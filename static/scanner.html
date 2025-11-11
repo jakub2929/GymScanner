@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Čtečka QR kódů - Vstup do posilovny</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+            display: block;
+            text-align: left;
+            padding: 20px;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+            display: block;
+        }
+        
+        .status-message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+            display: block;
+        }
+        
+        .button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            margin-top: 20px;
+            color: #666;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .manual-input {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .manual-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .manual-input input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏋️ Vstup do posilovny</h1>
+        <p class="subtitle">Naskenujte svůj QR kód pro vstup</p>
+        
+        <div id="reader"></div>
+        
+        <div class="status-message" id="statusMessage"></div>
+        
+        <div class="loading" id="loading">Ověřování...</div>
+        
+        <div class="manual-input">
+            <h3>Nebo zadejte token ručně:</h3>
+            <input type="text" id="manualToken" placeholder="Vložte token QR kódu">
+            <button class="button" onclick="verifyManualToken()">Ověřit token</button>
+        </div>
+        
+        <button class="button" id="startButton" onclick="startScanner()">Spustit skener</button>
+        <button class="button" id="stopButton" onclick="stopScanner()" style="display: none;">Zastavit skener</button>
+    </div>
+    
+    <script>
+        let html5QrcodeScanner = null;
+        let isScanning = false;
+        let isProcessing = false;
+        let lastScannedToken = null;
+        let lastScanTimestamp = 0;
+        const SCAN_COOLDOWN_MS = 4000;
+        
+        function showMessage(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.innerHTML = message.replace(/\n/g, '<br>');
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.style.display = 'block';
+            
+            const timeout = type === 'error' ? 10000 : 15000;
+            setTimeout(() => {
+                if (statusMessage.className.includes(type)) {
+                    statusMessage.style.display = 'none';
+                }
+            }, timeout);
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+        
+        async function verifyToken(token, fromScanner = false) {
+            if (!token || token.trim() === '') {
+                showMessage('Prázdný token', 'error');
+                return;
+            }
+            
+            let cleanToken = token.trim().replace(/\s+/g, '');
+            const urlMatch = cleanToken.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+            if (urlMatch) {
+                cleanToken = urlMatch[0];
+            }
+            
+            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidPattern.test(cleanToken)) {
+                showMessage('❌ Neplatný formát tokenu. Token musí být UUID.', 'error');
+                return;
+            }
+            
+            if (fromScanner) {
+                const now = Date.now();
+                if (isProcessing && (now - lastScanTimestamp) < SCAN_COOLDOWN_MS) {
+                    return;
+                }
+                if (cleanToken === lastScannedToken && (now - lastScanTimestamp) < SCAN_COOLDOWN_MS) {
+                    return;
+                }
+                lastScannedToken = cleanToken;
+                lastScanTimestamp = now;
+            }
+            
+            isProcessing = true;
+            showLoading(true);
+            showMessage('', '');
+            
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: cleanToken })
+                });
+                
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = await response.json();
+                    } catch (e) {
+                        errorData = { detail: `HTTP ${response.status}: ${response.statusText}` };
+                    }
+                    throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.status === 'allow') {
+                    let successMsg = '✅ Přístup povolen! Vítejte v posilovně.\n\n';
+                    if (data.user_name) {
+                        successMsg += `👤 Jméno: ${data.user_name}\n`;
+                    }
+                    if (data.user_email) {
+                        successMsg += `📧 Email: ${data.user_email}\n`;
+                    }
+                    if (data.expires_at) {
+                        const expiresDate = new Date(data.expires_at);
+                        successMsg += `📅 Platné do: ${expiresDate.toLocaleString('cs-CZ')}\n`;
+                    }
+                    showMessage(successMsg, 'success');
+                } else {
+                    showMessage(`❌ Přístup zamítnut: ${data.reason}`, 'error');
+                }
+            } catch (error) {
+                let errorMsg = error.message;
+                if (error.message.includes('pattern')) {
+                    errorMsg = 'Neplatný formát tokenu';
+                }
+                showMessage('❌ Chyba při ověřování: ' + errorMsg, 'error');
+            } finally {
+                const resetDelay = fromScanner ? SCAN_COOLDOWN_MS : 0;
+                setTimeout(() => {
+                    isProcessing = false;
+                }, resetDelay);
+                showLoading(false);
+            }
+        }
+        
+        function startScanner() {
+            if (isScanning) return;
+            
+            const readerElement = document.getElementById('reader');
+            html5QrcodeScanner = new Html5Qrcode('reader');
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                (decodedText, decodedResult) => {
+                    verifyToken(decodedText, true);
+                },
+                (errorMessage) => {
+                    // Ignore scanning errors (they happen frequently)
+                }
+            ).then(() => {
+                isScanning = true;
+                document.getElementById('startButton').style.display = 'none';
+                document.getElementById('stopButton').style.display = 'block';
+                showMessage('Skener spuštěn. Namiřte kameru na QR kód.', 'info');
+            }).catch((err) => {
+                showMessage('Chyba při spuštění kamery: ' + err, 'error');
+            });
+        }
+        
+        function stopScanner() {
+            if (!isScanning || !html5QrcodeScanner) return;
+            
+            html5QrcodeScanner.stop().then(() => {
+                isScanning = false;
+                document.getElementById('startButton').style.display = 'block';
+                document.getElementById('stopButton').style.display = 'none';
+                showMessage('Skener zastaven.', 'info');
+            }).catch((err) => {
+                showMessage('Chyba při zastavení skeneru: ' + err, 'error');
+            });
+        }
+        
+        function verifyManualToken() {
+            const token = document.getElementById('manualToken').value;
+            if (token) {
+                verifyToken(token);
+            } else {
+                showMessage('Zadejte prosím token', 'error');
+            }
+        }
+        
+        // Allow Enter key to submit manual token
+        document.getElementById('manualToken').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verifyManualToken();
+            }
+        });
+        
+        // Auto-start scanner on page load (optional)
+        // Uncomment the line below if you want scanner to start automatically
+        // window.addEventListener('load', startScanner);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Access – Admin</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #141E30, #243B55);
+            color: #f5f5f5;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: 700;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        main {
+            flex: 1;
+            padding: 30px 40px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            text-align: left;
+            vertical-align: middle;
+        }
+        th {
+            background: rgba(255,255,255,0.08);
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .badge {
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge.active {
+            background: rgba(57, 211, 83, 0.15);
+            color: #39D353;
+        }
+        .badge.inactive {
+            background: rgba(255, 99, 132, 0.2);
+            color: #FF6384;
+        }
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        button.secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+        }
+        .token-cell {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 13px;
+        }
+        .qr-preview {
+            position: fixed;
+            top: 50px;
+            right: 40px;
+            width: 220px;
+            padding: 16px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 16px;
+            text-align: center;
+            backdrop-filter: blur(8px);
+        }
+        .qr-preview img {
+            width: 180px;
+            height: 180px;
+            border-radius: 12px;
+            background: white;
+            padding: 6px;
+        }
+        .status-bar {
+            margin-top: 20px;
+            font-size: 13px;
+            opacity: 0.8;
+        }
+        .refresh-btn {
+            margin-left: 16px;
+        }
+        .filters {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        select, input[type="search"] {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>🏋️‍♂️ Gym Access – Admin Dashboard</div>
+        <div>
+            <button class="secondary refresh-btn" onclick="loadTokens()">↻ Obnovit</button>
+            <a href="/" style="color:#fff;text-decoration:none;margin-left:16px;">← Zpět na generátor</a>
+        </div>
+    </header>
+    <main>
+        <div class="filters">
+            <label>
+                Stav:
+                <select id="statusFilter" onchange="renderTable()">
+                    <option value="all">Vše</option>
+                    <option value="active">Pouze aktivní</option>
+                    <option value="inactive">Pouze deaktivované</option>
+                </select>
+            </label>
+            <label>
+                Vyhledat:
+                <input type="search" id="searchInput" placeholder="Jméno, email, token" oninput="renderTable()">
+            </label>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Uživatel</th>
+                    <th>Email</th>
+                    <th>Token</th>
+                    <th>Platnost do</th>
+                    <th>Počet skenů</th>
+                    <th>Stav</th>
+                    <th>Akce</th>
+                </tr>
+            </thead>
+            <tbody id="tokensTable"></tbody>
+        </table>
+        <div class="status-bar" id="statusBar">Načítám data…</div>
+    </main>
+    <div class="qr-preview" id="qrPreview" style="display:none;">
+        <div style="margin-bottom:10px;font-size:14px;font-weight:600;">QR náhled</div>
+        <img id="qrPreviewImage" src="" alt="QR Preview">
+        <div id="qrPreviewInfo" style="margin-top:10px;font-size:12px;opacity:0.8;"></div>
+    </div>
+
+    <script>
+        let tokens = [];
+        let isLoading = false;
+
+        async function loadTokens() {
+            if (isLoading) return;
+            isLoading = true;
+            setStatus('Načítám tokeny…');
+            try {
+                const res = await fetch('/api/admin/tokens');
+                if (!res.ok) {
+                    throw new Error('Chyba při načítání tokenů');
+                }
+                tokens = await res.json();
+                renderTable();
+                setStatus(`Načteno ${tokens.length} tokenů.`);
+            } catch (error) {
+                console.error(error);
+                setStatus('❌ Nepodařilo se načíst data.');
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function setStatus(message) {
+            document.getElementById('statusBar').textContent = message;
+        }
+
+        function filterTokens() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            return tokens.filter(token => {
+                const statusMatch =
+                    statusFilter === 'all' ||
+                    (statusFilter === 'active' && token.is_active) ||
+                    (statusFilter === 'inactive' && !token.is_active);
+                const tokenString = `${token.user_name || ''} ${token.user_email || ''} ${token.token}`.toLowerCase();
+                const searchMatch = tokenString.includes(searchValue);
+                return statusMatch && searchMatch;
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tokensTable');
+            tbody.innerHTML = '';
+            const filtered = filterTokens();
+            if (!filtered.length) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 7;
+                cell.style.textAlign = 'center';
+                cell.style.padding = '40px 16px';
+                cell.textContent = 'Žádné tokeny nesplňují filtr.';
+                row.appendChild(cell);
+                tbody.appendChild(row);
+                return;
+            }
+
+            filtered.forEach(token => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${token.user_name || '—'}</td>
+                    <td>${token.user_email || '—'}</td>
+                    <td class="token-cell">${token.token}</td>
+                    <td>${token.expires_at ? new Date(token.expires_at).toLocaleString('cs-CZ') : '—'}</td>
+                    <td>${token.scan_count ?? 0}</td>
+                    <td>
+                        <span class="badge ${token.is_active ? 'active' : 'inactive'}">
+                            ${token.is_active ? 'Aktivní' : 'Deaktivováno'}
+                        </span>
+                    </td>
+                    <td style="display:flex;gap:8px;">
+                        <button class="secondary" onclick="showQr('${token.qr_code_url}', '${token.user_name || ''}', '${token.token}')">QR</button>
+                        ${token.is_active
+                            ? `<button class="primary" onclick="toggleToken(${token.id}, false)">Deaktivovat</button>`
+                            : `<button class="primary" onclick="toggleToken(${token.id}, true)">Aktivovat</button>`}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function toggleToken(id, makeActive) {
+            const endpoint = makeActive ? 'activate' : 'deactivate';
+            try {
+                const res = await fetch(`/api/admin/tokens/${id}/${endpoint}`, { method: 'POST' });
+                if (!res.ok) throw new Error();
+                setStatus(makeActive ? 'Token byl aktivován.' : 'Token byl deaktivován.');
+                await loadTokens();
+            } catch (error) {
+                console.error(error);
+                setStatus('❌ Nepodařilo se změnit stav tokenu.');
+            }
+        }
+
+        function showQr(url, name, token) {
+            const preview = document.getElementById('qrPreview');
+            document.getElementById('qrPreviewImage').src = url;
+            document.getElementById('qrPreviewInfo').textContent = `${name || 'Bez jména'}\n${token}`;
+            preview.style.display = 'block';
+        }
+
+        window.addEventListener('load', loadTokens);
+    </script>
+</body>
+</html>
