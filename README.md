@@ -6,7 +6,7 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 ## Technologie
 - **Backend**: FastAPI (Python)
 - **Database**: SQLite (s možností PostgreSQL)
-- **Frontend**: HTML/JavaScript (moderní gym UI design)
+- **Frontend**: HTML/JavaScript s Tailwind CSS (čistý, moderní design)
 - **Containerization**: Docker & Docker Compose
 - **Authentication**: JWT tokens
 - **Password Hashing**: Argon2
@@ -17,9 +17,10 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 ### Pro uživatele
 - ✅ Registrace a přihlášení s JWT autentizací
 - ✅ Osobní QR kód pro vstup do gymu
+- ✅ Stahování QR kódu jako obrázek (PNG)
 - ✅ Kreditový systém (1 kredit = 1 cvičení)
 - ✅ Nastavení účtu (změna hesla, info o účtu)
-- ✅ Moderní gym UI design
+- ✅ Čistý, moderní UI design s Tailwind CSS
 
 ### Pro správu gymu
 - ✅ QR scanner pro turnstile (mobilní zařízení)
@@ -46,7 +47,7 @@ GymTurniket/
 │       └── admin.py         # Admin dashboard
 ├── static/
 │   ├── index.html           # Login/Register stránka
-│   ├── dashboard.html       # User dashboard s QR kódem
+│   ├── dashboard.html       # User dashboard s QR kódem (Tailwind CSS, download QR)
 │   ├── scanner.html         # QR scanner pro turnstile (moderní gym design)
 │   ├── settings.html        # Nastavení účtu
 │   ├── admin.html           # Admin dashboard
@@ -95,6 +96,7 @@ docker-compose up -d
 - `POST /api/regenerate_qr` - Vygenerování nového QR kódu (vyžaduje auth)
 - `POST /api/verify` - Ověření QR kódu (turnstile scanner)
   - Response: `{allowed: bool, reason: str, credits_left: int, cooldown_seconds_left: int | null}`
+- **Frontend:** Tlačítko "Stáhnout QR" pro stažení QR kódu jako PNG obrázek
 
 ### Kredity
 - `POST /api/buy_credits` - Nákup kreditů (vyžaduje auth)
@@ -240,13 +242,20 @@ docker-compose logs -f web
 - ✅ Mock platby (ne skutečné platební brány)
 - ✅ SQLite databáze v `./data/` složce (persistentní přes Docker volume)
 - ✅ HTTPS s self-signed certifikáty (pro produkci doporučujeme Let's Encrypt)
-- ✅ Moderní gym UI design s tmavým gradientem a neon efekty
+- ✅ Čistý, moderní UI design s Tailwind CSS (bez emojis, bez přehnaných gradientů)
 - ✅ Cooldown ochrana proti dvojitému odpíchnutí
 - ✅ Kompletní error handling a transakční bezpečnost
 
 ## Historie změn
 
-### Verze 1.1.0 (aktuální)
+### Verze 1.2.0 (aktuální)
+- ✅ Refaktor designu dashboard stránky na Tailwind CSS
+- ✅ Odstranění emojis z UI (čistší, profesionálnější vzhled)
+- ✅ Přidání tlačítka "Stáhnout QR" pro stažení QR kódu jako PNG
+- ✅ Nová barevná paleta (čisté barvy, žádné přehnané gradienty)
+- ✅ Zachování všech funkcí (QR zobrazení, kredity, regenerace)
+
+### Verze 1.1.0
 - ✅ Oprava HTTP 500 chyby v verify endpointu
 - ✅ Přidání cooldown ochrany (60s na úrovni uživatele)
 - ✅ Moderní gym UI design (scanner, dashboard)
