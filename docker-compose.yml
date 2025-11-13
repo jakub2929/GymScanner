@@ -3,7 +3,7 @@ services:
     build: .
     ports:
       - "8000:8000"
-      - "443:443"
+      - "443:443"  # Port 443 pouze pro lokální vývoj s SSL certifikáty
     env_file:
       - .env
     environment:
@@ -13,6 +13,8 @@ services:
       - ./static:/app/static
       - ./ssl:/app/ssl
     restart: unless-stopped
+    # POZNÁMKA: Pro Coolify použij Dockerfile.production přímo (bez docker-compose.yml)
+    # Coolify automaticky řeší HTTPS přes reverse proxy
 
   # Optional: Uncomment to use Postgres instead of SQLite
   # postgres:

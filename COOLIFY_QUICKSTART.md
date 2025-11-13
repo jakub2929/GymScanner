@@ -10,10 +10,15 @@
 4. Pokud GitHub:
    - Připoj repository
    - **Branch:** `main`
-   - **Build Pack:** `Dockerfile`
+   - **Build Pack:** `Dockerfile` ⚠️ **NEPOUŽÍVEJ Docker Compose!**
    - **Dockerfile Path:** `Dockerfile.production`
 5. Pokud Dockerfile:
    - Upload `Dockerfile.production`
+
+**⚠️ DŮLEŽITÉ:** 
+- **NEPOUŽÍVEJ** `docker-compose.yml` (obsahuje port 443, který způsobuje konflikt)
+- Použij **pouze** `Dockerfile.production` přímo
+- Coolify automaticky řeší networking a reverse proxy
 
 ### 2. Nastavení Environment Proměnných
 

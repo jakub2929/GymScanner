@@ -4,10 +4,13 @@
 # Tento soubor slouží jako dokumentace a reference pro nastavení v Coolify dashboard.
 #
 # V Coolify dashboard nastav:
-# - Build Pack: Dockerfile
+# - Build Pack: Dockerfile ⚠️ NEPOUŽÍVEJ Docker Compose!
 # - Dockerfile Path: Dockerfile.production
 # - Port: 8000
 # - Protocol: HTTP (Coolify přidá HTTPS automaticky)
+#
+# DŮLEŽITÉ: docker-compose.yml obsahuje port 443, který způsobuje konflikt.
+# Coolify by měl používat Dockerfile.production přímo, ne docker-compose.yml.
 
 # Environment variables (nastav v Coolify dashboard):
 # 
