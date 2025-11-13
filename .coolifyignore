@@ -27,9 +27,10 @@ DEPLOY.md
 README.md
 
 # Docker files (kromě Dockerfile.production)
-docker-compose.yml
+docker-compose.local.yml
 Dockerfile
 generate_cert.sh
+# POZNÁMKA: docker-compose.yml je potřeba pro Coolify, ale měl by používat Dockerfile.production přímo
 
 # IDE
 .vscode/
