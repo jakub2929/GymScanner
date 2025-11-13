@@ -26,16 +26,23 @@ COMGATE_NOTIFY_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/pa
 PYTHONUNBUFFERED=1
 ```
 
-## Volumes v Coolify (volitelné, ale doporučeno)
+## Volumes v Coolify (POVINNÉ pro produkci!)
 
-Pro persistentní data (aby se databáze neztratila při restartu):
+⚠️ **DŮLEŽITÉ:** Bez volume se databáze ztratí při každém redeploy!
 
-1. V Coolify → tvoje aplikace → **Volumes**
-2. Přidej volume:
+Pro persistentní data (aby se databáze neztratila při restartu/redeploy):
+
+1. V Coolify → tvoje aplikace → **Volumes** (nebo **Storage**)
+2. Klikni na **"Add Volume"** nebo **"Add Storage"**
+3. Přidej volume:
    - **Path**: `/app/data`
    - **Mount**: `gymturnstile-data` (nebo jakýkoliv název)
+4. Ulož a redeploy aplikaci
 
-**POZNÁMKA:** Pokud nepřidáš volume, databáze se vytvoří v kontejneru, ale ztratí se při restartu/redeploy. Pro testování to stačí, pro produkci přidej volume.
+**POZNÁMKA:** 
+- Bez volume se databáze vytvoří v kontejneru, ale **ztratí se při každém redeploy**!
+- Pro testování to může stačit, ale pro produkci **MUSÍŠ** přidat volume!
+- Po přidání volume restartuj/redeploy aplikaci
 
 ## Výhody SQLite
 
