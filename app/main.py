@@ -26,9 +26,10 @@ if not data_dir.exists():
     data_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Created data directory: {data_dir}")
 
-# Initialize database (with error handling - don't crash if DB is unavailable)
-def initialize_database():
-    """Initialize database tables - called on startup"""
+# Initialize database on startup (not during import)
+@app.on_event("startup")
+async def initialize_database():
+    """Initialize database tables - called on application startup"""
     try:
         # Test database connection first
         logger.info("Testing database connection...")
@@ -61,12 +62,6 @@ def initialize_database():
         logger.error("3. Network connectivity between app and database")
         logger.error("4. If using internal hostname, ensure app and DB are in same network")
         # Don't raise - let app start
-
-# Initialize database (non-blocking)
-try:
-    initialize_database()
-except Exception as e:
-    logger.error(f"Unexpected error during database initialization: {e}", exc_info=True)
 
 app = FastAPI(
     title="Gym Turnstile QR System",
