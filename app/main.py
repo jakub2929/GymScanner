@@ -14,39 +14,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-try:
-    from app.database import engine, Base, ensure_access_token_columns, ensure_user_password_column
-    from app.routes import payments, qr, verify, admin, auth, user_qr, credits
-    
-    logger.info("Starting application initialization...")
-    
-    # Ensure data directory exists for SQLite
-    data_dir = Path(__file__).parent.parent / "data"
-    if not data_dir.exists():
-        data_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Created data directory: {data_dir}")
-    
-    # Test database connection first
-    logger.info("Testing database connection...")
+# Import modules first (these should not fail)
+from app.database import engine, Base, ensure_access_token_columns, ensure_user_password_column
+from app.routes import payments, qr, verify, admin, auth, user_qr, credits
+
+logger.info("Starting application initialization...")
+
+# Ensure data directory exists for SQLite
+data_dir = Path(__file__).parent.parent / "data"
+if not data_dir.exists():
+    data_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Created data directory: {data_dir}")
+
+# Initialize database (with error handling - don't crash if DB is unavailable)
+def initialize_database():
+    """Initialize database tables - called on startup"""
     try:
+        # Test database connection first
+        logger.info("Testing database connection...")
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         logger.info("Database connection successful")
-    except Exception as db_error:
-        logger.error(f"Database connection failed: {db_error}")
-        logger.error("Application will continue, but database operations may fail.")
-        logger.error("Please check:")
-        logger.error("1. DATABASE_URL is correct")
-        logger.error("2. PostgreSQL database is running")
-        logger.error("3. Network connectivity between app and database")
-        # Don't raise - let app start, but database operations will fail
-    
-    # Create database tables
-    logger.info("Creating database tables...")
-    try:
+        
+        # Create database tables
+        logger.info("Creating database tables...")
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
         
+        # Run migrations
         ensure_access_token_columns()
         ensure_user_password_column()
         from app.database import ensure_user_credits_column, ensure_access_token_nullable_columns, ensure_user_admin_column, ensure_last_scan_at_column, ensure_payment_comgate_columns
@@ -56,18 +51,22 @@ try:
         ensure_last_scan_at_column()
         ensure_payment_comgate_columns()
         logger.info("Database migrations completed")
-    except Exception as migration_error:
-        logger.error(f"Database migration failed: {migration_error}")
-        logger.error("Application will continue, but some features may not work.")
-        # Don't raise - let app start
         
-except ImportError as import_error:
-    logger.error(f"Failed to import modules: {import_error}", exc_info=True)
-    raise
+    except Exception as db_error:
+        logger.error(f"Database initialization failed: {db_error}")
+        logger.error("Application will start, but database operations will fail.")
+        logger.error("Please check:")
+        logger.error("1. DATABASE_URL is correct")
+        logger.error("2. PostgreSQL database is running")
+        logger.error("3. Network connectivity between app and database")
+        logger.error("4. If using internal hostname, ensure app and DB are in same network")
+        # Don't raise - let app start
+
+# Initialize database (non-blocking)
+try:
+    initialize_database()
 except Exception as e:
-    logger.error(f"Failed to initialize application: {e}", exc_info=True)
-    # Only raise for critical errors
-    raise
+    logger.error(f"Unexpected error during database initialization: {e}", exc_info=True)
 
 app = FastAPI(
     title="Gym Turnstile QR System",
