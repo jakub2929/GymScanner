@@ -179,27 +179,31 @@ docker-compose up -d
 
 ## Docker (lokální vývoj)
 
+Pro lokální vývoj použij `docker-compose.local.yml`:
+
 ```bash
 # Build
-docker-compose build
+docker-compose -f docker-compose.local.yml build
 
 # Start
-docker-compose up -d
+docker-compose -f docker-compose.local.yml up -d
 
 # Stop
-docker-compose down
+docker-compose -f docker-compose.local.yml down
 
 # Restart
-docker-compose restart web
+docker-compose -f docker-compose.local.yml restart web
 
 # Logs
-docker-compose logs -f web
+docker-compose -f docker-compose.local.yml logs -f web
 
 # Rebuild a restart (po změnách kódu)
-docker-compose down
-docker-compose build
-docker-compose up -d
+docker-compose -f docker-compose.local.yml down
+docker-compose -f docker-compose.local.yml build
+docker-compose -f docker-compose.local.yml up -d
 ```
+
+**Poznámka:** `docker-compose.yml` je pro Coolify (bez portu 443). Pro lokální vývoj s HTTPS použij `docker-compose.local.yml`.
 
 ## Deployment na Coolify
 
