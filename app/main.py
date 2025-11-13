@@ -16,6 +16,12 @@ logger = logging.getLogger(__name__)
 from app.database import engine, Base, ensure_access_token_columns, ensure_user_password_column
 from app.routes import payments, qr, verify, admin, auth, user_qr, credits
 
+# Ensure data directory exists for SQLite
+data_dir = Path(__file__).parent.parent / "data"
+if not data_dir.exists():
+    data_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Created data directory: {data_dir}")
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 ensure_access_token_columns()

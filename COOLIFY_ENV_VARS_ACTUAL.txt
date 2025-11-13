@@ -1,0 +1,40 @@
+# Environment Variables pro Coolify - AKTUÁLNÍ HODNOTY
+# Zkopíruj a vlož do Coolify dashboard → Environment Variables
+
+# ============================================
+# POVINNÉ - DATABASE
+# ============================================
+# ⚠️ DŮLEŽITÉ: Nahraď "postgres-host" skutečným hostem z Coolify PostgreSQL databáze!
+# Získej connection string z Coolify → PostgreSQL databáze → Connection String
+DATABASE_URL=postgresql://gymuser:gympass@POSTGRES_HOST:5432/gymturnstile
+
+# ============================================
+# POVINNÉ - JWT AUTHENTICATION
+# ============================================
+JWT_SECRET_KEY=22316a650ece222be8b494406413e5ee93d213455ae2a0f3c2d037139e1922a3
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+# ============================================
+# COMGATE PAYMENT GATEWAY
+# ============================================
+COMGATE_MERCHANT_ID=123456
+COMGATE_SECRET=gx4q8OV3TJt6noJnfhjqJKyX3Z6Ych0y
+COMGATE_TEST_MODE=true
+
+# ⚠️ DŮLEŽITÉ: Použij HTTPS a svou skutečnou doménu!
+COMGATE_RETURN_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/payments/comgate/return
+COMGATE_NOTIFY_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/payments/comgate/notify
+
+# ============================================
+# VOLITELNÉ
+# ============================================
+PYTHONUNBUFFERED=1
+
+# ============================================
+# COOLIFY AUTOMATICKÉ PROMĚNNÉ (nastaví Coolify sám)
+# ============================================
+# Tyto proměnné Coolify nastaví automaticky, nemusíš je přidávat:
+# SERVICE_FQDN_WEB=ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io
+# SERVICE_URL_WEB=http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io
+
