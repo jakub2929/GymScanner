@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from sqlalchemy import text
 import os
 import logging
 from pathlib import Path
@@ -13,25 +14,35 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from app.database import engine, Base, ensure_access_token_columns, ensure_user_password_column
-from app.routes import payments, qr, verify, admin, auth, user_qr, credits
-
-# Ensure data directory exists for SQLite
-data_dir = Path(__file__).parent.parent / "data"
-if not data_dir.exists():
-    data_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Created data directory: {data_dir}")
-
-# Create database tables
-Base.metadata.create_all(bind=engine)
-ensure_access_token_columns()
-ensure_user_password_column()
-from app.database import ensure_user_credits_column, ensure_access_token_nullable_columns, ensure_user_admin_column, ensure_last_scan_at_column, ensure_payment_comgate_columns
-ensure_user_credits_column()
-ensure_access_token_nullable_columns()
-ensure_user_admin_column()
-ensure_last_scan_at_column()
-ensure_payment_comgate_columns()
+try:
+    from app.database import engine, Base, ensure_access_token_columns, ensure_user_password_column
+    from app.routes import payments, qr, verify, admin, auth, user_qr, credits
+    
+    logger.info("Starting application initialization...")
+    
+    # Ensure data directory exists for SQLite
+    data_dir = Path(__file__).parent.parent / "data"
+    if not data_dir.exists():
+        data_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Created data directory: {data_dir}")
+    
+    # Create database tables
+    logger.info("Creating database tables...")
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+    
+    ensure_access_token_columns()
+    ensure_user_password_column()
+    from app.database import ensure_user_credits_column, ensure_access_token_nullable_columns, ensure_user_admin_column, ensure_last_scan_at_column, ensure_payment_comgate_columns
+    ensure_user_credits_column()
+    ensure_access_token_nullable_columns()
+    ensure_user_admin_column()
+    ensure_last_scan_at_column()
+    ensure_payment_comgate_columns()
+    logger.info("Database migrations completed")
+except Exception as e:
+    logger.error(f"Failed to initialize database: {e}", exc_info=True)
+    raise
 
 app = FastAPI(
     title="Gym Turnstile QR System",
@@ -115,5 +126,18 @@ async def read_admin():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    try:
+        # Try to connect to database
+        from app.database import engine
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    return {
+        "status": "healthy",
+        "database": db_status,
+        "app": "running"
+    }
 
