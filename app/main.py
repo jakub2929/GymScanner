@@ -26,6 +26,34 @@ if not data_dir.exists():
     data_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Created data directory: {data_dir}")
 
+app = FastAPI(
+    title="Gym Turnstile QR System",
+    description="QR code access system for gym turnstiles",
+    version="1.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify actual origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Add logging middleware to debug requests
+@app.middleware("http")
+async def log_requests(request, call_next):
+    # Log request details - using print to ensure it shows up
+    auth_header = request.headers.get("Authorization", "None")
+    print(f"[MIDDLEWARE] Request: {request.method} {request.url.path}")
+    print(f"[MIDDLEWARE] Authorization header: {auth_header[:80] if auth_header != 'None' else 'None'}")
+    print(f"[MIDDLEWARE] All headers: {dict(request.headers)}")
+    
+    response = await call_next(request)
+    print(f"[MIDDLEWARE] Response status: {response.status_code}")
+    return response
+
 # Initialize database on startup (not during import)
 @app.on_event("startup")
 async def initialize_database():
@@ -62,34 +90,6 @@ async def initialize_database():
         logger.error("3. Network connectivity between app and database")
         logger.error("4. If using internal hostname, ensure app and DB are in same network")
         # Don't raise - let app start
-
-app = FastAPI(
-    title="Gym Turnstile QR System",
-    description="QR code access system for gym turnstiles",
-    version="1.0.0"
-)
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Add logging middleware to debug requests
-@app.middleware("http")
-async def log_requests(request, call_next):
-    # Log request details - using print to ensure it shows up
-    auth_header = request.headers.get("Authorization", "None")
-    print(f"[MIDDLEWARE] Request: {request.method} {request.url.path}")
-    print(f"[MIDDLEWARE] Authorization header: {auth_header[:80] if auth_header != 'None' else 'None'}")
-    print(f"[MIDDLEWARE] All headers: {dict(request.headers)}")
-    
-    response = await call_next(request)
-    print(f"[MIDDLEWARE] Response status: {response.status_code}")
-    return response
 
 # Include routers
 app.include_router(auth.router, prefix="/api", tags=["auth"])
