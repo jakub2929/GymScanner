@@ -1,14 +1,14 @@
 # Docker Compose pro Coolify
 # Coolify automaticky detekuje tento soubor, ale měl by používat Dockerfile.production přímo
-# Tento soubor je minimalizovaný - pouze port 8000, bez portu 443
+# Coolify spravuje porty sám přes reverse proxy - NEPOTŘEBUJEME ports sekci!
 
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile.production
-    ports:
-      - "8000:8000"  # HTTP only - Coolify přidá HTTPS přes reverse proxy
+    # POZNÁMKA: Coolify spravuje porty sám - nepoužívej ports!
+    # Dockerfile.production má EXPOSE 8000, což stačí
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped

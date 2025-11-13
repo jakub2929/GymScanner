@@ -1,13 +1,14 @@
 # Docker Compose pro produkci (Coolify)
-# Coolify automaticky řeší HTTPS přes reverse proxy, takže nepotřebujeme port 443
+# Coolify automaticky řeší HTTPS přes reverse proxy a spravuje porty sám
+# NEPOTŘEBUJEME ports sekci - Coolify používá EXPOSE z Dockerfile.production
 
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile.production
-    ports:
-      - "8000:8000"  # HTTP only, Coolify přidá HTTPS
+    # POZNÁMKA: Coolify spravuje porty sám - nepoužívej ports!
+    # Dockerfile.production má EXPOSE 8000, což stačí
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
