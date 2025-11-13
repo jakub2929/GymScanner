@@ -1,400 +1,261 @@
 # Gym Turnstile QR System
 
-A production-ready system that allows gym members to enter through a turnstile using a QR code generated after a valid payment.
+## Projekt
+Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se registrují, přihlásí, získají osobní QR kód a mohou vstoupit do gymu. Systém používá kredity (1 kredit = 1 cvičení) s ochranou proti dvojitému odpíchnutí pomocí cooldown systému.
 
-## ⚠️ Důležité: Požadavek HTTPS
-
-**Tento systém VYŽADUJE HTTPS pro správné fungování.** Aplikace běží na portu 443 s SSL certifikáty. Bez HTTPS nebudou některé funkce (např. přístup ke kameře pro skenování QR kódů) fungovat správně.
-
-- Aplikace běží na portu **443** (HTTPS)
-- SSL certifikáty musí být umístěny v adresáři `ssl/`
-- Pro vývoj lze použít self-signed certifikáty (viz sekce níže)
-- V produkci použijte certifikáty od důvěryhodné CA (Let's Encrypt, atd.)
-
-## Features
-
-- **Payment Processing**: Mock payment API (easily switchable to real payment providers)
-- **QR Code Generation**: Unique QR codes valid for 24 hours or until first use (one-time use)
-- **Turnstile Verification**: `/verify` endpoint for physical scanners
-- **Audit Logging**: Complete logging of all access attempts
-- **Dockerized**: Easy deployment on VPS or Coolify
-
-## Technology Stack
-
+## Technologie
 - **Backend**: FastAPI (Python)
-- **Database**: SQLite (default, switchable to Postgres)
-- **ORM**: SQLAlchemy
-- **QR Code**: python-qrcode
-- **Frontend**: Simple HTML/CSS/JS
-- **Containerization**: Docker + Docker Compose
+- **Database**: SQLite (s možností PostgreSQL)
+- **Frontend**: HTML/JavaScript (moderní gym UI design)
+- **Containerization**: Docker & Docker Compose
+- **Authentication**: JWT tokens
+- **Password Hashing**: Argon2
+- **Security**: HTTPS s self-signed certifikáty
 
-## Quick Start
+## Funkce
 
-### 1. Generování SSL Certifikátů (Nutné)
+### Pro uživatele
+- ✅ Registrace a přihlášení s JWT autentizací
+- ✅ Osobní QR kód pro vstup do gymu
+- ✅ Kreditový systém (1 kredit = 1 cvičení)
+- ✅ Nastavení účtu (změna hesla, info o účtu)
+- ✅ Moderní gym UI design
 
-Nejprve je nutné vygenerovat SSL certifikáty. Pro vývoj můžete použít self-signed certifikáty:
+### Pro správu gymu
+- ✅ QR scanner pro turnstile (mobilní zařízení)
+- ✅ Cooldown ochrana (60 sekund mezi úspěšnými vstupy)
+- ✅ Admin dashboard pro správu uživatelů a kreditů
+- ✅ Access log pro audit vstupů
 
-```bash
-# Vytvořte adresář pro SSL certifikáty (pokud neexistuje)
-mkdir -p ssl
-
-# Spusťte skript pro generování self-signed certifikátů
-bash generate_cert.sh
-
-# Nebo vygenerujte ručně (upravte IP adresu podle vašeho prostředí):
-openssl req -x509 -newkey rsa:4096 -nodes \
-    -out ssl/cert.pem \
-    -keyout ssl/key.pem \
-    -days 365 \
-    -subj "/C=CZ/ST=State/L=City/O=GymTurniket/CN=localhost" \
-    -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
+## Struktura projektu
+```
+GymTurniket/
+├── app/
+│   ├── __init__.py
+│   ├── main.py              # FastAPI aplikace
+│   ├── database.py          # DB konfigurace a migrace
+│   ├── auth.py              # JWT autentizace
+│   ├── models.py            # SQLAlchemy modely
+│   └── routes/
+│       ├── auth.py          # Login/Register endpoints + nastavení
+│       ├── user_qr.py       # QR generování pro uživatele
+│       ├── verify.py        # Ověření QR kódu (turnstile scanner)
+│       ├── credits.py       # Nákup kreditů
+│       ├── payments.py      # Mock platby
+│       ├── qr.py            # Starý QR endpoint (payment-based)
+│       └── admin.py         # Admin dashboard
+├── static/
+│   ├── index.html           # Login/Register stránka
+│   ├── dashboard.html       # User dashboard s QR kódem
+│   ├── scanner.html         # QR scanner pro turnstile (moderní gym design)
+│   ├── settings.html        # Nastavení účtu
+│   ├── admin.html           # Admin dashboard
+│   └── admin_login.html     # Admin přihlášení
+├── ssl/                     # SSL certifikáty pro HTTPS
+├── data/                    # SQLite databáze (volume)
+├── Dockerfile
+├── docker-compose.yml
+└── requirements.txt
 ```
 
-**Poznámka:** Pro produkci použijte certifikáty od důvěryhodné CA (např. Let's Encrypt).
+## Jak spustit
 
-### 2. Spuštění aplikace
-
-#### Using Docker Compose (Doporučeno)
-
+1. **Vygeneruj SSL certifikáty (pro HTTPS):**
 ```bash
-# Zastavit běžící kontejnery (pokud existují)
-docker-compose down
+bash generate_cert.sh
+```
 
-# Sestavit a spustit aplikaci
+2. **Build a start Docker:**
+```bash
 docker-compose build
 docker-compose up -d
-
-# Zobrazit logy
-docker-compose logs -f
-
-# Zastavit aplikaci
-docker-compose down
 ```
 
-Aplikace bude dostupná na `https://localhost:443`
+3. **Otevři v prohlížeči:**
+- Login/Register: `https://localhost` nebo `https://localhost:443`
+- Dashboard: `https://localhost/dashboard`
+- Settings: `https://localhost/settings`
+- Scanner: `https://localhost/scanner`
+- Admin Login: `https://localhost/admin/login`
+- Admin Dashboard: `https://localhost/admin`
 
-**Poznámka:** Prohlížeč může zobrazit varování o self-signed certifikátu. V produkci použijte certifikáty od důvěryhodné CA.
-
-#### Manual Setup (Vývoj)
-
-```bash
-# Instalace závislostí
-pip install -r requirements.txt
-
-# Spuštění aplikace s SSL
-uvicorn app.main:app --reload --host 0.0.0.0 --port 443 \
-    --ssl-keyfile ssl/key.pem --ssl-certfile ssl/cert.pem
-```
+**Poznámka:** Protože používáme self-signed certifikáty, prohlížeč zobrazí varování o zabezpečení. V Chromu/Firefoxu klikněte na "Pokračovat" nebo "Advanced" → "Proceed to localhost".
 
 ## API Endpoints
 
-### 1. Create Payment
+### Autentizace
+- `POST /api/register` - Registrace nového uživatele
+- `POST /api/login` - Přihlášení (vrací JWT token)
+- `POST /api/logout` - Odhlášení
+- `GET /api/user/info` - Informace o aktuálním uživateli (vyžaduje auth)
+- `POST /api/user/change-password` - Změna hesla (vyžaduje auth)
 
-Create a mock payment (in production, integrate with Stripe/PayPal/etc.)
+### QR kódy a vstup
+- `GET /api/my_qr` - Získání osobního QR kódu (vyžaduje auth)
+- `POST /api/regenerate_qr` - Vygenerování nového QR kódu (vyžaduje auth)
+- `POST /api/verify` - Ověření QR kódu (turnstile scanner)
+  - Response: `{allowed: bool, reason: str, credits_left: int, cooldown_seconds_left: int | null}`
 
-```bash
-curl -k -X POST "https://localhost:443/api/create_payment" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "name": "John Doe",
-    "amount": 25.00
-  }'
-```
+### Kredity
+- `POST /api/buy_credits` - Nákup kreditů (vyžaduje auth)
+- `GET /api/my_credits` - Zobrazení kreditů (vyžaduje auth)
 
-**Poznámka:** Parametr `-k` v curl ignoruje chyby s self-signed certifikáty. V produkci s platným certifikátem tento parametr není nutný.
+### Admin
+- `GET /api/admin/users/search` - Vyhledávání uživatelů (vyžaduje admin)
+- `POST /api/admin/users/{user_id}/credits` - Přidání kreditů uživateli (vyžaduje admin)
+- `GET /api/admin/users` - Seznam všech uživatelů (vyžaduje admin)
 
-**Response:**
+### Logs
+- `GET /api/access_logs` - Access log (pro debugging/admin)
+
+## Databázové modely
+
+### User
+- `id`, `email`, `name`, `password_hash`
+- `credits` (Integer, default=0) - Počet kreditů
+- `is_admin` (Boolean, default=False) - Admin práva
+- `created_at` (DateTime) - Datum vytvoření účtu
+
+### AccessToken
+- `token` (String, unique) - UUID token pro QR kód
+- `user_id` (Foreign Key) - Vlastník tokenu
+- `is_active` (Boolean, default=True) - Aktivní token
+- `scan_count` (Integer, default=0) - Počet skenů
+- `last_scan_at` (DateTime, nullable) - Poslední úspěšný scan (pro cooldown)
+- `used_at` (DateTime, nullable) - Kdy byl token naposledy použit
+- `expires_at` (DateTime, nullable) - Expirace (null = žádná expirace)
+- `created_at` (DateTime) - Datum vytvoření tokenu
+
+### AccessLog
+- `token_id` (Foreign Key, nullable) - ID tokenu
+- `token_string` (String) - Token string (i když token je smazaný)
+- `status` (String) - "allow" nebo "deny"
+- `reason` (String) - Důvod povolení/zamítnutí
+- `ip_address` (String, nullable) - IP adresa klienta
+- `user_agent` (String, nullable) - User agent
+- `created_at` (DateTime) - Čas pokusu o vstup
+
+### Payment
+- `user_id`, `amount`, `status`, `payment_id`
+- `created_at`, `completed_at`
+
+## Systém kreditů
+
+- **1 kredit = 1 cvičení**
+- Při úspěšném scanování QR kódu se odečte 1 kredit
+- QR kód nemá expiraci (pouze kontrola kreditů)
+- Kredity se kupují přes `/api/buy_credits` nebo přidávají adminem
+- **Ochrana:** Kredity nesmí jít do minusu - pokud je 0 kreditů, vstup je zamítnut
+
+## Cooldown systém
+
+- **Délka:** 60 sekund mezi úspěšnými vstupy
+- **Scope:** Na úrovni uživatele (všechny tokeny stejného uživatele sdílejí cooldown)
+- **Chování:** Po úspěšném skenu se nastaví `last_scan_at` pro všechny aktivní tokeny uživatele
+- **Ochrana:** Zabraňuje dvojitému odpíchnutí - pokud uživatel zkusí naskenovat QR kód dřív než za 60 sekund, vstup je zamítnut s cooldown zprávou
+
+## Response struktura verify endpointu
+
 ```json
 {
-  "payment_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "completed",
-  "user_id": 1,
-  "amount": 25.0
+  "allowed": true/false,
+  "reason": "ok" | "no_credits" | "cooldown" | "invalid_token" | "token_not_found" | "token_deactivated" | "user_not_found",
+  "credits_left": 5,
+  "cooldown_seconds_left": null | 45,
+  "user_name": "Jan Novák" | null,
+  "user_email": "jan@example.com" | null
 }
 ```
 
-### 2. Generate QR Code
+### Důvody zamítnutí:
+- `no_credits` - Uživatel nemá žádné kredity (0)
+- `cooldown` - Příliš rychlé další odpíchnutí (aktivní cooldown)
+- `invalid_token` - Token není aktivní nebo je neplatný
+- `token_not_found` - Token nebyl nalezen v databázi
+- `token_deactivated` - Token byl deaktivován
+- `user_not_found` - Uživatel tokenu nebyl nalezen
 
-Generate a QR code token for gym access (requires valid completed payment)
-
-```bash
-curl -k -X POST "https://localhost:443/api/generate_qr" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "payment_id": "550e8400-e29b-41d4-a716-446655440000"
-  }'
-```
-
-**Response:**
-```json
-{
-  "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "qr_code_url": "data:image/png;base64,iVBORw0KGgoAAAANS...",
-  "expires_at": "2024-01-02T12:00:00"
-}
-```
-
-### 3. Verify Token (Turnstile Scanner)
-
-Verify a QR code token for turnstile access
+## Docker
 
 ```bash
-curl -k -X POST "https://localhost:443/api/verify" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-  }'
-```
+# Build
+docker-compose build
 
-**Success Response:**
-```json
-{
-  "status": "allow",
-  "reason": "Access granted"
-}
-```
+# Start
+docker-compose up -d
 
-**Failure Response:**
-```json
-{
-  "status": "deny",
-  "reason": "Token not found"
-}
-```
-
-Possible deny reasons:
-- `"Token not found"`
-- `"Token expired"`
-- `"Token already used"`
-- `"Payment not valid"`
-
-### 4. Get Payment Status
-
-```bash
-curl -k "https://localhost:443/api/payment/550e8400-e29b-41d4-a716-446655440000"
-```
-
-### 5. Get Access Logs (Admin/Debugging)
-
-```bash
-curl -k "https://localhost:443/api/access_logs?limit=100"
-```
-
-### 6. Health Check
-
-```bash
-curl -k "https://localhost:443/health"
-```
-
-## Frontend
-
-Webové rozhraní je dostupné na `https://localhost:443` a umožňuje uživatelům:
-1. Zadání platebních údajů
-2. Zpracování mock platby
-3. Generování a zobrazení QR kódu
-
-### Admin Dashboard
-
-- Admin dashboard dostupný na `https://localhost:443/admin`
-- Umožňuje zobrazit všechny vydané tokeny (jméno, email, platnost, počet skenů)
-- Podporuje deaktivaci/aktivaci tokenu jedním klikem
-- Součástí je náhled QR kódu a filtrování podle stavu
-
-### Scanner Page
-
-- Stránka pro skenování QR kódů dostupná na `https://localhost:443/scanner`
-- Používá kameru pro skenování QR kódů
-- **Vyžaduje HTTPS** pro přístup ke kameře (bezpečnostní požadavek prohlížeče)
-
-## Database Schema
-
-### Users
-- `id`: Primary key
-- `email`: Unique email address
-- `name`: User's full name
-- `created_at`: Timestamp
-
-### Payments
-- `id`: Primary key
-- `user_id`: Foreign key to users
-- `amount`: Payment amount
-- `status`: Payment status (pending, completed, failed)
-- `payment_id`: Unique payment identifier (UUID)
-- `created_at`: Timestamp
-- `completed_at`: Completion timestamp
-
-### Access Tokens
-- `id`: Primary key
-- `token`: Unique token string (UUID)
-- `user_id`: Foreign key to users
-- `payment_id`: Foreign key to payments
-- `is_used`: Boolean flag (one-time use)
-- `expires_at`: Expiration timestamp (24 hours from creation)
-- `created_at`: Creation timestamp
-- `used_at`: Usage timestamp
-
-### Access Logs
-- `id`: Primary key
-- `token_id`: Foreign key to access_tokens (nullable)
-- `token_string`: Token string (for audit even if token deleted)
-- `status`: "allow" or "deny"
-- `reason`: Reason for allow/deny
-- `ip_address`: Client IP address
-- `user_agent`: Client user agent
-- `created_at`: Timestamp
-
-## Token Security
-
-- Tokens are **one-time use** - once verified, they cannot be reused
-- Tokens expire after **24 hours** from generation
-- Tokens are linked to completed payments
-- All access attempts are logged for audit purposes
-
-## Using Postgres Instead of SQLite
-
-1. Uncomment the Postgres service in `docker-compose.yml`
-2. Update the `DATABASE_URL` environment variable
-3. Rebuild and restart:
-
-```bash
+# Stop
 docker-compose down
-docker-compose up -d --build
+
+# Restart
+docker-compose restart web
+
+# Logs
+docker-compose logs -f web
+
+# Rebuild a restart (po změnách kódu)
+docker-compose down
+docker-compose build
+docker-compose up -d
 ```
 
-## Production Deployment
+## Environment variables
 
-### ⚠️ Důležité: HTTPS je povinné
+Vytvoř soubor `.env` na základě `.env.example`:
 
-**Aplikace VYŽADUJE HTTPS pro produkční nasazení.** Bez HTTPS nebudou fungovat kritické funkce:
-- Přístup ke kameře pro skenování QR kódů (bezpečnostní požadavek prohlížeče)
-- Některé API funkce mohou být omezeny
+- `DATABASE_URL` - Database connection string (default: `sqlite:///./data/gym_turnstile.db`)
+- `JWT_SECRET_KEY` - Secret key pro JWT tokeny (důležité pro produkci!)
+- `JWT_ALGORITHM` - Algorithm pro JWT (default: `HS256`)
+- `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` - Expirace tokenu v minutách (default: `60`)
 
-### SSL Certifikáty pro produkci
+## HTTPS konfigurace
 
-Pro produkci použijte certifikáty od důvěryhodné CA:
+Aplikace běží na HTTPS portu 443 s self-signed certifikáty.
 
-1. **Let's Encrypt (doporučeno):**
-   ```bash
-   # Instalace certbot
-   sudo apt-get update
-   sudo apt-get install certbot
-   
-   # Získání certifikátu
-   sudo certbot certonly --standalone -d yourdomain.com
-   
-   # Zkopírujte certifikáty do adresáře ssl/
-   sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem ssl/cert.pem
-   sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem ssl/key.pem
-   sudo chown $USER:$USER ssl/*.pem
-   ```
+- Certifikáty jsou generovány pomocí `generate_cert.sh`
+- Uloženy v `ssl/` složce
+- Mapovány do Docker kontejneru přes volume
+- Pro produkci doporučujeme použít Let's Encrypt nebo jiný důvěryhodný CA
 
-2. **Automatické obnovení certifikátů:**
-   Nastavte cron job pro automatické obnovení certifikátů Let's Encrypt (platné 90 dní).
+## Debugging
 
-### Environment Variables
-
-- `DATABASE_URL`: Database connection string (default: SQLite)
-
-### Security Considerations
-
-1. **HTTPS**: **POVINNÉ** - aplikace nefunguje správně bez HTTPS
-2. **SSL Certifikáty**: Použijte certifikáty od důvěryhodné CA (Let's Encrypt, atd.)
-3. **CORS**: Update CORS settings in `app/main.py` to restrict origins
-4. **Rate Limiting**: Consider adding rate limiting to prevent abuse
-5. **Authentication**: Add authentication for admin endpoints
-6. **Payment Integration**: Replace mock payment with real payment provider (Stripe, PayPal, etc.)
-
-### Coolify Deployment
-
-1. Connect your repository to Coolify
-2. Set build command: `docker build -t gym-turnstile .`
-3. Set start command: `docker-compose up -d`
-4. Configure environment variables
-5. **Nastavte SSL certifikáty** - použijte Let's Encrypt přímo v Coolify nebo nahrajte vlastní certifikáty
-6. Ujistěte se, že aplikace běží na portu 443 s HTTPS
-7. Deploy!
-
-## Development
-
+### Docker logy
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Vygenerujte SSL certifikáty (viz Quick Start)
-bash generate_cert.sh
-
-# Run with auto-reload and SSL
-uvicorn app.main:app --reload --host 0.0.0.0 --port 443 \
-    --ssl-keyfile ssl/key.pem --ssl-certfile ssl/cert.pem
-
-# Run tests (if you add them)
-pytest
+docker-compose logs -f web
 ```
 
-**Poznámka:** I pro vývoj je HTTPS nutné kvůli přístupu ke kameře pro skenování QR kódů.
+### Network debugging
+1. Zkontroluj Network tab v prohlížeči (Authorization header)
+2. Zkontroluj localStorage (access_token)
+3. Zkontroluj JWT token na jwt.io
 
-## Troubleshooting
+### Backend debugging
+- Všechny chyby jsou logovány do konzole Docker kontejneru
+- Access log je dostupný přes `/api/access_logs` endpoint
+- Middleware loguje všechny requesty (viditelné v Docker logách)
 
-### Problémy s HTTPS
+## Poznámky
 
-#### 1. Aplikace se nespustí - chyba s SSL certifikáty
-**Problém:** `FileNotFoundError` nebo podobná chyba při startu aplikace.
+- ✅ Systém je připraven k použití
+- ✅ Mock platby (ne skutečné platební brány)
+- ✅ SQLite databáze v `./data/` složce (persistentní přes Docker volume)
+- ✅ HTTPS s self-signed certifikáty (pro produkci doporučujeme Let's Encrypt)
+- ✅ Moderní gym UI design s tmavým gradientem a neon efekty
+- ✅ Cooldown ochrana proti dvojitému odpíchnutí
+- ✅ Kompletní error handling a transakční bezpečnost
 
-**Řešení:**
-- Zkontrolujte, že adresář `ssl/` existuje a obsahuje soubory `cert.pem` a `key.pem`
-- Vygenerujte certifikáty pomocí `bash generate_cert.sh`
-- Ověřte oprávnění k souborům: `chmod 600 ssl/*.pem`
+## Historie změn
 
-#### 2. Prohlížeč zobrazuje varování o nebezpečném spojení
-**Problém:** Prohlížeč varuje před self-signed certifikátem.
+### Verze 1.1.0 (aktuální)
+- ✅ Oprava HTTP 500 chyby v verify endpointu
+- ✅ Přidání cooldown ochrany (60s na úrovni uživatele)
+- ✅ Moderní gym UI design (scanner, dashboard)
+- ✅ Nastavení účtu (změna hesla, info)
+- ✅ HTTPS podpora
+- ✅ Vylepšený error handling
+- ✅ Ochrana proti záporným kreditům
 
-**Řešení:**
-- Pro vývoj je to normální - klikněte na "Pokračovat" nebo "Advanced" → "Proceed to localhost"
-- Pro produkci použijte certifikáty od důvěryhodné CA (Let's Encrypt)
-
-#### 3. Kamera nefunguje na stránce scanner
-**Problém:** Prohlížeč neposkytuje přístup ke kameře.
-
-**Řešení:**
-- **Ujistěte se, že používáte HTTPS** - kamera funguje pouze přes HTTPS
-- Zkontrolujte oprávnění prohlížeče pro přístup ke kameře
-- Zkuste použít jiný prohlížeč (Chrome, Firefox, Safari)
-
-#### 4. Port 443 je již používán
-**Problém:** `Address already in use` při startu aplikace.
-
-**Řešení:**
-```bash
-# Zjistěte, který proces používá port 443
-sudo lsof -i :443
-
-# Nebo použijte netstat
-sudo netstat -tulpn | grep :443
-
-# Zastavte proces nebo změňte port v docker-compose.yml a Dockerfile
-```
-
-#### 5. Docker container se nespustí kvůli SSL
-**Problém:** Container se nespustí nebo okamžitě spadne.
-
-**Řešení:**
-- Ověřte, že volume `./ssl:/app/ssl` je správně namountován v `docker-compose.yml`
-- Zkontrolujte logy: `docker-compose logs web`
-- Ujistěte se, že certifikáty existují před spuštěním: `ls -la ssl/`
-
-### Další problémy
-
-#### Databáze se nevytváří
-- Zkontrolujte, že adresář `data/` existuje a má správná oprávnění
-- Ověřte, že volume `./data:/app/data` je správně namountován
-
-#### API endpointy nefungují
-- Ověřte, že používáte `https://` místo `http://`
-- Zkontrolujte, že port je 443, ne 8000
-- Pro self-signed certifikáty použijte `curl -k` nebo přidejte certifikát do důvěryhodných
-
-## License
-
-MIT
-
+### Verze 1.0.0
+- ✅ Základní funkcionalita (registrace, login, QR kódy)
+- ✅ Kreditový systém
+- ✅ Admin dashboard
