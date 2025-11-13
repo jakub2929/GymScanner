@@ -12,6 +12,12 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set in the environment.")
 
+# Fix pro alias postgres:// → postgresql+psycopg2://
+# SQLAlchemy potřebuje explicitní dialekt postgresql+psycopg2://, ne postgres://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+    logger.info("Normalized DATABASE_URL: changed postgres:// to postgresql+psycopg2://")
+
 # For SQLite, we need check_same_thread=False
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(

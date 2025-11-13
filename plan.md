@@ -1,3 +1,47 @@
+# Plán projektu GymTurniket
+
+## 🟩 100% – Fix PostgreSQL dialect / DATABASE_URL v produkci
+
+**Problém:** SQLAlchemy vyhazuje `sqlalchemy.exc.NoSuchModuleError: sqlalchemy.dialects:postgres` když DATABASE_URL má prefix `postgres://` místo `postgresql+psycopg2://`.
+
+**Příčina:** Coolify poskytuje connection string ve formátu `postgres://user:pass@host:5432/db`, ale SQLAlchemy potřebuje explicitní dialekt `postgresql+psycopg2://` pro správné načtení PostgreSQL driveru.
+
+**Řešení:**
+- Normalizovat DATABASE_URL v kódu: `postgres://` → `postgresql+psycopg2://`
+- Ověřit, že `psycopg2-binary` je v requirements.txt
+- Aktualizovat dokumentaci s poznámkou o automatické konverzi
+
+### Backend – Normalizace DATABASE_URL 🟩
+- **Soubor:** `app/database.py`
+- **Změny:**
+  - ✅ Přidána normalizace: pokud DATABASE_URL začíná `postgres://`, přepíše se na `postgresql+psycopg2://`
+  - ✅ Přidáno logování změny pro debugging
+  - ✅ Aplikace nyní automaticky převádí `postgres://...` connection string z Coolify na správný formát
+
+### Kontrola PostgreSQL driveru 🟩
+- **Soubor:** `requirements.txt`
+- **Ověření:** ✅ `psycopg2-binary==2.9.9` je přítomen v requirements.txt
+
+### Dokumentace / .env.example 🟩
+- **Soubory:** `POSTGRES_SETUP_COOLIFY.md`, `COOLIFY_ENV_VARS_ACTUAL.txt`
+- **Změny:**
+  - ✅ Aktualizován příklad connection stringu na `postgresql+psycopg2://username:password@host:5432/database_name`
+  - ✅ Přidána poznámka o automatické konverzi `postgres://` → `postgresql+psycopg2://`
+  - ✅ Přidána sekce troubleshooting pro `NoSuchModuleError`
+
+### Deploy & ověření 🟨
+- ⏳ Commit a push změn (čeká na uživatele)
+- ⏳ Redeploy na Coolify (čeká na uživatele)
+- ⏳ Ověřit logy: nesmí se objevit `NoSuchModuleError` (čeká na deploy)
+- ⏳ Ověřit, že Uvicorn úspěšně naběhne (čeká na deploy)
+
+**Poznámka:** Po dokončení implementace spusť Docker build a ověř, že build proběhne úspěšně:
+```bash
+docker build -t gymturniket -f Dockerfile.production .
+```
+
+---
+
 # Plán integrace platební brány Comgate + nákup tokenů
 
 **Celkový progress:** 🟩 100% – Integrace platební brány (Comgate) + nákup tokenů dokončena

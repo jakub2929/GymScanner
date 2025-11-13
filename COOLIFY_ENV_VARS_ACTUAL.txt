@@ -6,7 +6,12 @@
 # ============================================
 # ⚠️ DŮLEŽITÉ: Nahraď "postgres-host" skutečným hostem z Coolify PostgreSQL databáze!
 # Získej connection string z Coolify → PostgreSQL databáze → Connection String
-DATABASE_URL=postgresql://gymuser:gympass@POSTGRES_HOST:5432/gymturnstile
+# 
+# Formát: postgresql+psycopg2://username:password@host:5432/database_name
+# Nebo použij formát z Coolify (postgres://...) - aplikace si to automaticky převede
+DATABASE_URL=postgresql+psycopg2://gymuser:gympass@POSTGRES_HOST:5432/gymturnstile
+# Alternativně (aplikace si to převede automaticky):
+# DATABASE_URL=postgres://gymuser:gympass@POSTGRES_HOST:5432/gymturnstile
 
 # ============================================
 # POVINNÉ - JWT AUTHENTICATION

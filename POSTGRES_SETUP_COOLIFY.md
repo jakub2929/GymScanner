@@ -36,12 +36,19 @@ Pokud nemůžeš vytvořit PostgreSQL v Coolify, použij externí službu:
 
 Connection string by měl vypadat takto:
 ```
-postgresql://username:password@host:5432/database_name
+postgresql+psycopg2://username:password@host:5432/database_name
 ```
+
+**Poznámka:** Pokud dostaneš z Coolify nebo jiného poskytovatele URL ve tvaru `postgres://...`, aplikace si ho automaticky přepíše na správný tvar `postgresql+psycopg2://`, takže můžeš použít přímo to, co ti poskytovatel dá.
 
 Příklad:
 ```
-postgresql://gymuser:gympass123@db.xxx.supabase.co:5432/postgres
+postgresql+psycopg2://gymuser:gympass123@db.xxx.supabase.co:5432/postgres
+```
+
+Nebo (aplikace si to převede automaticky):
+```
+postgres://gymuser:gympass123@db.xxx.supabase.co:5432/postgres
 ```
 
 ## Krok 2: Nastav DATABASE_URL v Coolify
@@ -49,15 +56,21 @@ postgresql://gymuser:gympass123@db.xxx.supabase.co:5432/postgres
 1. V Coolify → tvoje aplikace → **Environment Variables**
 2. Přidej nebo uprav `DATABASE_URL`:
    ```bash
-   DATABASE_URL=postgresql://username:password@host:5432/database_name
+   DATABASE_URL=postgresql+psycopg2://username:password@host:5432/database_name
    ```
+   **Nebo použij formát, který ti poskytuje Coolify:**
+   ```bash
+   DATABASE_URL=postgres://username:password@host:5432/database_name
+   ```
+   Aplikace si automaticky převede `postgres://` na `postgresql+psycopg2://`.
 3. Ulož a redeploy aplikaci
 
 ## Krok 3: Ověření
 
 1. Po redeploy zkontroluj logy aplikace
-2. Mělo by se zobrazit: `Using database: postgresql://...`
-3. Zkus se zaregistrovat - účet by se měl uložit do PostgreSQL
+2. Mělo by se zobrazit: `Using database: postgresql+psycopg2://...` nebo `Normalized DATABASE_URL: changed postgres:// to postgresql+psycopg2://`
+3. **Důležité:** Nesmí se objevit chyba `sqlalchemy.exc.NoSuchModuleError: sqlalchemy.dialects:postgres`
+4. Zkus se zaregistrovat - účet by se měl uložit do PostgreSQL
 
 ## Aplikace automaticky vytvoří tabulky
 
@@ -87,8 +100,13 @@ Aplikace automaticky vytvoří všechny potřebné tabulky při prvním spuště
 ### "SSL connection required"
 Některé externí PostgreSQL služby vyžadují SSL. Přidej do connection stringu:
 ```
-postgresql://user:pass@host:5432/db?sslmode=require
+postgresql+psycopg2://user:pass@host:5432/db?sslmode=require
 ```
+
+### "sqlalchemy.exc.NoSuchModuleError: sqlalchemy.dialects:postgres"
+Tato chyba se objevuje, když DATABASE_URL má prefix `postgres://` a SQLAlchemy nemůže najít dialekt. **Aplikace automaticky převádí `postgres://` na `postgresql+psycopg2://`**, takže pokud se tato chyba stále objevuje, zkontroluj:
+- Že máš v `requirements.txt` nainstalovaný `psycopg2-binary`
+- Že normalizace v `app/database.py` funguje správně
 
 ## Výhody PostgreSQL vs SQLite
 
