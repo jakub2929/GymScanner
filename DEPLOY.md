@@ -38,10 +38,15 @@ sqlite:///./data/gym_turnstile.db
 3. Pokud GitHub:
    - Připoj svůj GitHub repository
    - Branch: `main` (nebo jiný)
-   - Build Pack: `Dockerfile`
+   - **Build Pack: `Dockerfile`** ⚠️ **NEPOUŽÍVEJ Docker Compose!**
    - Dockerfile path: `Dockerfile.production`
 4. Pokud Dockerfile:
    - Upload nebo zadej Dockerfile.production obsah
+
+**⚠️ DŮLEŽITÉ:** 
+- **NEPOUŽÍVEJ** `docker-compose.yml` v Coolify (obsahuje port 443, který je obsazený a způsobuje chybu)
+- Použij **pouze** `Dockerfile.production` přímo
+- Coolify automaticky řeší networking a reverse proxy
 
 ## Krok 3: Nastavení environment proměnných
 
