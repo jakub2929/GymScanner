@@ -60,29 +60,41 @@ async def register(
     db: Session = Depends(get_db)
 ):
     """Register a new user"""
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == request.email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+    try:
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == request.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Create new user with hashed password
+        password_hash = get_password_hash(request.password)
+        user = User(
+            email=request.email,
+            name=request.name,
+            password_hash=password_hash
         )
-    
-    # Create new user with hashed password
-    password_hash = get_password_hash(request.password)
-    user = User(
-        email=request.email,
-        name=request.name,
-        password_hash=password_hash
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    
-    return RegisterResponse(
-        message="User registered successfully",
-        user_id=user.id
-    )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        return RegisterResponse(
+            message="User registered successfully",
+            user_id=user.id
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Database connection error or other error
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Registration error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
+        )
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
@@ -90,33 +102,45 @@ async def login(
     db: Session = Depends(get_db)
 ):
     """Login and get access token"""
-    # Find user by email
-    user = db.query(User).filter(User.email == form_data.username).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+    try:
+        # Find user by email
+        user = db.query(User).filter(User.email == form_data.username).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Verify password
+        if not verify_password(form_data.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Create access token (sub must be a string for JWT standard)
+        access_token = create_access_token({"sub": str(user.id)})
+        
+        return LoginResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user_id=user.id,
+            user_name=user.name,
+            user_email=user.email
         )
-    
-    # Verify password
-    if not verify_password(form_data.password, user.password_hash):
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Database connection error or other error
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Login error: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Login failed: {str(e)}"
         )
-    
-    # Create access token (sub must be a string for JWT standard)
-    access_token = create_access_token({"sub": str(user.id)})
-    
-    return LoginResponse(
-        access_token=access_token,
-        token_type="bearer",
-        user_id=user.id,
-        user_name=user.name,
-        user_email=user.email
-    )
 
 @router.post("/logout")
 async def logout():
