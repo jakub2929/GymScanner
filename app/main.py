@@ -26,22 +26,47 @@ try:
         data_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Created data directory: {data_dir}")
     
+    # Test database connection first
+    logger.info("Testing database connection...")
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("Database connection successful")
+    except Exception as db_error:
+        logger.error(f"Database connection failed: {db_error}")
+        logger.error("Application will continue, but database operations may fail.")
+        logger.error("Please check:")
+        logger.error("1. DATABASE_URL is correct")
+        logger.error("2. PostgreSQL database is running")
+        logger.error("3. Network connectivity between app and database")
+        # Don't raise - let app start, but database operations will fail
+    
     # Create database tables
     logger.info("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
-    
-    ensure_access_token_columns()
-    ensure_user_password_column()
-    from app.database import ensure_user_credits_column, ensure_access_token_nullable_columns, ensure_user_admin_column, ensure_last_scan_at_column, ensure_payment_comgate_columns
-    ensure_user_credits_column()
-    ensure_access_token_nullable_columns()
-    ensure_user_admin_column()
-    ensure_last_scan_at_column()
-    ensure_payment_comgate_columns()
-    logger.info("Database migrations completed")
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+        
+        ensure_access_token_columns()
+        ensure_user_password_column()
+        from app.database import ensure_user_credits_column, ensure_access_token_nullable_columns, ensure_user_admin_column, ensure_last_scan_at_column, ensure_payment_comgate_columns
+        ensure_user_credits_column()
+        ensure_access_token_nullable_columns()
+        ensure_user_admin_column()
+        ensure_last_scan_at_column()
+        ensure_payment_comgate_columns()
+        logger.info("Database migrations completed")
+    except Exception as migration_error:
+        logger.error(f"Database migration failed: {migration_error}")
+        logger.error("Application will continue, but some features may not work.")
+        # Don't raise - let app start
+        
+except ImportError as import_error:
+    logger.error(f"Failed to import modules: {import_error}", exc_info=True)
+    raise
 except Exception as e:
-    logger.error(f"Failed to initialize database: {e}", exc_info=True)
+    logger.error(f"Failed to initialize application: {e}", exc_info=True)
+    # Only raise for critical errors
     raise
 
 app = FastAPI(
