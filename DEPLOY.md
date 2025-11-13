@@ -44,9 +44,10 @@ sqlite:///./data/gym_turnstile.db
    - Upload nebo zadej Dockerfile.production obsah
 
 **⚠️ DŮLEŽITÉ:** 
-- **NEPOUŽÍVEJ** `docker-compose.yml` v Coolify (obsahuje port 443, který je obsazený a způsobuje chybu)
+- **NEPOUŽÍVEJ** `docker-compose.yml` v Coolify (Coolify spravuje porty sám)
 - Použij **pouze** `Dockerfile.production` přímo
-- Coolify automaticky řeší networking a reverse proxy
+- Coolify automaticky řeší networking, reverse proxy a porty (používá EXPOSE z Dockerfile)
+- `docker-compose.yml` už nemá `ports` sekci - Coolify to řeší sám
 
 ## Krok 3: Nastavení environment proměnných
 
