@@ -1,0 +1,43 @@
+# Coolify ignore file
+# Soubory, které se nebudou kopírovat do Coolify build kontextu
+
+# Development files
+.env
+.env.local
+*.log
+*.tmp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/
+gym_turnstile.db/
+
+# SSL certificates (Coolify řeší SSL)
+ssl/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+plan.md
+DEPLOY.md
+README.md
+
+# Docker files (kromě Dockerfile.production)
+docker-compose.yml
+Dockerfile
+generate_cert.sh
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Access - QR Code Generator</title>
+    <title>Gym Access - Přihlášení</title>
     <style>
         * {
             margin: 0;
@@ -26,7 +26,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             padding: 40px;
-            max-width: 500px;
+            max-width: 450px;
             width: 100%;
         }
         
@@ -41,6 +41,36 @@
             text-align: center;
             margin-bottom: 30px;
             font-size: 14px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
         }
         
         .form-group {
@@ -92,41 +122,6 @@
             transform: none;
         }
         
-        .qr-container {
-            display: none;
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .qr-container.active {
-            display: block;
-        }
-        
-        .qr-code {
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            display: inline-block;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .qr-code img {
-            max-width: 300px;
-            height: auto;
-        }
-        
-        .token-info {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            font-size: 14px;
-            color: #666;
-        }
-        
         .error {
             background: #fee;
             color: #c33;
@@ -152,75 +147,82 @@
         .success.active {
             display: block;
         }
-        
-        .loading {
-            text-align: center;
-            color: #666;
-            margin-top: 20px;
-            display: none;
-        }
-        
-        .loading.active {
-            display: block;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏋️ Gym Access</h1>
-        <p class="subtitle">Generate your QR code for turnstile access</p>
+        <p class="subtitle">Přihlaste se nebo se zaregistrujte pro přístup</p>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="login">Přihlášení</div>
+            <div class="tab" data-tab="register">Registrace</div>
+        </div>
         
         <div class="error" id="error"></div>
         <div class="success" id="success"></div>
         
-        <form id="paymentForm">
-            <div class="form-group">
-                <label for="name">Full Name</label>
-                <input type="text" id="name" name="name" required placeholder="John Doe">
-            </div>
-            
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required placeholder="john@example.com">
-            </div>
-            
-            <div class="form-group">
-                <label for="amount">Amount ($)</label>
-                <input type="number" id="amount" name="amount" required min="1" step="0.01" value="25.00">
-            </div>
-            
-            <div class="form-group">
-                <label for="expiresInDays">Platnost (dny)</label>
-                <input type="number" id="expiresInDays" name="expiresInDays" min="1" max="365" value="1" title="Počet dní, po které bude QR kód platný">
-            </div>
-            
-            <button type="submit" id="submitBtn">Pay & Generate QR Code</button>
-        </form>
+        <!-- Login Form -->
+        <div class="tab-content active" id="loginForm">
+            <form id="loginFormElement">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" name="email" required placeholder="vas@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Heslo</label>
+                    <input type="password" id="loginPassword" name="password" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" id="loginBtn">Přihlásit se</button>
+            </form>
+        </div>
         
-        <div class="loading" id="loading">Processing payment...</div>
-        
-        <div class="qr-container" id="qrContainer">
-            <h2>Your Access QR Code</h2>
-            <div class="qr-code">
-                <img id="qrImage" src="" alt="QR Code">
-            </div>
-            <div class="token-info">
-                <strong>Token:</strong> <span id="tokenDisplay"></span><br>
-                <strong>Expires:</strong> <span id="expiresDisplay"></span>
-            </div>
+        <!-- Register Form -->
+        <div class="tab-content" id="registerForm">
+            <form id="registerFormElement">
+                <div class="form-group">
+                    <label for="registerName">Jméno</label>
+                    <input type="text" id="registerName" name="name" required placeholder="Jan Novák">
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" name="email" required placeholder="vas@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerPassword">Heslo</label>
+                    <input type="password" id="registerPassword" name="password" required placeholder="••••••••" minlength="6">
+                </div>
+                
+                <button type="submit" id="registerBtn">Registrovat se</button>
+            </form>
         </div>
     </div>
     
     <script>
-        const form = document.getElementById('paymentForm');
+        // Tab switching
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(targetTab + 'Form').classList.add('active');
+                
+                hideMessages();
+            });
+        });
+        
         const errorDiv = document.getElementById('error');
         const successDiv = document.getElementById('success');
-        const loadingDiv = document.getElementById('loading');
-        const qrContainer = document.getElementById('qrContainer');
-        const qrImage = document.getElementById('qrImage');
-        const tokenDisplay = document.getElementById('tokenDisplay');
-        const expiresDisplay = document.getElementById('expiresDisplay');
-        const submitBtn = document.getElementById('submitBtn');
         
         function showError(message) {
             errorDiv.textContent = message;
@@ -239,22 +241,68 @@
             successDiv.classList.remove('active');
         }
         
-        form.addEventListener('submit', async (e) => {
+        // Login
+        document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
             e.preventDefault();
             hideMessages();
-            loadingDiv.classList.add('active');
-            submitBtn.disabled = true;
-            qrContainer.classList.remove('active');
+            
+            const loginBtn = document.getElementById('loginBtn');
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Přihlašování...';
+            
+            const formData = new FormData();
+            formData.append('username', document.getElementById('loginEmail').value);
+            formData.append('password', document.getElementById('loginPassword').value);
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Přihlášení selhalo');
+                }
+                
+                const data = await response.json();
+                
+                // Store token in localStorage
+                localStorage.setItem('access_token', data.access_token);
+                localStorage.setItem('user_id', data.user_id);
+                localStorage.setItem('user_name', data.user_name);
+                localStorage.setItem('user_email', data.user_email);
+                
+                showSuccess('Přihlášení úspěšné! Přesměrování...');
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1000);
+                
+            } catch (error) {
+                showError(error.message || 'Chyba při přihlášení');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Přihlásit se';
+            }
+        });
+        
+        // Register
+        document.getElementById('registerFormElement').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMessages();
+            
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registrace...';
             
             const formData = {
-                email: document.getElementById('email').value,
-                name: document.getElementById('name').value,
-                amount: parseFloat(document.getElementById('amount').value)
+                email: document.getElementById('registerEmail').value,
+                name: document.getElementById('registerName').value,
+                password: document.getElementById('registerPassword').value
             };
             
             try {
-                // Step 1: Create payment
-                const paymentResponse = await fetch('/api/create_payment', {
+                const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -262,50 +310,32 @@
                     body: JSON.stringify(formData)
                 });
                 
-                if (!paymentResponse.ok) {
-                    const error = await paymentResponse.json();
-                    throw new Error(error.detail || 'Payment failed');
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Registrace selhala');
                 }
                 
-                const payment = await paymentResponse.json();
-                showSuccess('Payment successful! Generating QR code...');
+                const data = await response.json();
+                showSuccess('Registrace úspěšná! Nyní se můžete přihlásit.');
                 
-                // Step 2: Generate QR code
-                const expiresInDays = parseInt(document.getElementById('expiresInDays').value) || 1;
-                const qrResponse = await fetch('/api/generate_qr', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        payment_id: payment.payment_id,
-                        expires_in_days: expiresInDays
-                    })
-                });
-                
-                if (!qrResponse.ok) {
-                    const error = await qrResponse.json();
-                    throw new Error(error.detail || 'QR generation failed');
-                }
-                
-                const qrData = await qrResponse.json();
-                
-                // Display QR code
-                qrImage.src = qrData.qr_code_url;
-                tokenDisplay.textContent = qrData.token;
-                expiresDisplay.textContent = new Date(qrData.expires_at).toLocaleString();
-                qrContainer.classList.add('active');
-                
-                showSuccess('QR code generated successfully! Show this at the turnstile.');
+                // Switch to login tab
+                setTimeout(() => {
+                    document.querySelector('[data-tab="login"]').click();
+                    document.getElementById('loginEmail').value = formData.email;
+                }, 1500);
                 
             } catch (error) {
-                showError(error.message || 'An error occurred. Please try again.');
+                showError(error.message || 'Chyba při registraci');
             } finally {
-                loadingDiv.classList.remove('active');
-                submitBtn.disabled = false;
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Registrovat se';
             }
         });
+        
+        // Check if already logged in
+        if (localStorage.getItem('access_token')) {
+            window.location.href = '/dashboard';
+        }
     </script>
 </body>
 </html>
-

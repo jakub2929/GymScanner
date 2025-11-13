@@ -1,0 +1,32 @@
+# Coolify deployment configuration
+# 
+# POZNÁMKA: Coolify obvykle nepotřebuje tento soubor - používá Dockerfile.production přímo.
+# Tento soubor slouží jako dokumentace a reference pro nastavení v Coolify dashboard.
+#
+# V Coolify dashboard nastav:
+# - Build Pack: Dockerfile
+# - Dockerfile Path: Dockerfile.production
+# - Port: 8000
+# - Protocol: HTTP (Coolify přidá HTTPS automaticky)
+
+# Environment variables (nastav v Coolify dashboard):
+# 
+# POVINNÉ:
+# - DATABASE_URL=postgresql://user:pass@postgres:5432/dbname
+# - JWT_SECRET_KEY=min_32_znaku_silne_heslo
+# - COMGATE_MERCHANT_ID=tvuj_merchant_id
+# - COMGATE_SECRET=tvuj_secret
+# - COMGATE_RETURN_URL=https://tvoje-domena.cz/api/payments/comgate/return
+# - COMGATE_NOTIFY_URL=https://tvoje-domena.cz/api/payments/comgate/notify
+#
+# VOLITELNÉ:
+# - JWT_ALGORITHM=HS256 (default)
+# - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60 (default)
+# - COMGATE_TEST_MODE=false (true pro testování)
+# - ENVIRONMENT=production
+# - LOG_LEVEL=info
+# - PYTHONUNBUFFERED=1
+
+# Health check endpoint: /health
+# Coolify automaticky detekuje a používá tento endpoint
+

@@ -2,13 +2,16 @@ services:
   web:
     build: .
     ports:
+      - "8000:8000"
       - "443:443"
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./data:/app/data
       - ./static:/app/static
       - ./ssl:/app/ssl
-    environment:
-      - DATABASE_URL=sqlite:///./data/gym_turnstile.db
     restart: unless-stopped
 
   # Optional: Uncomment to use Postgres instead of SQLite

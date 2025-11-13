@@ -177,7 +177,7 @@ docker-compose up -d
 - `token_deactivated` - Token byl deaktivován
 - `user_not_found` - Uživatel tokenu nebyl nalezen
 
-## Docker
+## Docker (lokální vývoj)
 
 ```bash
 # Build
@@ -200,6 +200,27 @@ docker-compose down
 docker-compose build
 docker-compose up -d
 ```
+
+## Deployment na Coolify
+
+Aplikace je připravena pro deployment na Coolify (self-hosted platforma).
+
+**Pro detailní instrukce viz:** [DEPLOY.md](./DEPLOY.md)
+
+### Rychlý start:
+
+1. Vytvoř aplikaci v Coolify dashboard
+2. Použij `Dockerfile.production` pro build
+3. Nastav environment proměnné (viz `.env.example`)
+4. Přidej doménu (Coolify automaticky nastaví SSL)
+5. Deploy!
+
+**Výhody Coolify:**
+- ✅ Automatické SSL certifikáty (Let's Encrypt)
+- ✅ Reverse proxy s HTTPS
+- ✅ Snadný deployment z Git
+- ✅ Automatické health checks
+- ✅ Monitoring a logy
 
 ## Environment variables
 

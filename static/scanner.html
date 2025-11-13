@@ -14,129 +14,340 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 25%, #16213e 50%, #0f3460 75%, #1a0a2e 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(0, 191, 255, 0.08) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(120deg); }
+            66% { transform: translate(-20px, 20px) rotate(240deg); }
         }
         
         .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                0 0 50px rgba(102, 126, 234, 0.3);
+            padding: 3rem;
+            max-width: 700px;
             width: 100%;
             text-align: center;
+            position: relative;
+            z-index: 1;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         h1 {
-            color: #333;
-            margin-bottom: 10px;
+            color: #1a0a2e;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            text-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
         }
         
         .subtitle {
             color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
+            margin-bottom: 2rem;
+            font-size: 1rem;
         }
         
         #reader {
             width: 100%;
             max-width: 500px;
-            margin: 20px auto;
-            border-radius: 10px;
+            margin: 2rem auto;
+            border-radius: 15px;
             overflow: hidden;
             background: #000;
+            box-shadow: 
+                0 10px 40px rgba(0, 0, 0, 0.3),
+                0 0 30px rgba(102, 126, 234, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        #reader:hover {
+            transform: translateY(-5px);
+            box-shadow: 
+                0 15px 50px rgba(0, 0, 0, 0.4),
+                0 0 40px rgba(102, 126, 234, 0.4);
         }
         
         .status-message {
-            margin-top: 20px;
-            padding: 20px;
-            border-radius: 10px;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 15px;
             font-weight: 600;
             display: none;
+            text-align: left;
+            line-height: 1.8;
+            font-size: 1rem;
+            position: relative;
+            animation: slideIn 0.5s ease-out;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .status-message.success {
-            background: #d4edda;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             color: #155724;
-            border: 2px solid #c3e6cb;
+            border: 2px solid #00c853;
             display: block;
-            text-align: left;
-            padding: 20px;
-            line-height: 1.6;
-            font-size: 16px;
+            box-shadow: 
+                0 4px 20px rgba(0, 200, 83, 0.3),
+                0 0 30px rgba(0, 200, 83, 0.2);
+        }
+
+        .status-message.success::before {
+            content: '✅';
+            font-size: 2rem;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
         }
         
         .status-message.error {
-            background: #f8d7da;
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
             color: #721c24;
-            border: 2px solid #f5c6cb;
+            border: 2px solid #ff4444;
             display: block;
+            box-shadow: 
+                0 4px 20px rgba(255, 68, 68, 0.3),
+                0 0 30px rgba(255, 68, 68, 0.2);
+        }
+
+        .status-message.error::before {
+            content: '❌';
+            font-size: 2rem;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
+
+        .status-message.cooldown {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border: 2px solid #ff9800;
+            display: block;
+            box-shadow: 
+                0 4px 20px rgba(255, 152, 0, 0.3),
+                0 0 30px rgba(255, 152, 0, 0.2);
+        }
+
+        .status-message.cooldown::before {
+            content: '⏱️';
+            font-size: 2rem;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
         }
         
         .status-message.info {
-            background: #d1ecf1;
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
             color: #0c5460;
-            border: 2px solid #bee5eb;
+            border: 2px solid #00bcd4;
             display: block;
         }
         
         .button {
-            margin-top: 20px;
-            padding: 12px 24px;
+            margin-top: 1.5rem;
+            padding: 1rem 2rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 12px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 4px 15px rgba(102, 126, 234, 0.4),
+                0 0 20px rgba(102, 126, 234, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .button:hover::before {
+            width: 300px;
+            height: 300px;
         }
         
         .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 
+                0 6px 25px rgba(102, 126, 234, 0.6),
+                0 0 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(-1px);
+        }
+
+        .button span {
+            position: relative;
+            z-index: 1;
         }
         
         .button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
         
         .loading {
             display: none;
-            margin-top: 20px;
-            color: #666;
+            margin-top: 2rem;
+            color: #1a0a2e;
+            font-size: 1.1rem;
+            font-weight: 600;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
         }
         
         .loading.active {
             display: block;
         }
+
+        .loading::before {
+            content: '⏳ ';
+        }
         
         .manual-input {
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 2px solid #e0e0e0;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .manual-input h3 {
+            color: #1a0a2e;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
         }
         
         .manual-input input {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            margin-bottom: 10px;
+            padding: 0.75rem 1rem;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
         }
         
         .manual-input input:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .credits-info {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #00c853;
+        }
+
+        .cooldown-timer {
+            margin-top: 1rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #ff9800;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem 1.5rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            #reader {
+                max-width: 100%;
+            }
+
+            .status-message {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .status-message.success::before,
+            .status-message.error::before,
+            .status-message.cooldown::before {
+                font-size: 1.5rem;
+                top: 0.5rem;
+                right: 0.5rem;
+            }
         }
     </style>
 </head>
@@ -154,11 +365,17 @@
         <div class="manual-input">
             <h3>Nebo zadejte token ručně:</h3>
             <input type="text" id="manualToken" placeholder="Vložte token QR kódu">
-            <button class="button" onclick="verifyManualToken()">Ověřit token</button>
+            <button class="button" onclick="verifyManualToken()">
+                <span>Ověřit token</span>
+            </button>
         </div>
         
-        <button class="button" id="startButton" onclick="startScanner()">Spustit skener</button>
-        <button class="button" id="stopButton" onclick="stopScanner()" style="display: none;">Zastavit skener</button>
+        <button class="button" id="startButton" onclick="startScanner()">
+            <span>🎥 Spustit skener</span>
+        </button>
+        <button class="button" id="stopButton" onclick="stopScanner()" style="display: none;">
+            <span>⏹️ Zastavit skener</span>
+        </button>
     </div>
     
     <script>
@@ -167,18 +384,57 @@
         let isProcessing = false;
         let lastScannedToken = null;
         let lastScanTimestamp = 0;
-        const SCAN_COOLDOWN_MS = 4000;
+        const SCAN_COOLDOWN_MS = 4000; // Frontend cooldown to prevent duplicate rapid scans
+        let cooldownTimer = null;
         
-        function showMessage(message, type) {
+        function showMessage(message, type, creditsLeft = null, cooldownSeconds = null) {
             const statusMessage = document.getElementById('statusMessage');
-            statusMessage.innerHTML = message.replace(/\n/g, '<br>');
+            let html = message.replace(/\n/g, '<br>');
+            
+            // Add credits info if available
+            if (creditsLeft !== null && creditsLeft !== undefined) {
+                html += `<div class="credits-info">💰 Zbývá kreditů: ${creditsLeft}</div>`;
+            }
+            
+            // Add cooldown timer if active
+            if (cooldownSeconds !== null && cooldownSeconds > 0) {
+                html += `<div class="cooldown-timer">⏱️ Počkej ${cooldownSeconds} sekund</div>`;
+                
+                // Start countdown if not already running
+                if (cooldownTimer) {
+                    clearInterval(cooldownTimer);
+                }
+                let secondsLeft = cooldownSeconds;
+                cooldownTimer = setInterval(() => {
+                    secondsLeft--;
+                    if (secondsLeft <= 0) {
+                        clearInterval(cooldownTimer);
+                        const timerEl = statusMessage.querySelector('.cooldown-timer');
+                        if (timerEl) {
+                            timerEl.textContent = '✅ Cooldown vypršel - můžeš znovu naskenovat';
+                            timerEl.style.color = '#00c853';
+                        }
+                    } else {
+                        const timerEl = statusMessage.querySelector('.cooldown-timer');
+                        if (timerEl) {
+                            timerEl.textContent = `⏱️ Počkej ${secondsLeft} sekund`;
+                        }
+                    }
+                }, 1000);
+            }
+            
+            statusMessage.innerHTML = html;
             statusMessage.className = `status-message ${type}`;
             statusMessage.style.display = 'block';
             
-            const timeout = type === 'error' ? 10000 : 15000;
+            const timeout = type === 'error' || type === 'cooldown' ? 15000 : 10000;
             setTimeout(() => {
                 if (statusMessage.className.includes(type)) {
                     statusMessage.style.display = 'none';
+                    if (cooldownTimer) {
+                        clearInterval(cooldownTimer);
+                        cooldownTimer = null;
+                    }
                 }
             }, timeout);
         }
@@ -205,6 +461,7 @@
                 return;
             }
             
+            // Frontend cooldown to prevent duplicate rapid scans (before API call)
             if (fromScanner) {
                 const now = Date.now();
                 if (isProcessing && (now - lastScanTimestamp) < SCAN_COOLDOWN_MS) {
@@ -237,12 +494,21 @@
                     } catch (e) {
                         errorData = { detail: `HTTP ${response.status}: ${response.statusText}` };
                     }
+                    
+                    // Handle 500 errors gracefully
+                    if (response.status === 500) {
+                        console.error('Server error:', errorData);
+                        showMessage('❌ Chyba na serveru. Zkus to prosím znovu později.', 'error');
+                        return;
+                    }
+                    
                     throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}`);
                 }
                 
                 const data = await response.json();
                 
-                if (data.status === 'allow') {
+                // Handle new response structure with allowed: bool
+                if (data.allowed === true) {
                     let successMsg = '✅ Přístup povolen! Vítejte v posilovně.\n\n';
                     if (data.user_name) {
                         successMsg += `👤 Jméno: ${data.user_name}\n`;
@@ -250,15 +516,53 @@
                     if (data.user_email) {
                         successMsg += `📧 Email: ${data.user_email}\n`;
                     }
-                    if (data.expires_at) {
-                        const expiresDate = new Date(data.expires_at);
-                        successMsg += `📅 Platné do: ${expiresDate.toLocaleString('cs-CZ')}\n`;
-                    }
-                    showMessage(successMsg, 'success');
+                    showMessage(successMsg, 'success', data.credits_left, null);
                 } else {
-                    showMessage(`❌ Přístup zamítnut: ${data.reason}`, 'error');
+                    // Handle different denial reasons
+                    let errorMsg = '';
+                    let messageType = 'error';
+                    
+                    switch (data.reason) {
+                        case 'no_credits':
+                            errorMsg = '❌ Nemůžeš vstoupit - nemáš žádné kredity.\n\n💰 Nakup si kredity v nastavení účtu.';
+                            messageType = 'error';
+                            break;
+                        case 'cooldown':
+                            errorMsg = '⏱️ Příliš rychlé další odpíchnutí!\n\nPočkej chvíli, než se můžeš znovu odpíchnout.';
+                            messageType = 'cooldown';
+                            break;
+                        case 'token_not_found':
+                            errorMsg = '❌ Neplatný token.\n\nToken nebyl nalezen v databázi.';
+                            messageType = 'error';
+                            break;
+                        case 'token_deactivated':
+                            errorMsg = '❌ Token je deaktivován.\n\nVygeneruj si nový QR kód.';
+                            messageType = 'error';
+                            break;
+                        case 'user_not_found':
+                            errorMsg = '❌ Uživatel nebyl nalezen.\n\nKontaktuj prosím podporu.';
+                            messageType = 'error';
+                            break;
+                        case 'invalid_token':
+                            errorMsg = '❌ Neplatný token.\n\nToken není aktivní nebo je neplatný.';
+                            messageType = 'error';
+                            break;
+                        default:
+                            errorMsg = `❌ Přístup zamítnut: ${data.reason || 'Neznámý důvod'}`;
+                            messageType = 'error';
+                    }
+                    
+                    showMessage(errorMsg, messageType, data.credits_left || 0, data.cooldown_seconds_left);
                 }
             } catch (error) {
+                console.error('Error verifying token:', error);
+                
+                // Handle network errors
+                if (error.name === 'TypeError' || error.message.includes('Failed to fetch')) {
+                    showMessage('❌ Chyba připojení k serveru. Zkontroluj připojení k internetu.', 'error');
+                    return;
+                }
+                
                 let errorMsg = error.message;
                 if (error.message.includes('pattern')) {
                     errorMsg = 'Neplatný formát tokenu';
@@ -297,7 +601,8 @@
                 document.getElementById('stopButton').style.display = 'block';
                 showMessage('Skener spuštěn. Namiřte kameru na QR kód.', 'info');
             }).catch((err) => {
-                showMessage('Chyba při spuštění kamery: ' + err, 'error');
+                console.error('Error starting scanner:', err);
+                showMessage('❌ Chyba při spuštění kamery: ' + err, 'error');
             });
         }
         
@@ -310,7 +615,8 @@
                 document.getElementById('stopButton').style.display = 'none';
                 showMessage('Skener zastaven.', 'info');
             }).catch((err) => {
-                showMessage('Chyba při zastavení skeneru: ' + err, 'error');
+                console.error('Error stopping scanner:', err);
+                showMessage('❌ Chyba při zastavení skeneru: ' + err, 'error');
             });
         }
         
@@ -329,11 +635,6 @@
                 verifyManualToken();
             }
         });
-        
-        // Auto-start scanner on page load (optional)
-        // Uncomment the line below if you want scanner to start automatically
-        // window.addEventListener('load', startScanner);
     </script>
 </body>
 </html>
-

@@ -29,3 +29,6 @@ ENV/
 ssl/
 *.pem
 
+# Environment variables
+.env
+

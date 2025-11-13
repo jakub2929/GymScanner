@@ -1,127 +1,259 @@
-# Plán úpravy designu QR stránky + tlačítko "Stáhnout QR"
+# Plán integrace platební brány Comgate + nákup tokenů
 
-**Celkový progress:** 🟩 100% (3/3 hlavních úkolů dokončeno)
+**Celkový progress:** 🟩 100% – Integrace platební brány (Comgate) + nákup tokenů dokončena
 
-## Celkový popis
+## Analýza existujícího kódu
 
-Úprava designu dashboard stránky (QR kód + kredity) - odstranění "AI gradient" stylu, zavedení Tailwind CSS, čistá barevná paleta vhodná pro GYM, odstranění emojis, přidání tlačítka pro stažení QR kódu.
+### Existující struktura
 
-**Důležité:** NESAHAT na backend logiku, databázi, business logiku. Pouze frontend design a QR download funkcionalita.
+**Modely:**
+- ✅ `User` model má `credits` (Integer, default=0) - toto je to, co potřebujeme
+- ✅ `Payment` model už existuje s poli: id, user_id, amount (Float), status (String), payment_id (String, unique), created_at, completed_at
+- ✅ `AccessToken` má vztah k Payment přes `payment_id` (nullable)
+
+**Existující payment logika:**
+- ✅ `app/routes/credits.py` - má `/api/buy_credits` (mock payment, okamžitě přidává kredity)
+- ✅ `app/routes/payments.py` - má `/api/create_payment` (starý mock endpoint)
+
+**Frontend:**
+- ✅ `static/dashboard.html` - hlavní stránka s QR kódem, zobrazuje kredity v `creditsDisplay` elementu
+- ✅ Používá Tailwind CSS
+- ✅ Má tlačítka "Stáhnout QR" a "Vygenerovat nový QR kód"
+
+### Co potřebujeme přidat/upravit
+
+1. **Rozšířit Payment model** o pole pro Comgate:
+   - `token_amount` (Integer) - počet tokenů v objednávce
+   - `price_czk` (Integer) - cena v Kč
+   - `provider` (String) - "comgate" nebo jiný provider
+   - `paid_at` (DateTime, nullable) - kdy byla platba dokončena
+   - `updated_at` (DateTime) - poslední aktualizace
+
+2. **Vytvořit nový payment service** pro abstrakci platební logiky
+
+3. **Nové endpointy:**
+   - `POST /api/payments/create` - vytvoření objednávky
+   - `POST /api/payments/comgate/notify` - callback z Comgate (NOTIFY URL)
+   - `GET /api/payments/comgate/return` - návrat uživatele po platbě (RETURN URL)
+
+4. **Frontend:**
+   - Přidat tlačítko "Koupit tokeny" na dashboard
+   - Modal s tabulkou balíčků (1, 5, 10 tokenů)
+   - Integrace s novým endpointem
 
 ---
 
-## Analýza současného stavu
+## 1) Backend – Platební logika & modely
 
-### Stack:
-- **Backend:** FastAPI (Python)
-- **Frontend:** Vanilla HTML/CSS/JS (statické soubory)
-- **QR stránka:** `static/dashboard.html`
-- **QR implementace:** Backend generuje PNG jako base64 data URL, zobrazuje se jako `<img id="qrImage">`
-- **Email API:** Neexistuje (jen TODO komentáře v kódu)
+### 1.1 Rozšíření Payment modelu 🟩
+- **Popis:** Přidat pole pro Comgate integraci do existujícího Payment modelu
+- **Soubor:** `app/models.py`
+- **Změny:**
+  - Přidat `token_amount` (Integer) - počet tokenů v objednávce
+  - Přidat `price_czk` (Integer) - cena v Kč (místo Float amount pro přesnost)
+  - Přidat `provider` (String, default="comgate") - identifikace platební brány
+  - Přidat `paid_at` (DateTime, nullable) - kdy byla platba dokončena
+  - Přidat `updated_at` (DateTime) - poslední aktualizace
+  - Změnit `status` na enum: "pending", "paid", "failed", "cancelled"
+  - **Migrace:** Vytvořit migrační funkci v `app/database.py` pro přidání nových sloupců
 
-### Současný design:
-- Animované gradienty (`linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 25%...)`)
-- Neon efekty a animace (`@keyframes gradientShift`, `@keyframes float`)
-- Emojis v nadpisech (🏋️)
-- Inline CSS v `<style>` tagu
-- "AI gradient" styl s přehnanými efekty
+### 1.2 Vytvoření Payment Service vrstvy 🟩
+- **Popis:** Vytvořit abstrakci pro platební logiku (připravit pro Comgate)
+- **Soubor:** `app/services/payment_service.py` (nový)
+- **Funkce:**
+  - `create_order(user_id, token_amount, price_czk) -> Payment` - vytvoří objednávku se statusem pending
+  - `mark_order_paid(payment_id) -> Payment` - označí objednávku jako paid, přičte tokeny uživateli
+  - `prepare_comgate_data(payment) -> dict` - připraví data pro budoucí Comgate redirect (zatím placeholder)
+  - **Důležité:** Použít transakce pro atomické operace (připsání tokenů + update payment)
 
-### Soubory k úpravě:
-- `static/dashboard.html` - hlavní QR stránka (design + download tlačítko)
+### 1.3 Nové payment endpointy 🟩
+- **Soubor:** `app/routes/payments.py` (upravit existující)
+- **Endpointy:**
+  - `POST /api/payments/create`:
+    - Vstup: `{ "token_amount": 1 | 5 | 10 }`
+    - Validace: token_amount musí být 1, 5 nebo 10
+    - Spočítá cenu: `token_amount * 100` Kč
+    - Vytvoří Payment se statusem "pending"
+    - Připraví data pro Comgate (zatím placeholder redirect_url)
+    - Odpověď: `{ payment_id, token_amount, price_czk, provider, redirect_url }`
+  
+  - `POST /api/payments/comgate/notify`:
+    - Callback z Comgate (NOTIFY URL)
+    - Zatím TODO logika s validací signatury
+    - Po úspěšné validaci: označit payment jako paid, přičíst tokeny
+  
+  - `GET /api/payments/comgate/return`:
+    - Návrat uživatele po platbě (RETURN URL)
+    - Zobrazí status platby (úspěch/neúspěch)
+    - Přesměruje na dashboard s informací o připsaných tokenech
+
+### 1.4 Migrace databáze 🟩
+- **Soubor:** `app/database.py`
+- **Funkce:** `ensure_payment_comgate_columns()`
+- **Změny:**
+  - Přidat sloupce: token_amount, price_czk, provider, paid_at, updated_at
+  - Aktualizovat existující payments (pokud existují)
 
 ---
 
-## Úkoly
+## 2) Frontend – Tlačítko "Koupit tokeny" + tabulka balíčků
 
-### 1. Tailwind CSS setup 🟩
-- **Popis:** Přidat Tailwind CSS do projektu (přes CDN, protože je to vanilla HTML)
+### 2.1 Přidání tlačítka "Koupit tokeny" 🟩
 - **Soubor:** `static/dashboard.html`
 - **Změny:**
-  - Přidat Tailwind CDN link do `<head>` sekce
-  - Přidat základní theme konfiguraci (volitelně přes CDN config)
-  - Vytvořit čistou barevnou paletu vhodnou pro GYM (čitelné, jednoduché barvy)
+  - Přidat tlačítko "Koupit tokeny" na dashboard (např. vedle "Vygenerovat nový QR kód" nebo jako samostatnou sekci)
+  - Stylově sladěné s Tailwind CSS (modrá barva, podobné jako ostatní tlačítka)
 
-### 2. Design refactor (Tailwind) 🟩
-- **Popis:** Přepsat současný CSS na Tailwind utility classy, odstranit emojis, změnit barvy
+### 2.2 Modal s tabulkou balíčků 🟩
 - **Soubor:** `static/dashboard.html`
 - **Změny:**
-  - Odstranit všechny emojis z nadpisů/popisků (🏋️, 🔄, atd.)
-  - Přepsat inline CSS na Tailwind utility classy
-  - Odstranit animované gradienty a neon efekty
-  - Vytvořit čistý, moderní design s:
-    - Jednoduchým pozadím (světle šedé nebo bílé)
-    - Čitelnou typografií
-    - Čistými kartami a tlačítky
-    - "Gym vibe" barvami (např. tmavě modrá, šedá, bílá - žádný neon)
-  - Zachovat všechny funkce (QR zobrazení, kredity, regenerace QR)
+  - Po kliknutí na "Koupit tokeny" otevřít modal/panel
+  - Tabulka s balíčky:
+    - **1 token** – 100 Kč
+    - **5 tokenů** – 500 Kč
+    - **10 tokenů** – 1000 Kč
+  - U každého balíčku tlačítko "Koupit"
+  - Design: čistý, moderní, s Tailwind CSS
 
-### 3. QR download button 🟩
-- **Popis:** Přidat tlačítko "Stáhnout QR" pro stažení QR kódu jako obrázek
+### 2.3 Integrace s backend API 🟩
+- **Soubor:** `static/dashboard.html` (JavaScript sekce)
+- **Funkce:**
+  - `openBuyTokensModal()` - otevře modal
+  - `buyTokens(tokenAmount)` - zavolá `POST /api/payments/create` s token_amount
+  - Po úspěchu:
+    - Zobrazí informaci o vytvořené objednávce
+    - Zobrazí redirect_url (zatím placeholder)
+    - Do budoucna: automatický redirect na Comgate
+  - Po chybě: zobrazí error message
+
+### 2.4 Aktualizace zobrazení kreditů 🟩
 - **Soubor:** `static/dashboard.html`
 - **Změny:**
-  - Přidat tlačítko vedle "Vygenerovat nový QR kód"
-  - Implementovat funkci `downloadQR()` která:
-    - Získá QR obrázek z `<img id="qrImage">` (data URL)
-    - Převede data URL na blob nebo použije přímý download
-    - Stáhne jako PNG soubor (např. `my-qr-code.png`)
-  - Funkce musí fungovat na mobilu i desktopu
-  - **Důležité:** NESAHAT na logiku generování QR (backend zůstává stejný)
+  - Po úspěšné platbě (simulace) aktualizovat `creditsDisplay`
+  - Zobrazit toast notifikaci o připsaných tokenech
 
-### 4. Volitelné: Email QR button 🟥 (zrušeno - není potřeba)
-- **Popis:** Přidat UI tlačítko "Poslat QR e-mailem" s TODO komentářem
-- **Soubor:** `static/dashboard.html`
+---
+
+## 3) Environment & konfigurace
+
+### 3.1 Přidání Comgate proměnných do .env 🟩
+- **Soubor:** `.env.example` a `.env`
+- **Proměnné:**
+  ```
+  COMGATE_MERCHANT_ID=
+  COMGATE_SECRET=
+  COMGATE_TEST_MODE=true
+  COMGATE_RETURN_URL=https://localhost/api/payments/comgate/return
+  COMGATE_NOTIFY_URL=https://localhost/api/payments/comgate/notify
+  ```
+- **Důležité:** Nepoužívat hard-coded hodnoty v kódu
+
+### 3.2 Načítání konfigurace v backendu 🟩
+- **Soubor:** `app/services/payment_service.py`
 - **Změny:**
-  - Přidat tlačítko "Poslat QR e-mailem" (volitelné, vedle download tlačítka)
-  - Implementovat funkci `sendQRByEmail()` s TODO komentářem
-  - Funkce zkontroluje, jestli existuje `/api/send_qr_email` endpoint
-  - Pokud neexistuje, zobrazí TODO zprávu nebo připraví strukturu pro budoucí implementaci
-  - **Důležité:** Email API endpoint neexistuje, takže jen připravit strukturu
+  - Použít `os.getenv()` pro načtení Comgate dat
+  - Validace: pokud proměnné nejsou nastavené, použít placeholder hodnoty (pro vývoj)
+
+---
+
+## 4) Napojení tokenů
+
+### 4.1 Logika připsání tokenů po platbě 🟩
+- **Soubor:** `app/services/payment_service.py`
+- **Funkce:** `mark_order_paid(payment_id)`
+- **Logika:**
+  - Najít Payment podle payment_id
+  - Zkontrolovat, že status je "pending" (ochrana proti dvojímu připsání)
+  - V transakci:
+    - Nastavit status = "paid"
+    - Nastavit paid_at = now()
+    - Připsat `token_amount` kreditů uživateli: `user.credits += payment.token_amount`
+  - Commit transakce
+  - **Důležité:** Použít DB transakci pro atomičnost
+
+### 4.2 Validace a ochrana 🟩
+- **Ochrana proti dvojímu připsání:**
+  - Kontrola statusu před připsáním (musí být "pending")
+  - Použití DB transakce
+  - Idempotentní callback handling (Comgate může volat notify vícekrát)
+
+---
+
+## 5) Testování
+
+### 5.1 Test vytvoření objednávky 🟥
+- Přihlásit uživatele
+- Kliknout na "Koupit tokeny"
+- Vybrat balíček (1, 5, 10 tokenů)
+- Ověřit, že se vytvoří Payment v DB se statusem "pending"
+- Ověřit, že se vrátí správná odpověď s redirect_url
+
+### 5.2 Test simulace zaplacení 🟥
+- Ručně zavolat funkci `mark_order_paid(payment_id)`
+- Ověřit, že se Payment označí jako "paid"
+- Ověřit, že se správně přičtou tokeny uživateli
+- Ověřit, že se kredity zobrazí na dashboardu
+
+### 5.3 Test ochrany proti dvojímu připsání 🟥
+- Zkusit zavolat `mark_order_paid()` dvakrát na stejný payment
+- Ověřit, že se tokeny přičtou pouze jednou
+
+### 5.4 Test stávajících funkcí 🟥
+- Ověřit, že QR kód se stále zobrazuje
+- Ověřit, že regenerace QR funguje
+- Ověřit, že scanner funguje
+- Ověřit, že login/registrace fungují
 
 ---
 
 ## Technické detaily
 
-### QR download implementace:
-- QR je zobrazen jako `<img id="qrImage" src="data:image/png;base64,...">`
-- Možnosti stažení:
-  1. **Přímý download:** Vytvořit `<a>` element s `download` atributem a data URL jako `href`
-  2. **Canvas approach:** Vykreslit obrázek na canvas a stáhnout jako blob
-- **Doporučení:** Použít přímý download (jednodušší, funguje všude)
+### Datový tok:
+1. User klikne "Koupit tokeny" → otevře se modal
+2. User vybere balíček (1/5/10 tokenů) → klikne "Koupit"
+3. Frontend zavolá `POST /api/payments/create` s `token_amount`
+4. Backend vytvoří Payment (status="pending") a vrátí `redirect_url`
+5. **Budoucí:** Frontend přesměruje na Comgate (zatím zobrazí placeholder)
+6. User zaplatí na Comgate
+7. Comgate zavolá `POST /api/payments/comgate/notify` (callback)
+8. Backend označí payment jako "paid" a přičte tokeny
+9. Comgate přesměruje uživatele na `GET /api/payments/comgate/return`
+10. Backend zobrazí status a přesměruje na dashboard
 
-### Tailwind CDN:
-```html
-<script src="https://cdn.tailwindcss.com"></script>
+### Payment model (rozšířený):
+```python
+class Payment(Base):
+    id: int
+    user_id: int
+    token_amount: int  # NOVÉ: počet tokenů
+    price_czk: int  # NOVÉ: cena v Kč
+    status: str  # "pending", "paid", "failed", "cancelled"
+    provider: str  # NOVÉ: "comgate"
+    payment_id: str  # unique identifier
+    created_at: datetime
+    paid_at: datetime | None  # NOVÉ
+    updated_at: datetime  # NOVÉ
+    completed_at: datetime | None  # existující (možná deprecated)
 ```
 
-### Barevná paleta (Gym vibe):
-- **Primární:** Tmavě modrá (`#1e3a8a` / `blue-900`)
-- **Sekundární:** Šedá (`#4b5563` / `gray-600`)
-- **Pozadí:** Světle šedé/bílé (`#f9fafb` / `gray-50`)
-- **Akcent:** Modrá (`#3b82f6` / `blue-500`)
-- **Text:** Tmavě šedá (`#1f2937` / `gray-800`)
+### Balíčky tokenů:
+- **1 token** = 100 Kč
+- **5 tokenů** = 500 Kč
+- **10 tokenů** = 1000 Kč
+- (každý balíček zatím za 100 Kč/token, bez slev)
 
 ---
 
 ## Pořadí implementace
 
-1. **Tailwind setup** (úkol 1) - přidat CDN, základní konfigurace
-2. **Design refactor** (úkol 2) - přepsat CSS na Tailwind, odstranit emojis, změnit barvy
-3. **QR download button** (úkol 3) - implementovat stažení QR kódu
-4. **Email QR button** (úkol 4) - volitelně přidat UI + TODO komentář
+1. **Backend modely a migrace** (1.1, 1.4) - rozšířit Payment model
+2. **Payment service** (1.2) - vytvořit abstrakci
+3. **Backend endpointy** (1.3) - vytvořit/upravit payment endpointy
+4. **Environment** (3.1, 3.2) - přidat .env proměnné
+5. **Frontend UI** (2.1, 2.2) - přidat tlačítko a modal
+6. **Frontend integrace** (2.3, 2.4) - propojit s backendem
+7. **Testování** (5) - otestovat všechny scénáře
 
 ---
 
-## Testování
-
-Po implementaci otestovat:
-- ✅ QR kód se stále korektně zobrazuje
-- ✅ Kredity se správně zobrazují
-- ✅ Tlačítko "Vygenerovat nový QR kód" funguje
-- ✅ Tlačítko "Stáhnout QR" stáhne obrázek
-- ✅ Design je čistý, bez emojis, bez přehnaných gradientů
-- ✅ Stránka je responzivní (mobil + desktop)
-- ✅ Login/QR logika není rozbitá
-
----
-
-**Poznámka:** Backend logika, databáze, business logika zůstávají beze změny. Upravujeme pouze frontend design a přidáváme download funkcionalitu.
+**Poznámka:** V této fázi NEPLNOU integraci Comgate (reálné API volání), ale připravíme strukturu, kam se integrace později připojí. Použijeme správnou abstrakci (PaymentService), aby přidání Comgate bylo jen doplnění implementace.

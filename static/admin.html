@@ -3,283 +3,418 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Access – Admin</title>
+    <title>Gym Access – Admin Panel</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #141E30, #243B55);
             color: #f5f5f5;
             margin: 0;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
         }
         header {
-            padding: 20px 40px;
-            font-size: 24px;
-            font-weight: 700;
-            background: rgba(0,0,0,0.2);
+            padding: 20px 0;
+            margin-bottom: 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        main {
+        h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .search-section {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        input[type="search"], input[type="number"], textarea {
             flex: 1;
-            padding: 30px 40px;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 14px;
+        }
+        input::placeholder, textarea::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .btn-success {
+            background: #39D353;
+            color: white;
+        }
+        .btn-danger {
+            background: #FF6384;
+            color: white;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             background: rgba(255,255,255,0.05);
-            border-radius: 16px;
+            border-radius: 12px;
             overflow: hidden;
         }
         th, td {
             padding: 14px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
             text-align: left;
-            vertical-align: middle;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
         }
         th {
             background: rgba(255,255,255,0.08);
-            font-size: 14px;
             font-weight: 600;
+            font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        tr:last-child td {
-            border-bottom: none;
+        tr:hover {
+            background: rgba(255,255,255,0.03);
         }
         .badge {
-            padding: 6px 10px;
-            border-radius: 999px;
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
             font-size: 12px;
             font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
         }
-        .badge.active {
+        .badge-admin {
+            background: rgba(255, 193, 7, 0.2);
+            color: #FFC107;
+        }
+        .badge-user {
             background: rgba(57, 211, 83, 0.15);
             color: #39D353;
         }
-        .badge.inactive {
-            background: rgba(255, 99, 132, 0.2);
-            color: #FF6384;
-        }
-        button {
-            border: none;
-            border-radius: 8px;
-            padding: 8px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        button.primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        button.secondary {
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
-        button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.25);
-        }
-        .token-cell {
-            font-family: 'SFMono-Regular', Consolas, monospace;
-            font-size: 13px;
-        }
-        .qr-preview {
-            position: fixed;
-            top: 50px;
-            right: 40px;
-            width: 220px;
-            padding: 16px;
-            background: rgba(0,0,0,0.4);
-            border-radius: 16px;
-            text-align: center;
-            backdrop-filter: blur(8px);
-        }
-        .qr-preview img {
-            width: 180px;
-            height: 180px;
-            border-radius: 12px;
-            background: white;
-            padding: 6px;
-        }
-        .status-bar {
-            margin-top: 20px;
-            font-size: 13px;
-            opacity: 0.8;
-        }
-        .refresh-btn {
-            margin-left: 16px;
-        }
-        .filters {
-            margin-bottom: 20px;
+        .credits-control {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
-        select, input[type="search"] {
-            padding: 8px 12px;
+        .credits-input {
+            width: 80px;
+            padding: 6px;
+        }
+        .message {
+            padding: 12px;
             border-radius: 8px;
-            border: none;
-            font-size: 14px;
+            margin: 10px 0;
+            display: none;
+        }
+        .message.success {
+            background: rgba(57, 211, 83, 0.2);
+            color: #39D353;
+            border: 1px solid rgba(57, 211, 83, 0.3);
+        }
+        .message.error {
+            background: rgba(255, 99, 132, 0.2);
+            color: #FF6384;
+            border: 1px solid rgba(255, 99, 132, 0.3);
+        }
+        .message.show {
+            display: block;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            opacity: 0.7;
         }
     </style>
 </head>
 <body>
-    <header>
-        <div>🏋️‍♂️ Gym Access – Admin Dashboard</div>
-        <div>
-            <button class="secondary refresh-btn" onclick="loadTokens()">↻ Obnovit</button>
-            <a href="/" style="color:#fff;text-decoration:none;margin-left:16px;">← Zpět na generátor</a>
+    <div class="container">
+        <header>
+            <h1>🏋️ Admin Panel</h1>
+            <div>
+                <button class="btn-secondary" onclick="loadUsers()">↻ Obnovit</button>
+                <button class="btn-secondary" onclick="logout()" style="margin-left:10px;">Odhlásit se</button>
+                <a href="/" style="color:#fff;text-decoration:none;margin-left:16px;">← Zpět na běžné přihlášení</a>
+            </div>
+        </header>
+
+        <div class="message" id="message"></div>
+
+        <div class="search-section">
+            <h2 style="margin-top:0;">Vyhledávání uživatelů</h2>
+            <div class="search-box">
+                <input type="search" id="searchInput" placeholder="Zadej jméno nebo email..." onkeyup="if(event.key==='Enter') searchUsers()">
+                <button class="btn-primary" onclick="searchUsers()">🔍 Hledat</button>
+                <button class="btn-secondary" onclick="loadUsers()">📋 Všechny uživatelé</button>
+            </div>
         </div>
-    </header>
-    <main>
-        <div class="filters">
-            <label>
-                Stav:
-                <select id="statusFilter" onchange="renderTable()">
-                    <option value="all">Vše</option>
-                    <option value="active">Pouze aktivní</option>
-                    <option value="inactive">Pouze deaktivované</option>
-                </select>
-            </label>
-            <label>
-                Vyhledat:
-                <input type="search" id="searchInput" placeholder="Jméno, email, token" oninput="renderTable()">
-            </label>
+
+        <div id="usersTableContainer">
+            <div class="loading">Načítám uživatele...</div>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Uživatel</th>
-                    <th>Email</th>
-                    <th>Token</th>
-                    <th>Platnost do</th>
-                    <th>Počet skenů</th>
-                    <th>Stav</th>
-                    <th>Akce</th>
-                </tr>
-            </thead>
-            <tbody id="tokensTable"></tbody>
-        </table>
-        <div class="status-bar" id="statusBar">Načítám data…</div>
-    </main>
-    <div class="qr-preview" id="qrPreview" style="display:none;">
-        <div style="margin-bottom:10px;font-size:14px;font-weight:600;">QR náhled</div>
-        <img id="qrPreviewImage" src="" alt="QR Preview">
-        <div id="qrPreviewInfo" style="margin-top:10px;font-size:12px;opacity:0.8;"></div>
     </div>
 
     <script>
-        let tokens = [];
-        let isLoading = false;
-
-        async function loadTokens() {
-            if (isLoading) return;
-            isLoading = true;
-            setStatus('Načítám tokeny…');
-            try {
-                const res = await fetch('/api/admin/tokens');
-                if (!res.ok) {
-                    throw new Error('Chyba při načítání tokenů');
-                }
-                tokens = await res.json();
-                renderTable();
-                setStatus(`Načteno ${tokens.length} tokenů.`);
-            } catch (error) {
-                console.error(error);
-                setStatus('❌ Nepodařilo se načíst data.');
-            } finally {
-                isLoading = false;
-            }
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/admin/login';
         }
 
-        function setStatus(message) {
-            document.getElementById('statusBar').textContent = message;
+        function showMessage(text, type = 'success') {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type} show`;
+            setTimeout(() => {
+                msg.classList.remove('show');
+            }, 3000);
         }
 
-        function filterTokens() {
-            const statusFilter = document.getElementById('statusFilter').value;
-            const searchValue = document.getElementById('searchInput').value.toLowerCase();
-            return tokens.filter(token => {
-                const statusMatch =
-                    statusFilter === 'all' ||
-                    (statusFilter === 'active' && token.is_active) ||
-                    (statusFilter === 'inactive' && !token.is_active);
-                const tokenString = `${token.user_name || ''} ${token.user_email || ''} ${token.token}`.toLowerCase();
-                const searchMatch = tokenString.includes(searchValue);
-                return statusMatch && searchMatch;
-            });
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('tokensTable');
-            tbody.innerHTML = '';
-            const filtered = filterTokens();
-            if (!filtered.length) {
-                const row = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.colSpan = 7;
-                cell.style.textAlign = 'center';
-                cell.style.padding = '40px 16px';
-                cell.textContent = 'Žádné tokeny nesplňují filtr.';
-                row.appendChild(cell);
-                tbody.appendChild(row);
+        async function searchUsers() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                showMessage('Zadej hledaný text', 'error');
                 return;
             }
 
-            filtered.forEach(token => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${token.user_name || '—'}</td>
-                    <td>${token.user_email || '—'}</td>
-                    <td class="token-cell">${token.token}</td>
-                    <td>${token.expires_at ? new Date(token.expires_at).toLocaleString('cs-CZ') : '—'}</td>
-                    <td>${token.scan_count ?? 0}</td>
-                    <td>
-                        <span class="badge ${token.is_active ? 'active' : 'inactive'}">
-                            ${token.is_active ? 'Aktivní' : 'Deaktivováno'}
-                        </span>
-                    </td>
-                    <td style="display:flex;gap:8px;">
-                        <button class="secondary" onclick="showQr('${token.qr_code_url}', '${token.user_name || ''}', '${token.token}')">QR</button>
-                        ${token.is_active
-                            ? `<button class="primary" onclick="toggleToken(${token.id}, false)">Deaktivovat</button>`
-                            : `<button class="primary" onclick="toggleToken(${token.id}, true)">Aktivovat</button>`}
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
+            if (!token) {
+                window.location.href = '/admin/login';
+                return;
+            }
 
-        async function toggleToken(id, makeActive) {
-            const endpoint = makeActive ? 'activate' : 'deactivate';
             try {
-                const res = await fetch(`/api/admin/tokens/${id}/${endpoint}`, { method: 'POST' });
-                if (!res.ok) throw new Error();
-                setStatus(makeActive ? 'Token byl aktivován.' : 'Token byl deaktivován.');
-                await loadTokens();
+                const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    showMessage('Session vypršela, prosím přihlaste se znovu', 'error');
+                    setTimeout(() => window.location.href = '/admin/login', 2000);
+                    return;
+                }
+
+                if (response.status === 403) {
+                    showMessage('Nemáš admin oprávnění', 'error');
+                    return;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({ detail: 'Chyba při vyhledávání' }));
+                    throw new Error(error.detail || 'Chyba při vyhledávání');
+                }
+
+                const users = await response.json();
+                renderUsers(users);
+                showMessage(`Nalezeno ${users.length} uživatelů`);
             } catch (error) {
                 console.error(error);
-                setStatus('❌ Nepodařilo se změnit stav tokenu.');
+                showMessage(error.message || 'Chyba při vyhledávání', 'error');
             }
         }
 
-        function showQr(url, name, token) {
-            const preview = document.getElementById('qrPreview');
-            document.getElementById('qrPreviewImage').src = url;
-            document.getElementById('qrPreviewInfo').textContent = `${name || 'Bez jména'}\n${token}`;
-            preview.style.display = 'block';
+        async function loadUsers() {
+            document.getElementById('searchInput').value = '';
+            const container = document.getElementById('usersTableContainer');
+            container.innerHTML = '<div class="loading">Načítám uživatele...</div>';
+
+            if (!token) {
+                window.location.href = '/admin/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    showMessage('Session vypršela, prosím přihlaste se znovu', 'error');
+                    container.innerHTML = '<div class="loading">Session vypršela, přesměrování na login...</div>';
+                    setTimeout(() => window.location.href = '/admin/login', 2000);
+                    return;
+                }
+
+                if (response.status === 403) {
+                    showMessage('Nemáš admin oprávnění', 'error');
+                    container.innerHTML = '<div class="loading">Nemáš oprávnění k přístupu</div>';
+                    return;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({ detail: 'Chyba při načítání' }));
+                    throw new Error(error.detail || 'Chyba při načítání');
+                }
+
+                const users = await response.json();
+                renderUsers(users);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                container.innerHTML = `<div class="loading">Chyba při načítání uživatelů: ${error.message || 'Neznámá chyba'}</div>`;
+                showMessage(error.message || 'Chyba při načítání uživatelů', 'error');
+            }
         }
 
-        window.addEventListener('load', loadTokens);
+        function renderUsers(users) {
+            const container = document.getElementById('usersTableContainer');
+            
+            if (users.length === 0) {
+                container.innerHTML = '<div class="loading">Žádní uživatelé nenalezeni</div>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Jméno</th>
+                            <th>Email</th>
+                            <th>Kredity</th>
+                            <th>Role</th>
+                            <th>Registrován</th>
+                            <th>Správa kreditů</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            users.forEach(user => {
+                html += `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td><strong>${user.credits || 0}</strong></td>
+                        <td>
+                            <span class="badge ${user.is_admin ? 'badge-admin' : 'badge-user'}">
+                                ${user.is_admin ? '👑 Admin' : '👤 Uživatel'}
+                            </span>
+                        </td>
+                        <td>${user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '—'}</td>
+                        <td>
+                            <div class="credits-control">
+                                <input type="number" id="credits_${user.id}" class="credits-input" placeholder="±kredity" min="-1000" max="1000">
+                                <button class="btn-success" onclick="updateCredits(${user.id}, true)">+ Přidat</button>
+                                <button class="btn-danger" onclick="updateCredits(${user.id}, false)">- Odebrat</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        async function updateCredits(userId, isAdd) {
+            if (!token) {
+                window.location.href = '/admin/login';
+                return;
+            }
+
+            const input = document.getElementById(`credits_${userId}`);
+            const amount = parseInt(input.value);
+
+            if (!amount || amount <= 0) {
+                showMessage('Zadej platný počet kreditů', 'error');
+                return;
+            }
+
+            const creditsChange = isAdd ? amount : -amount;
+
+            try {
+                const response = await fetch(`/api/admin/users/${userId}/credits`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        credits: creditsChange,
+                        note: isAdd ? `Přidáno ${amount} kreditů` : `Odebráno ${amount} kreditů`
+                    })
+                });
+
+                if (response.status === 401) {
+                    showMessage('Session vypršela, prosím přihlaste se znovu', 'error');
+                    setTimeout(() => window.location.href = '/admin/login', 2000);
+                    return;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({ detail: 'Chyba při aktualizaci kreditů' }));
+                    throw new Error(error.detail || 'Chyba při aktualizaci kreditů');
+                }
+
+                const result = await response.json();
+                input.value = '';
+                showMessage(`${isAdd ? 'Přidáno' : 'Odebráno'} ${amount} kreditů. Nový stav: ${result.new_credits}`, 'success');
+                
+                // Reload users to show updated credits
+                const query = document.getElementById('searchInput').value.trim();
+                if (query) {
+                    searchUsers();
+                } else {
+                    loadUsers();
+                }
+            } catch (error) {
+                console.error(error);
+                showMessage(error.message || 'Chyba při aktualizaci kreditů', 'error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_email');
+            window.location.href = '/admin/login';
+        }
+
+        // Load users on page load
+        window.addEventListener('load', loadUsers);
     </script>
 </body>
 </html>

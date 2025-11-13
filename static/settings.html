@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Access - Nastavení účtu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 25%, #16213e 50%, #0f3460 75%, #1a0a2e 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            min-height: 100vh;
+            padding: 0;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(0, 191, 255, 0.08) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(120deg); }
+            66% { transform: translate(-20px, 20px) rotate(240deg); }
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 10px rgba(102, 126, 234, 0.8));
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            color: #fff;
+            background: rgba(102, 126, 234, 0.2);
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .nav-link.active {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.15);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 68, 68, 0.5);
+        }
+
+        .burger-menu {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .burger-menu span {
+            width: 25px;
+            height: 3px;
+            background: #fff;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+            padding: 1rem;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .mobile-menu.active {
+            display: flex;
+        }
+
+        /* Main Content */
+        .main-content {
+            position: relative;
+            z-index: 1;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .page-header h1 {
+            color: #fff;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .page-header p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.1rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Settings Card */
+        .settings-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                0 0 50px rgba(102, 126, 234, 0.3);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .settings-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .section-title {
+            color: #1a0a2e;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #1a0a2e;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+            color: #1a0a2e;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #1a0a2e;
+        }
+
+        .info-value {
+            color: #333;
+            font-family: monospace;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.verified {
+            background: linear-gradient(135deg, #00c853 0%, #00a044 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(0, 200, 83, 0.3);
+        }
+
+        .badge.not-verified {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(255, 152, 0, 0.3);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 4px 15px rgba(102, 126, 234, 0.4),
+                0 0 20px rgba(102, 126, 234, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 25px rgba(102, 126, 234, 0.6),
+                0 0 30px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        button span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            color: #667eea;
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+        }
+
+        .error {
+            background: linear-gradient(135deg, rgba(255, 68, 68, 0.1) 0%, rgba(204, 0, 0, 0.1) 100%);
+            color: #cc0000;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: none;
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .error.active {
+            display: block;
+            animation: shake 0.5s ease;
+        }
+
+        .success {
+            background: linear-gradient(135deg, rgba(0, 200, 83, 0.1) 0%, rgba(0, 160, 68, 0.1) 100%);
+            color: #00a044;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: none;
+            border: 1px solid rgba(0, 200, 83, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .success.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            z-index: 10000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-color: rgba(0, 200, 0, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 200, 0, 0.3);
+        }
+
+        .toast.error {
+            border-color: rgba(255, 68, 68, 0.5);
+            box-shadow: 0 8px 32px rgba(255, 68, 68, 0.3);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .burger-menu {
+                display: flex;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .settings-card {
+                padding: 1.5rem;
+            }
+
+            .page-header h1 {
+                font-size: 2rem;
+            }
+
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .toast {
+                right: 1rem;
+                left: 1rem;
+                bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <a href="/dashboard" class="logo">
+            <span class="logo-icon">🏋️</span>
+            <span>Gym Access</span>
+        </a>
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/settings" class="nav-link active">Nastavení</a>
+            <button class="logout-btn" onclick="logout()">Odhlásit se</button>
+        </div>
+        <div class="burger-menu" onclick="toggleMobileMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="/dashboard" class="nav-link" onclick="closeMobileMenu()">Dashboard</a>
+        <a href="/settings" class="nav-link active" onclick="closeMobileMenu()">Nastavení</a>
+        <button class="logout-btn" onclick="logout()">Odhlásit se</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-header">
+            <h1>⚙️ Nastavení účtu</h1>
+            <p>Spravujte své osobní údaje a bezpečnostní nastavení</p>
+        </div>
+
+        <!-- Section A: Account Info -->
+        <div class="settings-card">
+            <h2 class="section-title">📧 Informace o účtu</h2>
+            
+            <div class="info-row">
+                <span class="info-label">Email:</span>
+                <span class="info-value" id="userEmail">Načítání...</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Stav ověření emailu:</span>
+                <span id="emailStatus">
+                    <span class="badge not-verified" id="emailBadge">Neověřený email</span>
+                </span>
+            </div>
+            
+            <div class="form-group">
+                <button class="btn-secondary" id="resendEmailBtn" onclick="resendVerificationEmail()" disabled>
+                    <span>🔄 Znovu odeslat ověřovací email</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Section B: Change Password -->
+        <div class="settings-card">
+            <h2 class="section-title">🔒 Změna hesla</h2>
+            
+            <div class="error" id="passwordError"></div>
+            <div class="success" id="passwordSuccess"></div>
+            
+            <form id="passwordForm" onsubmit="changePassword(event)">
+                <div class="form-group">
+                    <label for="currentPassword">Aktuální heslo:</label>
+                    <input type="password" id="currentPassword" name="currentPassword" required placeholder="••••••••">
+                </div>
+                
+                <div class="form-group">
+                    <label for="newPassword">Nové heslo:</label>
+                    <input type="password" id="newPassword" name="newPassword" required placeholder="••••••••" minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">Potvrzení nového hesla:</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="••••••••" minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" id="changePasswordBtn">
+                        <span>💾 Změnit heslo</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Section C: Security Info -->
+        <div class="settings-card">
+            <h2 class="section-title">🛡️ Bezpečnostní informace</h2>
+            
+            <div class="info-row">
+                <span class="info-label">Datum vytvoření účtu:</span>
+                <span class="info-value" id="accountCreated">Načítání...</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Počet vygenerovaných QR kódů:</span>
+                <span class="info-value" id="qrCount">Načítání...</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">User ID:</span>
+                <span class="info-value" id="userId">Načítání...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        const token = localStorage.getItem('access_token');
+        
+        if (!token) {
+            window.location.href = '/';
+        }
+        
+        // Set user info from localStorage
+        document.getElementById('userEmail').textContent = localStorage.getItem('user_email') || 'N/A';
+        document.getElementById('userId').textContent = localStorage.getItem('user_id') || 'N/A';
+        
+        // Mobile menu functions
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('active');
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('active');
+        }
+
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Load account info
+        async function loadAccountInfo() {
+            try {
+                // TODO: Create backend endpoint /api/user/info to get user details
+                // For now, use existing data from localStorage
+                const userId = localStorage.getItem('user_id');
+                const userEmail = localStorage.getItem('user_email');
+                
+                // Set email status (since email verification is not implemented, show as not verified)
+                const emailBadge = document.getElementById('emailBadge');
+                emailBadge.textContent = 'Neověřený email';
+                emailBadge.className = 'badge not-verified';
+                
+                // Set account created date (if available from backend)
+                // For now, show placeholder
+                document.getElementById('accountCreated').textContent = 'Nedostupné';
+                
+                // Get QR count (if endpoint exists)
+                // TODO: Create endpoint to count user's access tokens
+                document.getElementById('qrCount').textContent = 'Nedostupné';
+                
+                // Try to fetch user info if endpoint exists
+                // This is optional - if endpoint doesn't exist, the page will still work
+                try {
+                    const response = await fetch('/api/user/info', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        if (data.email_verified !== undefined) {
+                            emailBadge.textContent = data.email_verified ? 'Ověřený email' : 'Neověřený email';
+                            emailBadge.className = data.email_verified ? 'badge verified' : 'badge not-verified';
+                        }
+                        
+                        if (data.created_at) {
+                            const date = new Date(data.created_at);
+                            document.getElementById('accountCreated').textContent = date.toLocaleDateString('cs-CZ', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            });
+                        }
+                        
+                        if (data.qr_count !== undefined) {
+                            document.getElementById('qrCount').textContent = data.qr_count.toString();
+                        }
+                        
+                        if (data.user_id) {
+                            document.getElementById('userId').textContent = data.user_id.toString();
+                        }
+                    }
+                } catch (error) {
+                    // Endpoint doesn't exist or error - continue with defaults
+                    console.log('User info endpoint not available, using defaults:', error);
+                }
+                
+            } catch (error) {
+                console.error('Error loading account info:', error);
+            }
+        }
+
+        // Resend verification email
+        async function resendVerificationEmail() {
+            const btn = document.getElementById('resendEmailBtn');
+            btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span>Odesílání...</span><span class="loading"></span>';
+            
+            try {
+                // TODO: Create backend endpoint /api/user/resend-verification
+                // For now, show placeholder message
+                showToast('Funkce ověření emailu není momentálně k dispozici', 'error');
+            } catch (error) {
+                showToast('Chyba při odesílání emailu', 'error');
+            } finally {
+                btn.disabled = true; // Keep disabled until backend is implemented
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // Change password
+        async function changePassword(event) {
+            event.preventDefault();
+            
+            const errorDiv = document.getElementById('passwordError');
+            const successDiv = document.getElementById('passwordSuccess');
+            const btn = document.getElementById('changePasswordBtn');
+            
+            // Hide previous messages
+            errorDiv.classList.remove('active');
+            successDiv.classList.remove('active');
+            
+            // Get form values
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Validate passwords match
+            if (newPassword !== confirmPassword) {
+                errorDiv.textContent = 'Nová hesla se neshodují';
+                errorDiv.classList.add('active');
+                return;
+            }
+            
+            // Validate password length
+            if (newPassword.length < 6) {
+                errorDiv.textContent = 'Nové heslo musí mít alespoň 6 znaků';
+                errorDiv.classList.add('active');
+                return;
+            }
+            
+            // Disable button
+            btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span>Měním heslo...</span><span class="loading"></span>';
+            
+            try {
+                // TODO: Create backend endpoint /api/user/change-password
+                // Expected request: { current_password, new_password }
+                const response = await fetch('/api/user/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        errorDiv.textContent = 'Aktuální heslo není správné';
+                        errorDiv.classList.add('active');
+                        return;
+                    }
+                    
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Chyba při změně hesla');
+                }
+                
+                const data = await response.json();
+                
+                // Success
+                successDiv.textContent = 'Heslo bylo úspěšně změněno';
+                successDiv.classList.add('active');
+                showToast('Heslo bylo úspěšně změněno', 'success');
+                
+                // Clear form
+                document.getElementById('passwordForm').reset();
+                
+            } catch (error) {
+                // Check if it's a network error (endpoint doesn't exist)
+                if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+                    errorDiv.textContent = 'Funkce změny hesla není momentálně k dispozici (TODO: vytvořit backend endpoint)';
+                    errorDiv.classList.add('active');
+                } else {
+                    errorDiv.textContent = error.message || 'Chyba při změně hesla';
+                    errorDiv.classList.add('active');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
+        async function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_email');
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                if (token) {
+                    await fetch('/api/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Logout API call failed:', error);
+            }
+            
+            window.location.href = '/';
+        }
+        
+        // Load account info on page load
+        loadAccountInfo();
+    </script>
+</body>
+</html>

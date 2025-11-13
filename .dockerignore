@@ -18,4 +18,16 @@ README.md
 *.db
 *.sqlite
 *.sqlite3
-
+.DS_Store
+*.log
+*.tmp
+ssl/
+data/
+gym_turnstile.db/
+plan.md
+docker-compose.yml
+Dockerfile
+Dockerfile.production
+generate_cert.sh
+DEPLOY.md
+coolify.yml
