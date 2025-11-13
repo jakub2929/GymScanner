@@ -83,13 +83,18 @@ async def initialize_database():
         
     except Exception as db_error:
         logger.error(f"Database initialization failed: {db_error}")
-        logger.error("Application will start, but database operations will fail.")
-        logger.error("Please check:")
-        logger.error("1. DATABASE_URL is correct")
-        logger.error("2. PostgreSQL database is running")
-        logger.error("3. Network connectivity between app and database")
-        logger.error("4. If using internal hostname, ensure app and DB are in same network")
-        # Don't raise - let app start
+        logger.warning("=" * 60)
+        logger.warning("DATABASE CONNECTION FAILED - Application will continue")
+        logger.warning("=" * 60)
+        logger.warning("Possible solutions:")
+        logger.warning("1. Use SQLite: Set DATABASE_URL=sqlite:///./data/gym_turnstile.db")
+        logger.warning("2. Fix PostgreSQL connection:")
+        logger.warning("   - Ensure app and PostgreSQL are in same network")
+        logger.warning("   - Check DATABASE_URL hostname is correct")
+        logger.warning("   - Verify PostgreSQL is running")
+        logger.warning("3. Add Volume for SQLite: Path=/app/data, Mount=gymturnstile-data")
+        logger.warning("=" * 60)
+        # Don't raise - let app start (but DB operations will fail)
 
 # Include routers
 app.include_router(auth.router, prefix="/api", tags=["auth"])
