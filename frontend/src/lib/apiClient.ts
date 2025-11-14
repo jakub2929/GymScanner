@@ -1,14 +1,23 @@
 // Get API URL - must be set via NEXT_PUBLIC_API_URL environment variable
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 
-  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000');
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// Warn if API_URL seems incorrect (localhost in production or empty)
-if (typeof window !== 'undefined' && API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
-  console.warn(
-    '⚠️ NEXT_PUBLIC_API_URL is set to localhost but app is running on',
-    window.location.hostname,
-    '- API calls may fail. Set NEXT_PUBLIC_API_URL to your public API URL.'
-  );
+// Warn if API_URL seems incorrect or not set
+if (typeof window !== 'undefined') {
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    console.error(
+      '❌ NEXT_PUBLIC_API_URL is not set! API calls will fail.',
+      'Current API_URL:', API_URL,
+      'Set NEXT_PUBLIC_API_URL to your public API URL in Coolify and rebuild the frontend.'
+    );
+  } else if (API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
+    console.warn(
+      '⚠️ NEXT_PUBLIC_API_URL is set to localhost but app is running on',
+      window.location.hostname,
+      '- API calls may fail. Set NEXT_PUBLIC_API_URL to your public API URL.'
+    );
+  } else {
+    console.log('✅ API URL configured:', API_URL);
+  }
 }
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -27,14 +36,20 @@ export async function apiClient<TResponse>(path: string, options: ApiClientOptio
   }
 
   const url = `${API_URL}${path}`;
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    console.debug(`[API Client] ${options.method || 'GET'} ${url}`);
+  // Always log API calls in production to help debug
+  if (typeof window !== 'undefined') {
+    console.log(`[API Client] ${options.method || 'GET'} ${url}`);
   }
 
   const response = await fetch(url, {
     ...options,
     headers,
   });
+  
+  // Log response for debugging
+  if (typeof window !== 'undefined' && !response.ok) {
+    console.error(`[API Client] ${response.status} ${response.statusText} for ${options.method || 'GET'} ${url}`);
+  }
 
   if (!response.ok) {
     const detail = await safeParseError(response);
