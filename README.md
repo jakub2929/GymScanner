@@ -5,12 +5,12 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 
 ## Technologie
 - **Backend**: FastAPI (Python)
-- **Database**: SQLite (s možností PostgreSQL)
+- **Database**: SQLite (lokální vývoj) nebo PostgreSQL (produkce)
 - **Frontend**: HTML/JavaScript s Tailwind CSS (čistý, moderní design)
 - **Containerization**: Docker & Docker Compose
 - **Authentication**: JWT tokens
 - **Password Hashing**: Argon2
-- **Security**: HTTPS s self-signed certifikáty
+- **Security**: HTTPS s self-signed certifikáty (lokálně) nebo Let's Encrypt (produkce)
 
 ## Funkce
 
@@ -230,7 +230,10 @@ Aplikace je připravena pro deployment na Coolify (self-hosted platforma).
 
 Vytvoř soubor `.env` na základě `.env.example`:
 
-- `DATABASE_URL` - Database connection string (default: `sqlite:///./data/gym_turnstile.db`)
+- `DATABASE_URL` - Database connection string
+  - **SQLite (lokální vývoj):** `sqlite:///./data/gym_turnstile.db`
+  - **PostgreSQL (produkce):** `postgresql+psycopg2://username:password@host:5432/database_name`
+  - **Poznámka:** Aplikace automaticky převádí `postgres://` na `postgresql+psycopg2://`, takže můžeš použít connection string přímo z Coolify nebo jiného poskytovatele
 - `JWT_SECRET_KEY` - Secret key pro JWT tokeny (důležité pro produkci!)
 - `JWT_ALGORITHM` - Algorithm pro JWT (default: `HS256`)
 - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` - Expirace tokenu v minutách (default: `60`)
@@ -261,11 +264,28 @@ docker-compose logs -f web
 - Access log je dostupný přes `/api/access_logs` endpoint
 - Middleware loguje všechny requesty (viditelné v Docker logách)
 
+## Databáze
+
+### SQLite (lokální vývoj)
+- Výchozí databáze pro lokální vývoj
+- Uložena v `./data/gym_turnstile.db`
+- Persistentní přes Docker volume
+
+### PostgreSQL (produkce)
+- Doporučeno pro produkční nasazení
+- Automatická konverze connection stringu: `postgres://` → `postgresql+psycopg2://`
+- Podporuje externí PostgreSQL služby (Supabase, Railway, Render, Coolify)
+- Automatické vytváření tabulek při prvním spuštění
+- **Výhody:** Lepší výkon, škálovatelnost, automatická persistence bez volumes
+
+**Pro detailní instrukce viz:** [POSTGRES_SETUP_COOLIFY.md](./POSTGRES_SETUP_COOLIFY.md)
+
 ## Poznámky
 
 - ✅ Systém je připraven k použití
 - ✅ Mock platby (ne skutečné platební brány)
 - ✅ SQLite databáze v `./data/` složce (persistentní přes Docker volume)
+- ✅ PostgreSQL podpora s automatickou konverzí connection stringu
 - ✅ HTTPS s self-signed certifikáty (pro produkci doporučujeme Let's Encrypt)
 - ✅ Čistý, moderní UI design s Tailwind CSS (bez emojis, bez přehnaných gradientů)
 - ✅ Cooldown ochrana proti dvojitému odpíchnutí
@@ -273,7 +293,13 @@ docker-compose logs -f web
 
 ## Historie změn
 
-### Verze 1.2.0 (aktuální)
+### Verze 1.3.0 (aktuální)
+- ✅ Fix PostgreSQL dialekt: automatická konverze `postgres://` na `postgresql+psycopg2://`
+- ✅ Oprava `sqlalchemy.exc.NoSuchModuleError: sqlalchemy.dialects:postgres`
+- ✅ Vylepšená podpora PostgreSQL pro produkční nasazení
+- ✅ Aktualizovaná dokumentace pro PostgreSQL setup
+
+### Verze 1.2.0
 - ✅ Refaktor designu dashboard stránky na Tailwind CSS
 - ✅ Odstranění emojis z UI (čistší, profesionálnější vzhled)
 - ✅ Přidání tlačítka "Stáhnout QR" pro stažení QR kódu jako PNG
