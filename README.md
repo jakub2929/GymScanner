@@ -38,7 +38,7 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 
 ## Comgate test API
 
-Produkční nákupy tokenů teď používají Comgate platební bránu. Backend volá REST endpoint `https://payments.comgate.cz/v2.0/payment.json` (přepiš pomocí `COMGATE_API_URL`, pokud Coolify používá jinou testovací URL) a předává `refId` = interní `payment_id`.  
+Produkční nákupy tokenů teď používají Comgate platební bránu. Backend volá HTTP POST endpoint `https://payments.comgate.cz/v1.0/create` (přepiš pomocí `COMGATE_API_URL`, pokud Coolify používá jinou testovací URL) a předává `refId` = interní `payment_id`.  
 Po úspěšném vytvoření objednávky backend vrací `redirect_url`, na kterou frontend přesměruje uživatele.  
 Callbacky:
 
@@ -53,10 +53,9 @@ COMGATE_SECRET=...
 COMGATE_TEST_MODE=true
 COMGATE_RETURN_URL=http://<api-domain>/api/payments/comgate/return
 COMGATE_NOTIFY_URL=http://<api-domain>/api/payments/comgate/notify
-COMGATE_API_URL=https://payments.comgate.cz/v2.0/payment.json  # REST endpoint (lze přepsat)
+COMGATE_API_URL=https://payments.comgate.cz/v1.0/create        # HTTP-POST endpoint (lze přepsat)
 COMGATE_DEFAULT_PHONE=+420777111222                    # fallback telefon, pokud uživatel nemá číslo
 COMGATE_PREPARE_ONLY=0                                 # 1 = pouze předautorizace, 0 = rovnou platba
-COMGATE_COUNTRY=CZE                                    # ISO kód země
 ```
 
 Frontend (`/dashboard`) nyní volá `/api/payments/create` a po úspěchu automaticky přesměruje na Comgate. Po návratu/notify získává uživatel nové kredity.

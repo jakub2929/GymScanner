@@ -75,10 +75,9 @@ COMGATE_SECRET=tvuj_comgate_secret
 COMGATE_TEST_MODE=false  # true pro testování, false pro produkci
 COMGATE_RETURN_URL=http://tvoje-api-domena.cz/api/payments/comgate/return
 COMGATE_NOTIFY_URL=http://tvoje-api-domena.cz/api/payments/comgate/notify
-COMGATE_API_URL=https://payments.comgate.cz/v2.0/payment.json
+COMGATE_API_URL=https://payments.comgate.cz/v1.0/create
 COMGATE_DEFAULT_PHONE=+420777111222
 COMGATE_PREPARE_ONLY=0
-COMGATE_COUNTRY=CZE
 
 # App
 ENVIRONMENT=production
