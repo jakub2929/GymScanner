@@ -286,6 +286,7 @@ docker-compose logs -f web
 
 ## Design modernization
 - Připravujeme Apple-inspirovaný “liquid glass” vzhled všech stránek. Detailní plán kroků (`tooling → auth → dashboard → scanner → admin`) je v `docs/apple_liquid_design_plan.md`.
+- Zvažujeme migraci na Next.js + TypeScript front-end. Rozsah a odhad prací je popsán v `docs/nextjs_migration_plan.md`.
 
 ## Historie změn
 
