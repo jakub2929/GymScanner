@@ -5,8 +5,11 @@ Zkopíruj a vlož do Coolify dashboard → Environment Variables:
 ## Povinné proměnné
 
 ```bash
-# Database (PostgreSQL - získej z Coolify PostgreSQL databáze)
-DATABASE_URL=postgresql://gymuser:gympass@postgres-host:5432/gymturnstile
+# Database (interní PostgreSQL kontejner z docker-compose)
+# Výchozí hodnota v compose:
+# postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
+# Pokud chceš použít vlastní DB, přepiš proměnnou v Coolify
+DATABASE_URL=postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
 
 # JWT Authentication (vygeneruj silné heslo - min 32 znaků)
 JWT_SECRET_KEY=tvoje_super_tajne_heslo_produkce_min_32_znaku_pro_jwt_tokeny
@@ -76,4 +79,3 @@ openssl rand -hex 32
 ```
 
 Minimálně 32 znaků!
-

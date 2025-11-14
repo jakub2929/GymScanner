@@ -6,27 +6,21 @@
 
 1. Otevři Coolify dashboard
 2. Klikni na **"New Resource"** → **"Application"**
-3. Vyber **"GitHub"** (pokud máš repo) nebo **"Dockerfile"**
-4. Pokud GitHub:
-   - Připoj repository
-   - **Branch:** `main`
-   - **Build Pack:** `Dockerfile` – **NEPOUŽÍVEJ Docker Compose!**
-   - **Dockerfile Path:** `Dockerfile.production`
-5. Pokud Dockerfile:
-   - Upload `Dockerfile.production`
-
-**DŮLEŽITÉ:** 
-- **NEPOUŽÍVEJ** `docker-compose.yml` (obsahuje port 443, který způsobuje konflikt)
-- Použij **pouze** `Dockerfile.production` přímo
-- Coolify automaticky řeší networking a reverse proxy
+3. Vyber **"Git repository"** (nebo GitHub)
+4. Zdroj: toto repo, **Branch:** `main`
+5. Build pack: **Docker Compose**
+6. **Compose file path:** `docker-compose.yml`
+7. Coolify vytvoří dvě služby:
+   - `web` (FastAPI) → používá `Dockerfile.production`
+   - `db` (PostgreSQL 15-alpine with persistent volume `gym-db-data`)
 
 ### 2. Nastavení Environment Proměnných
 
 V Coolify → **Environment Variables** přidej:
 
 ```bash
-# Database (PostgreSQL doporučeno)
-DATABASE_URL=postgresql://user:password@postgres-host:5432/gymturnstile
+# Database (vnitřní Postgres z docker-compose)
+DATABASE_URL=postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
 
 # JWT (ZMIŇ NA SILNÉ HESLO!)
 JWT_SECRET_KEY=tvoje_super_tajne_heslo_min_32_znaku_produkce
@@ -46,14 +40,7 @@ LOG_LEVEL=info
 PYTHONUNBUFFERED=1
 ```
 
-### 3. Nastavení Portu
-
-- **Port:** `8000`
-- **Protocol:** `HTTP`
-
-Coolify automaticky přidá HTTPS.
-
-### 4. Přidání Domény
+### 3. Přidání Domény
 
 1. V Coolify → **Domains** přidej svou doménu
 2. Coolify automaticky:
@@ -61,11 +48,11 @@ Coolify automaticky přidá HTTPS.
    - Nakonfiguruje reverse proxy
 3. Aktualizuj `COMGATE_RETURN_URL` a `COMGATE_NOTIFY_URL` na novou doménu
 
-### 5. Deploy
+### 4. Deploy
 
 Klikni na **"Deploy"** a počkej na dokončení.
 
-### 6. Ověření
+### 5. Ověření
 
 - Otevři `https://tvoje-domena.cz/health` → `{"status": "healthy"}`
 - Otevři `https://tvoje-domena.cz/` → Login stránka

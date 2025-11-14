@@ -1,16 +1,38 @@
-# Docker Compose pro Coolify
-# Coolify automaticky detekuje tento soubor, ale měl by používat Dockerfile.production přímo
-# Coolify spravuje porty sám přes reverse proxy - NEPOTŘEBUJEME ports sekci!
-
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile.production
-    # POZNÁMKA: Coolify spravuje porty sám - nepoužívej ports!
-    # Dockerfile.production má EXPOSE 8000, což stačí
     environment:
-      - PYTHONUNBUFFERED=1
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-changeme}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      COMGATE_MERCHANT_ID: ${COMGATE_MERCHANT_ID:-}
+      COMGATE_SECRET: ${COMGATE_SECRET:-}
+      COMGATE_TEST_MODE: ${COMGATE_TEST_MODE:-true}
+      COMGATE_RETURN_URL: ${COMGATE_RETURN_URL:-https://example.com/api/payments/comgate/return}
+      COMGATE_NOTIFY_URL: ${COMGATE_NOTIFY_URL:-https://example.com/api/payments/comgate/notify}
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
-    # POZNÁMKA: Coolify by měl používat Dockerfile.production přímo, ne tento soubor
-    # Pokud Coolify stále používá docker-compose.yml, tento soubor je připravený
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: gymuser
+      POSTGRES_PASSWORD: superheslo
+      POSTGRES_DB: gymdb
+    volumes:
+      - gym-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymuser -d gymdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  gym-db-data:

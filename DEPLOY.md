@@ -12,37 +12,35 @@ Tato aplikace je připravena pro deployment na Coolify. Coolify je self-hosted p
 
 ## Architektura
 
-Repo nyní obsahuje dvě služby:
+Repo nyní obsahuje tyto služby:
 
-1. **FastAPI backend** (složka kořene) – poskytuje REST API, generuje QR kódy a komunikuje s PostgreSQL. Deployuje se pomocí `Dockerfile.production` (stejně jako dříve).
-2. **Next.js frontend** (složka `frontend/`) – moderní React/TypeScript UI s Apple “liquid glass” designem. Deployuje se jako samostatná Node.js aplikace (Dockerfile v `frontend/Dockerfile`) a komunikuje s backendem přes `NEXT_PUBLIC_API_URL`.
+1. **FastAPI backend** (`services.web` v compose) – poskytuje REST API, generuje QR kódy a komunikuje s PostgreSQL. Build jede přes `Dockerfile.production`.
+2. **PostgreSQL databáze** (`services.db` v compose) – `postgres:15-alpine` se persistentním volume `gym-db-data`.
+3. **Next.js frontend** (složka `frontend/`) – moderní React/TypeScript UI s Apple “liquid glass” designem. Deployuje se jako samostatná Node.js aplikace (Dockerfile v `frontend/Dockerfile`) a komunikuje s backendem přes `NEXT_PUBLIC_API_URL`.
 
-Na Coolify tedy vytváříme dvě aplikace (Backend API + Frontend UI) a jednu databázi. Ve vývoji lze backend provozovat přes Docker Compose a frontend přes `npm run dev`.
+Na Coolify typicky vytváříme:
+- Jednu aplikaci typu **Docker Compose** pro backend + databázi (použije kořenový `docker-compose.yml`).
+- Druhou aplikaci pro Next.js frontend.
 
 ## Krok 1: Příprava databáze
 
-V Coolify vytvoř PostgreSQL databázi:
-- Database name: `gymturnstile`
-- User: `gymuser`
-- Password: `gympass` (nebo silnější heslo)
+`docker-compose.yml` nyní obsahuje databázový kontejner `db` (PostgreSQL 15) s persistentním volume. Coolify Compose deployment tak spustí databázi automaticky vedle backendu. Výchozí connection string v compose:
 
-Získej connection string:
 ```
-postgresql://gymuser:gympass@postgres-host:5432/gymturnstile
+postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
 ```
 
-Pokud potřebuješ offline/debug režim se SQLite, podívej se na `SQLITE_SETUP.md`. Produkční nasazení vyžaduje PostgreSQL.
+Můžeš ho přepsat v Coolify přes Environment → `DATABASE_URL` (např. pokud chceš externí databázi). Pro většinu instalací ale stačí vestavěná služba `db`.
 
-## Krok 2: Backend aplikace v Coolify
+## Krok 2: Backend aplikace v Coolify (Docker Compose)
 
 1. V Coolify klikni na **New Resource → Application**
-2. Zdroj: GitHub repo nebo Dockerfile URL
-3. Branch: `main` (nebo jiná produktivní)
-4. **Build pack:** Dockerfile
-5. **Dockerfile path:** `Dockerfile.production`
-6. Deploy target: např. `api.tvoje-domena.cz`
-
-> ⚠️ Nepoužívej `docker-compose.yml` – Coolify spravuje porty i reverse proxy. Dockerfile.production vystaví HTTP (8000) + HTTPS (443) a aplikace sama řeší TLS (případně můžeš v Coolify nechat TLS a uvnitř používat pouze HTTP).
+2. Zdroj: Git repozitář (nebo GitHub) → vyber toto repo
+3. Branch: `main` (nebo tvůj production branch)
+4. Build pack: **Docker Compose**
+5. `Compose file path`: `docker-compose.yml`
+6. Coolify automaticky vytvoří dvě služby (web + db) a připojí persistentní volume `gym-db-data`
+7. Deploy target: `api.tvoje-domena.cz`
 
 ## Krok 3: Frontend (Next.js) aplikace v Coolify
 
@@ -63,8 +61,8 @@ Next.js Docker image používá production build (`npm run build`) a `output: st
 V Coolify dashboard → Environment Variables služby backendu nastav:
 
 ```bash
-# Database
-DATABASE_URL=postgresql://gymuser:gympass@postgres-host:5432/gymturnstile
+# Database (vestavěný Postgres kontejner)
+DATABASE_URL=postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
 
 # JWT
 JWT_SECRET_KEY=tvoje_super_tajne_heslo_produkce_min_32_znaku
@@ -131,7 +129,7 @@ Pro přehledné oddělení doporučujeme:
 
 ## Krok 7: Volumes
 
-PostgreSQL data spravuj přímo ve službě Coolify (sekce Databases) – Coolify vytvoří persistentní storage automaticky. Volume pro aplikaci nejsou potřeba. Pokud někdy použiješ SQLite fallback, přidej volume dle `SQLITE_SETUP.md`.
+Docker Compose definuje volume `gym-db-data`, které Coolify vytvoří automaticky při deployi a připojí k `/var/lib/postgresql/data`. Není potřeba zakládat samostatnou DB službu v Coolify. Pokud někdy použiješ SQLite fallback, přidej volume dle `SQLITE_SETUP.md`.
 
 ## Krok 8: Health Check
 

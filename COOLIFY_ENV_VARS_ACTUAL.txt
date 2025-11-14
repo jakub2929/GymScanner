@@ -4,14 +4,11 @@
 # ============================================
 # POVINNÉ - DATABASE
 # ============================================
-# DŮLEŽITÉ: Nahraď "postgres-host" skutečným hostem z Coolify PostgreSQL databáze!
-# Získej connection string z Coolify → PostgreSQL databáze → Connection String
-# 
-# Formát: postgresql+psycopg2://username:password@host:5432/database_name
-# Nebo použij formát z Coolify (postgres://...) - aplikace si to automaticky převede
-DATABASE_URL=postgresql+psycopg2://gymuser:gympass@POSTGRES_HOST:5432/gymturnstile
-# Alternativně (aplikace si to převede automaticky):
-# DATABASE_URL=postgres://gymuser:gympass@POSTGRES_HOST:5432/gymturnstile
+# INFO: docker-compose spouští vlastní Postgres kontejner ( služba `db` )
+# Výchozí connection string z compose:
+# postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
+# Můžeš ho zde přepsat, pokud chceš použít jinou DB (Coolify secrets/env overrides)
+DATABASE_URL=postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
 
 # ============================================
 # POVINNÉ - JWT AUTHENTICATION
