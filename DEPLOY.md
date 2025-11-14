@@ -19,8 +19,8 @@ Repo nyní obsahuje tyto služby:
 3. **Next.js frontend** (složka `frontend/`) – moderní React/TypeScript UI s Apple “liquid glass” designem. Deployuje se jako samostatná Node.js aplikace (Dockerfile v `frontend/Dockerfile`) a komunikuje s backendem přes `NEXT_PUBLIC_API_URL`.
 
 Na Coolify typicky vytváříme:
-- Jednu aplikaci typu **Docker Compose** pro backend + databázi (použije kořenový `docker-compose.yml`).
-- Druhou aplikaci pro Next.js frontend.
+- Jednu aplikaci typu **Docker Compose** pro backend + databázi (použije kořenový `docker-compose.yml`, služba se jmenuje `web`).
+- Druhou aplikaci pro Next.js frontend (služba `frontend`).
 
 ## Krok 1: Příprava databáze
 
@@ -48,7 +48,7 @@ Můžeš ho přepsat v Coolify přes Environment → `DATABASE_URL` (např. poku
 2. Branch: `main`.
 3. **Build pack:** Dockerfile
 4. **Dockerfile path:** `frontend/Dockerfile`
-5. V sekci Environment přidej `NEXT_PUBLIC_API_URL=https://api.tvoje-domena.cz` (musí směřovat na veřejnou URL FastAPI backendu – použije se už při build-time).
+5. V sekci Environment přidej `NEXT_PUBLIC_API_URL=https://<web-doména>` (musí směřovat na veřejnou URL FastAPI backendu – použije se už při build-time). U nás je API služba pojmenovaná `web`.
 6. Zvol doménu např. `app.tvoje-domena.cz`.
 7. Port z Dockerfile je 3000 → Coolify jej připojí na reverse proxy (HTTPS terminace probíhá v Coolify).
 
@@ -56,7 +56,7 @@ Next.js Docker image používá production build (`npm run build`) a `output: st
 
 ## Krok 4: Nastavení environment proměnných
 
-### Backend (FastAPI)
+### Backend (FastAPI – služba `web`)
 
 V Coolify dashboard → Environment Variables služby backendu nastav:
 
@@ -88,12 +88,12 @@ FRONTEND_URL=https://app.tvoje-domena.cz
 PYTHONUNBUFFERED=1  # Pro lepší logování
 ```
 
-### Frontend (Next.js)
+### Frontend (Next.js – služba `frontend`)
 
 U frontend aplikace přidej minimálně:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://api.tvoje-domena.cz  # veřejná URL FastAPI aplikace
+NEXT_PUBLIC_API_URL=https://<web-doména>  # veřejná URL FastAPI (služba web)
 NEXT_TELEMETRY_DISABLED=1
 ```
 
@@ -152,13 +152,13 @@ U frontend služby můžeš volitelně nastavit `/` s očekávaným HTTP 200 (Ne
 
 ### Ověření
 
-**API**
-1. Otevři `https://api.tvoje-domena.cz/health` → mělo by vrátit `{"status": "healthy"}`.
+**API (služba `web`)**
+1. Otevři `https://<web-doména>/health` → mělo by vrátit `{"status": "healthy"}`.
 2. Ověř `/admin/login` nebo `/docs` podle potřeby.
 
-**Frontend**
-1. Otevři `https://app.tvoje-domena.cz/login` → zobrazí se Apple glass přihlášení.
-2. Registruj / přihlaš se, ujisti se že requests míří na `https://api.tvoje-domena.cz`.
+**Frontend (služba `frontend`)**
+1. Otevři `https://<frontend-doména>/login` → zobrazí se Apple glass přihlášení.
+2. Registruj / přihlaš se, ujisti se že requests míří na `https://<web-doména>`.
 
 ### Migrace databáze
 

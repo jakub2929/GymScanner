@@ -23,7 +23,7 @@ Frontend (Dockerfile):
 3. Build pack: **Dockerfile**
 4. Dockerfile path: `frontend/Dockerfile`
 5. Nastav doménu pro UI (např. `https://app.tvoje-domena.cz`)
-6. Přidej env: `NEXT_PUBLIC_API_URL=https://api.tvoje-domena.cz`
+6. Přidej env: `NEXT_PUBLIC_API_URL=https://<web-doména>` (u nás je služba API pojmenovaná `web`, ne `api`)
 
 ### 2. Nastavení Environment Proměnných
 
@@ -53,7 +53,7 @@ FRONTEND_URL=https://app.tvoje-domena.cz
 
 Frontend (Next.js):
 ```bash
-NEXT_PUBLIC_API_URL=https://api.tvoje-domena.cz
+NEXT_PUBLIC_API_URL=https://<web-doména>
 NEXT_TELEMETRY_DISABLED=1
 ```
 ```
@@ -72,10 +72,16 @@ Klikni na **"Deploy"** a počkej na dokončení.
 
 ### 5. Ověření
 
-- API: Otevři `https://api.tvoje-domena.cz/health` → `{"status": "healthy"}`
-- Frontend: Otevři `https://app.tvoje-domena.cz/login` → UI běží
+- API (služba `web`): Otevři `https://<web-doména>/health` → `{"status": "healthy"}`
+- Frontend (služba `frontend`): Otevři `https://<frontend-doména>/login` → UI běží
 
 Poznámka: Backend root `/` nyní přesměruje (HTTP 307) na `FRONTEND_URL`, pokud je nastavená.
+
+Příklad s sslip.io (podle našich názvů služeb v Compose):
+- `web` (FastAPI): `https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io`
+- `frontend` (Next.js): `https://k4wkoc0oc0kg4sk4kgg4ssws.93.91.159.48.sslip.io`
+- Nastav `NEXT_PUBLIC_API_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io`
+- Nastav `FRONTEND_URL=https://k4wkoc0oc0kg4sk4kgg4ssws.93.91.159.48.sslip.io`
 
 ## Troubleshooting
 

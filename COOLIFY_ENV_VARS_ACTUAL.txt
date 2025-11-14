@@ -33,6 +33,11 @@ COMGATE_NOTIFY_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/pa
 # ============================================
 PYTHONUNBUFFERED=1
 
+# Frontend ↔ Backend propojení
+# Služba API se v docker-compose jmenuje `web`, proto nastav:
+NEXT_PUBLIC_API_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io
+FRONTEND_URL=https://k4wkoc0oc0kg4sk4kgg4ssws.93.91.159.48.sslip.io
+
 # ============================================
 # COOLIFY AUTOMATICKÉ PROMĚNNÉ (nastaví Coolify sám)
 # ============================================
