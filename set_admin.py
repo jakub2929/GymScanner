@@ -14,15 +14,18 @@ from app.models import User
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     print("❌ Chyba: DATABASE_URL není nastaven v environment variables!")
-    print("Nastav DATABASE_URL, např. postgres připojení:")
+    print("Nastav PostgreSQL connection string, např.:")
     print("  export DATABASE_URL='postgresql+psycopg2://gymuser:gympass@localhost:5432/gym_turnstile'")
     sys.exit(1)
 
-# Vytvoř engine
-if DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-else:
-    engine = create_engine(DATABASE_URL)
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+
+if not DATABASE_URL.startswith(("postgresql://", "postgresql+")):
+    print("❌ Tato aplikace nyní podporuje pouze PostgreSQL. Zadaný DATABASE_URL je neplatný.")
+    sys.exit(1)
+
+engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
