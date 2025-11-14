@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  web:
+  api:
     build:
       context: .
       dockerfile: Dockerfile.production
@@ -21,7 +21,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Expose internal port so Coolify can detect the web service
+    # Expose internal port so Coolify can detect the API service
     expose:
       - "8000"
     labels:
@@ -62,7 +62,7 @@ services:
       NEXT_TELEMETRY_DISABLED: 1
       NODE_ENV: production
     depends_on:
-      web:
+      api:
         condition: service_started
     # Expose internal port so Coolify can detect the frontend service
     expose:
