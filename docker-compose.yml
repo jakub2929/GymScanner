@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   web:
     build:
@@ -19,6 +21,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Expose internal port so Coolify can detect the web service
+    expose:
+      - "8000"
     restart: unless-stopped
 
   db:
@@ -49,6 +54,9 @@ services:
     depends_on:
       web:
         condition: service_started
+    # Expose internal port so Coolify can detect the frontend service
+    expose:
+      - "3000"
     restart: unless-stopped
 
 volumes:
