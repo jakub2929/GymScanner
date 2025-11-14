@@ -6,13 +6,19 @@
 - **Modern build pipeline** – Tailwind/PostCSS integrated, SSR/ISR available for authenticated pages, easier to deploy on Vercel/Render.
 - **DX** – Hot reload, ESLint, Prettier, Storybook options.
 
-## 2. Scope snapshot
-| Layer | Current | Target |
-|-------|---------|--------|
-| Frontend delivery | Static HTML served by FastAPI | Next.js 14 app router (TypeScript) served behind FastAPI (or separate origin). |
-| Styling | Tailwind CDN + inline CSS | Tailwind configured in Next.js + custom glass tokens. |
-| Auth flows | LocalStorage manipulations in vanilla JS | Next.js pages calling FastAPI endpoints via typed hooks (TanStack Query or custom fetch). |
-| QR scanner | html5-qrcode script | React component (e.g., `react-html5-qrcode` or custom hook). |
+## 2. Recommended stack snapshot
+| Layer | Choice | Reason |
+|-------|--------|--------|
+| Framework | **Next.js 14 (App Router)** | Hybrid SSR/CSR, file-based routing, built-in bundler (Turbopack / Webpack) and image/font optimizations. |
+| Language | **TypeScript** | Static typing across API DTOs, form state, and service hooks. |
+| UI | **React 18** | Component ecosystem, concurrent features, integrates with Next.js seamlessly. |
+| Styling | **Tailwind CSS w/ PostCSS** | Utility-first styling + custom tokens for liquid glass themes. |
+| Data fetching | **TanStack Query (React Query)** | Request caching, retries, loading/error states for `/api/**` endpoints. |
+| Forms | **React Hook Form** | Lightweight form state for login/register/settings. |
+| Charts (if needed) | Recharts/Nivo (opt-in) | Future metrics (usage, credits). |
+| Scanner | `react-html5-qrcode` or custom hook | Wraps camera access in React-friendly API. |
+| Auth storage | `sessionStorage` or HTTP-only cookie | Avoids XSS risk; easy to share between pages. |
+| Lint/Format | ESLint + Prettier + Husky | Enforces consistent code style. |
 
 Backend (FastAPI) remains – only minimal adjustments (CORS, static file mount removal).
 
