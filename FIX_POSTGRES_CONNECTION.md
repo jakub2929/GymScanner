@@ -32,20 +32,6 @@ Pokud máš PostgreSQL jako samostatný resource:
 - Pro internal network: `postgresql://user:pass@postgres-service-name:5432/dbname`
 - Nebo: `postgresql://user:pass@postgres-xxx.coolify.internal:5432/dbname`
 
-### Možnost 3: Použij SQLite jako dočasné řešení
-
-Pokud nemůžeš opravit PostgreSQL připojení:
-
-1. V Coolify → Environment Variables
-2. Změň `DATABASE_URL` na:
-   ```bash
-   DATABASE_URL=sqlite:///./data/gym_turnstile.db
-   ```
-3. Přidej Volume v Coolify:
-   - Path: `/app/data`
-   - Mount: `gymturnstile-data`
-4. Redeploy aplikaci
-
 ### Možnost 4: Zkontroluj, že PostgreSQL běží
 
 1. V Coolify → PostgreSQL databáze → **Status**
@@ -90,4 +76,3 @@ Please check:
 
 4. **Firewall blokuje připojení**
    - Řešení: Zkontroluj firewall nastavení v Coolify
-

@@ -9,7 +9,6 @@
    ```bash
    export DATABASE_URL="postgresql+psycopg2://gymuser:gympass@localhost:5432/gym_turnstile"
    ```
-   (Pokud z nějakého důvodu používáš SQLite fallback, nastav `sqlite:///./data/gym_turnstile.db`)
 3. Spusť skript:
    ```bash
    python set_admin.py <tvuj-email>
@@ -41,15 +40,8 @@
 UPDATE users SET is_admin = TRUE WHERE email = 'tvuj-email@example.com';
 ```
 
-### Legacy SQLite:
-
-```sql
-UPDATE users SET is_admin = 1 WHERE email = 'tvuj-email@example.com';
-```
-
 **Jak spustit SQL:**
-- **PostgreSQL**: Připoj se k databázi přes `psql` nebo Coolify → PostgreSQL → Terminal
-- **SQLite** (fallback): `sqlite3 data/gym_turnstile.db` → pak SQL příkaz
+- Připoj se k PostgreSQL databázi přes `psql` nebo Coolify → PostgreSQL → Terminal
 
 ## Metoda 3: Přes API (pokud už máš admina)
 

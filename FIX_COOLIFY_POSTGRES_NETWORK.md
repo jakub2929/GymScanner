@@ -40,22 +40,6 @@ Aplikace a PostgreSQL databáze **nejsou ve stejné síti** v Coolify. Internal 
 - `postgres-db` (pokud jsi to pojmenoval)
 - `kgo0ksc40s8k84wg4kwk0cso` (internal hostname - měl by fungovat, pokud jsou ve stejné síti)
 
-### Možnost 3: Použij SQLite (dočasné řešení)
-
-Pokud nemůžeš opravit PostgreSQL síť:
-
-1. V Coolify → Environment Variables
-2. **Přepiš** `DATABASE_URL` (i když je automaticky generovaný):
-   ```bash
-   DATABASE_URL=sqlite:///./data/gym_turnstile.db
-   ```
-3. Přidej Volume:
-   - Path: `/app/data`
-   - Mount: `gymturnstile-data`
-4. Redeploy
-
-**POZNÁMKA:** Coolify může automaticky přepisovat `DATABASE_URL` při redeploy. Pokud se to stane, použij Možnost 1 nebo 2.
-
 ### Možnost 4: Zkontroluj PostgreSQL status
 
 1. V Coolify → PostgreSQL databáze → **Status**
@@ -79,4 +63,3 @@ Database tables created successfully
 ## Nejlepší řešení:
 
 **Přidej PostgreSQL jako Resource k aplikaci** - Coolify to automaticky vyřeší!
-
