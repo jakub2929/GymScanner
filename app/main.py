@@ -20,12 +20,6 @@ from app.routes import payments, qr, verify, admin, auth, user_qr, credits
 
 logger.info("Starting application initialization...")
 
-# Ensure data directory exists for SQLite
-data_dir = Path(__file__).parent.parent / "data"
-if not data_dir.exists():
-    data_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Created data directory: {data_dir}")
-
 app = FastAPI(
     title="Gym Turnstile QR System",
     description="QR code access system for gym turnstiles",
