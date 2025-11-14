@@ -1,5 +1,7 @@
 # Apple-Inspired “Liquid Glass” Redesign Plan
 
+> **Poznámka:** Tento plán popisuje legacy statické HTML šablony. Projekt je nyní plně na Next.js, takže dokument slouží jen jako historická inspirace.
+
 ## 1. Design Principles
 | Principle | Description | Tailwind Support |
 |-----------|-------------|------------------|

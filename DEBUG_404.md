@@ -86,8 +86,8 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 - **Řešení:** Zkontroluj connection string a status PostgreSQL databáze
 
 ### Health check funguje, ale hlavní stránka ne
-- **Příčina:** Problém s routingem nebo static files
-- **Řešení:** Zkontroluj, jestli existuje `static/index.html`
+- **Příčina:** Next.js frontend neběží nebo `FRONTEND_URL` míří na špatnou adresu
+- **Řešení:** Ověř, že Next.js dev/prod server běží (`npm run dev` nebo frontend Docker image) a proměnná `FRONTEND_URL` ukazuje na správnou doménu (`http://localhost:3000` lokálně)
 
 ## Co jsem přidal do kódu:
 
@@ -96,4 +96,3 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 3. **Debug logy** - více informací o startu aplikace
 
 Po redeploy zkontroluj logy - měly by ukázat, kde je problém!
-

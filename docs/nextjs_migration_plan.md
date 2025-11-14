@@ -44,7 +44,7 @@ Backend (FastAPI) remains – only minimal adjustments (CORS, static file mount 
 - `frontend/` Next.js project (TypeScript, Tailwind).
 - Updated `README.md` with dev instructions (`npm install`, `npm run dev`, `npm run build`).
 - Updated Docker/Coolify instructions (backend + frontend services).
-- Legacy `static/` folder deprecated once new UI is live.
+- Legacy `static/` folder removed once new UI went live (FastAPI už neservíruje HTML).
 
 ## 6. Risks / mitigations
 | Risk | Mitigation |

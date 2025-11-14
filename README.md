@@ -45,7 +45,6 @@ GymScanner/
 ├── docs/                    # Migrační plány a design guidelines
 │   ├── apple_liquid_design_plan.md
 │   └── nextjs_migration_plan.md
-├── static/                  # Legacy HTML šablony (ponechány do úplného vyřazení)
 ├── docker-compose.local.yml # FastAPI + Postgres lokálně
 ├── Dockerfile
 └── README.md
@@ -74,15 +73,13 @@ docker compose -f docker-compose.local.yml logs -f web
 ```bash
 cd frontend
 npm install
-NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+NEXT_PUBLIC_API_URL=https://localhost:8443 npm run dev
 ```
-Dev server běží ve výchozím stavu na `http://localhost:3000`. `NEXT_PUBLIC_API_URL` musí směřovat na FastAPI (`http://localhost:8000` uvnitř docker network nebo dle reverse proxy).
+Dev server běží ve výchozím stavu na `http://localhost:3000`. `NEXT_PUBLIC_API_URL` musí směřovat na FastAPI (`https://localhost:8443` v lokálním Dockeru; potvrď self-signed certifikát v prohlížeči aby fetchy fungovaly).
 
-5. **Otevři v prohlížeči:**
-   - **Next.js UI:** `http://localhost:3000/login`, `/register`, `/dashboard`, `/scanner`, `/settings`, `/admin/login`, `/admin`.
-   - **Legacy statické stránky (přímo z FastAPI):** `https://localhost:8443` a podstránky (`/dashboard`, `/scanner`, `/settings`, `/admin`). Tyto budou odstraněny po dokončení fáze F migrace.
+5. **Otevři v prohlížeči:** `http://localhost:3000/login`, `/register`, `/dashboard`, `/scanner`, `/settings`, `/admin/login`, `/admin`.
 
-**Poznámka:** Pokud nepotřebuješ HTTPS, API je dostupné i na `http://localhost:8181`. Kvůli self-signed certifikátům pro HTTPS bude prohlížeč zobrazovat varování – klikni na "Pokračovat" / "Advanced".
+**Poznámka:** Kontejner by default běží na HTTPS (`https://localhost:8443`). Pro vlastní HTTP běh uprav `Dockerfile`/`docker-compose` a spusť uvicorn na portu 8000 bez SSL.
 
 ## Next.js frontend (React/TypeScript)
 
@@ -249,7 +246,7 @@ npm install
 npm run dev
 ```
 
-API requests jsou proxy‑ovány na FastAPI (`NEXT_PUBLIC_API_URL`). Po dokončení migrace nahradí Next.js statické stránky v `static/`.
+API requests jsou proxy‑ovány na FastAPI (`NEXT_PUBLIC_API_URL`). FastAPI již neslouží žádné HTML stránky, pouze REST API + healthcheck (root endpoint vrací odkaz na frontend).
 
 ## Deployment na Coolify
 
@@ -278,6 +275,7 @@ Vytvoř soubor `.env` na základě `.env.example`:
 
 - `DATABASE_URL` - PostgreSQL connection string (default: `postgresql+psycopg2://gymuser:gympass@localhost:5432/gym_turnstile`)
   - V Docker Compose je tato hodnota přepsaná na `postgresql+psycopg2://gymuser:gympass@postgres:5432/gym_turnstile`
+- `FRONTEND_URL` - veřejná URL Next.js aplikace (default `http://localhost:3000`, používá ji FastAPI root endpoint pro odkázání na UI)
 - `JWT_SECRET_KEY` - Secret key pro JWT tokeny (důležité pro produkci!)
 - `JWT_ALGORITHM` - Algorithm pro JWT (default: `HS256`)
 - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` - Expirace tokenu v minutách (default: `60`)

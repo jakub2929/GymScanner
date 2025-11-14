@@ -1,5 +1,7 @@
 # Plán projektu GymTurniket
 
+> **Poznámka:** Dokument popisuje i historické úkoly (např. legacy `static/` šablony). Aktuální frontend běží na Next.js.
+
 ## [DONE] 100% – Fix PostgreSQL dialect / DATABASE_URL v produkci
 
 **Problém:** SQLAlchemy vyhazuje `sqlalchemy.exc.NoSuchModuleError: sqlalchemy.dialects:postgres` když DATABASE_URL má prefix `postgres://` místo `postgresql+psycopg2://`.

@@ -81,6 +81,7 @@ COMGATE_NOTIFY_URL=https://tvoje-domena.cz/api/payments/comgate/notify
 # App
 ENVIRONMENT=production
 LOG_LEVEL=info
+FRONTEND_URL=https://app.tvoje-domena.cz
 ```
 
 ### Volitelné proměnné:
