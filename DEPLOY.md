@@ -10,6 +10,15 @@ Tato aplikace je připravena pro deployment na Coolify. Coolify je self-hosted p
 - PostgreSQL databáze (povinné pro produkci i lokální běh)
 - Veřejná doména pro aplikaci (kvůli HTTPS a Comgate callbackům)
 
+## Architektura
+
+Repo nyní obsahuje dvě služby:
+
+1. **FastAPI backend** (složka kořene) – poskytuje REST API, generuje QR kódy a komunikuje s PostgreSQL. Deployuje se pomocí `Dockerfile.production` (stejně jako dříve).
+2. **Next.js frontend** (složka `frontend/`) – moderní React/TypeScript UI s Apple “liquid glass” designem. Deployuje se jako samostatná Node.js aplikace (Dockerfile v `frontend/Dockerfile`) a komunikuje s backendem přes `NEXT_PUBLIC_API_URL`.
+
+Na Coolify tedy vytváříme dvě aplikace (Backend API + Frontend UI) a jednu databázi. Ve vývoji lze backend provozovat přes Docker Compose a frontend přes `npm run dev`.
+
 ## Krok 1: Příprava databáze
 
 V Coolify vytvoř PostgreSQL databázi:
@@ -24,29 +33,34 @@ postgresql://gymuser:gympass@postgres-host:5432/gymturnstile
 
 Pokud potřebuješ offline/debug režim se SQLite, podívej se na `SQLITE_SETUP.md`. Produkční nasazení vyžaduje PostgreSQL.
 
-## Krok 2: Vytvoření aplikace v Coolify
+## Krok 2: Backend aplikace v Coolify
 
-1. V Coolify dashboard klikni na "New Resource" → "Application"
-2. Vyber "GitHub" nebo "Dockerfile"
-3. Pokud GitHub:
-   - Připoj svůj GitHub repository
-   - Branch: `main` (nebo jiný)
-   - **Build Pack: `Dockerfile`** – **NEPOUŽÍVEJ Docker Compose!**
-   - Dockerfile path: `Dockerfile.production`
-4. Pokud Dockerfile:
-   - Upload nebo zadej Dockerfile.production obsah
+1. V Coolify klikni na **New Resource → Application**
+2. Zdroj: GitHub repo nebo Dockerfile URL
+3. Branch: `main` (nebo jiná produktivní)
+4. **Build pack:** Dockerfile
+5. **Dockerfile path:** `Dockerfile.production`
+6. Deploy target: např. `api.tvoje-domena.cz`
 
-**DŮLEŽITÉ:** 
-- **NEPOUŽÍVEJ** `docker-compose.yml` v Coolify (Coolify spravuje porty sám)
-- Použij **pouze** `Dockerfile.production` přímo
-- Coolify automaticky řeší networking, reverse proxy a porty (používá EXPOSE z Dockerfile)
-- `docker-compose.yml` už nemá `ports` sekci - Coolify to řeší sám
+> ⚠️ Nepoužívej `docker-compose.yml` – Coolify spravuje porty i reverse proxy. Dockerfile.production vystaví HTTP (8000) + HTTPS (443) a aplikace sama řeší TLS (případně můžeš v Coolify nechat TLS a uvnitř používat pouze HTTP).
 
-## Krok 3: Nastavení environment proměnných
+## Krok 3: Frontend (Next.js) aplikace v Coolify
 
-V Coolify dashboard → Environment Variables nastav:
+1. Vytvoř druhou aplikaci (New Resource → Application).
+2. Branch: `main`.
+3. **Build pack:** Dockerfile
+4. **Dockerfile path:** `frontend/Dockerfile`
+5. V sekci Environment přidej `NEXT_PUBLIC_API_URL=https://api.tvoje-domena.cz` (musí směřovat na veřejnou URL FastAPI backendu – použije se už při build-time).
+6. Zvol doménu např. `app.tvoje-domena.cz`.
+7. Port z Dockerfile je 3000 → Coolify jej připojí na reverse proxy (HTTPS terminace probíhá v Coolify).
 
-### Povinné proměnné:
+Next.js Docker image používá production build (`npm run build`) a `output: standalone`, takže běží jako Node server uvnitř kontejneru.
+
+## Krok 4: Nastavení environment proměnných
+
+### Backend (FastAPI)
+
+V Coolify dashboard → Environment Variables služby backendu nastav:
 
 ```bash
 # Database
@@ -75,7 +89,18 @@ LOG_LEVEL=info
 PYTHONUNBUFFERED=1  # Pro lepší logování
 ```
 
-## Krok 4: Nastavení portů
+### Frontend (Next.js)
+
+U frontend aplikace přidej minimálně:
+
+```bash
+NEXT_PUBLIC_API_URL=https://api.tvoje-domena.cz  # veřejná URL FastAPI aplikace
+NEXT_TELEMETRY_DISABLED=1
+```
+
+Pamatuj, že `NEXT_PUBLIC_API_URL` se propisuje během buildu, takže změna cílové API URL vyžaduje nový build/redeploy frontend služby.
+
+## Krok 5: Nastavení portů
 
 Coolify automaticky detekuje port z Dockerfile (8000). Pokud ne, nastav:
 - **Port:** 8000
@@ -83,7 +108,9 @@ Coolify automaticky detekuje port z Dockerfile (8000). Pokud ne, nastav:
 
 Coolify automaticky přidá HTTPS přes reverse proxy.
 
-## Krok 5: Nastavení domény
+Frontend Dockerfile vystavuje port 3000 – Coolify jej mapuje na HTTPS doménu automaticky.
+
+## Krok 6: Nastavení domény
 
 1. V Coolify → Domains přidej svou doménu
 2. Coolify automaticky:
@@ -97,17 +124,23 @@ Coolify automaticky přidá HTTPS přes reverse proxy.
    COMGATE_NOTIFY_URL=https://tvoje-domena.cz/api/payments/comgate/notify
    ```
 
-## Krok 6: Volumes
+Pro přehledné oddělení doporučujeme:
+- `api.tvoje-domena.cz` → FastAPI backend
+- `app.tvoje-domena.cz` → Next.js frontend (`NEXT_PUBLIC_API_URL` musí mířit na první doménu)
+
+## Krok 7: Volumes
 
 PostgreSQL data spravuj přímo ve službě Coolify (sekce Databases) – Coolify vytvoří persistentní storage automaticky. Volume pro aplikaci nejsou potřeba. Pokud někdy použiješ SQLite fallback, přidej volume dle `SQLITE_SETUP.md`.
 
-## Krok 7: Health Check
+## Krok 8: Health Check
 
 Coolify automaticky použije health check endpoint:
 - **URL:** `/health`
 - **Interval:** 30s
 
-## Krok 8: Deploy
+U frontend služby můžeš volitelně nastavit `/` s očekávaným HTTP 200 (Next.js odpověď).
+
+## Krok 9: Deploy
 
 1. Klikni na "Deploy" v Coolify
 2. Coolify:
@@ -120,8 +153,13 @@ Coolify automaticky použije health check endpoint:
 
 ### Ověření
 
-1. Otevři `https://tvoje-domena.cz/health` → mělo by vrátit `{"status": "healthy"}`
-2. Otevři `https://tvoje-domena.cz/` → měla by se zobrazit login stránka
+**API**
+1. Otevři `https://api.tvoje-domena.cz/health` → mělo by vrátit `{"status": "healthy"}`.
+2. Ověř `/admin/login` nebo `/docs` podle potřeby.
+
+**Frontend**
+1. Otevři `https://app.tvoje-domena.cz/login` → zobrazí se Apple glass přihlášení.
+2. Registruj / přihlaš se, ujisti se že requests míří na `https://api.tvoje-domena.cz`.
 
 ### Migrace databáze
 

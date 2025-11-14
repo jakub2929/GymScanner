@@ -65,3 +65,8 @@ Backend (FastAPI) remains – only minimal adjustments (CORS, static file mount 
 - Align docker/coolify configs once frontend deploy target is defined (SSR vs static export) and capture in docs.
 
 Projekt je nyní ve fázi F – po dokončení dokumentace a QA můžeme úplně vypnout původní statické šablony.
+
+**Průběžný stav (F)**
+- README doplněno o Next.js dev kroky a odkaz na produkční Dockerfile.
+- DEPLOY.md vysvětluje dvouslužbovou architekturu (FastAPI API + Next.js UI) v Coolify a popisuje nově přidaný `frontend/Dockerfile`.
+- Další kroky: mobilní QA (App/Scanner/Admin), případné úpravy docker-compose pro lokální SSR build a kontrola, že legacy `/static` stránky lze bezpečně odstranit.
