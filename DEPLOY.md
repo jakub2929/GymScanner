@@ -48,7 +48,7 @@ Můžeš ho přepsat v Coolify přes Environment → `DATABASE_URL` (např. poku
 2. Branch: `main`.
 3. **Build pack:** Dockerfile
 4. **Dockerfile path:** `frontend/Dockerfile`
-5. V sekci Environment přidej `NEXT_PUBLIC_API_URL=https://<web-doména>` (musí směřovat na veřejnou URL FastAPI backendu – použije se už při build-time). U nás je API služba pojmenovaná `web`.
+5. V sekci Environment přidej `NEXT_PUBLIC_API_URL=http://<web-doména>` (musí směřovat na veřejnou URL FastAPI backendu – použije se už při build-time). U nás je API služba pojmenovaná `web`.
 6. Zvol doménu např. `app.tvoje-domena.cz`.
 7. Port z Dockerfile je 3000 → Coolify jej připojí na reverse proxy (HTTPS terminace probíhá v Coolify).
 
@@ -69,17 +69,18 @@ JWT_SECRET_KEY=tvoje_super_tajne_heslo_produkce_min_32_znaku
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-# Comgate
+# Comgate (drž HTTP dokud Coolify nevystaví SSL)
 COMGATE_MERCHANT_ID=tvuj_merchant_id
 COMGATE_SECRET=tvuj_comgate_secret
 COMGATE_TEST_MODE=false  # true pro testování, false pro produkci
-COMGATE_RETURN_URL=https://tvoje-domena.cz/api/payments/comgate/return
-COMGATE_NOTIFY_URL=https://tvoje-domena.cz/api/payments/comgate/notify
+COMGATE_RETURN_URL=http://tvoje-api-domena.cz/api/payments/comgate/return
+COMGATE_NOTIFY_URL=http://tvoje-api-domena.cz/api/payments/comgate/notify
 
 # App
 ENVIRONMENT=production
 LOG_LEVEL=info
-FRONTEND_URL=https://app.tvoje-domena.cz
+FRONTEND_URL=http://tvoje-frontend-domena.cz
+CORS_ORIGINS=http://tvoje-frontend-domena.cz
 ```
 
 ### Volitelné proměnné:
@@ -93,11 +94,11 @@ PYTHONUNBUFFERED=1  # Pro lepší logování
 U frontend aplikace přidej minimálně:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://<web-doména>  # veřejná URL FastAPI (služba web)
+NEXT_PUBLIC_API_URL=http://<web-doména>  # veřejná URL FastAPI (služba web)
 NEXT_TELEMETRY_DISABLED=1
 ```
 
-Pamatuj, že `NEXT_PUBLIC_API_URL` se propisuje během buildu, takže změna cílové API URL vyžaduje nový build/redeploy frontend služby.
+Pamatuj, že `NEXT_PUBLIC_API_URL` se propisuje během buildu, takže změna cílové API URL vyžaduje nový build/redeploy frontend služby. Jakmile Coolify vystaví SSL certifikát, přepni všechny URL výše na `https://...`.
 
 ## Krok 5: Nastavení portů
 
@@ -117,10 +118,10 @@ Frontend Dockerfile vystavuje port 3000 – Coolify jej mapuje na HTTPS doménu 
    - Nakonfiguruje reverse proxy
    - Přesměruje HTTP → HTTPS
 
-3. Aktualizuj environment proměnné:
+3. Aktualizuj environment proměnné (nejprve `http://`, po vystavení certifikátu přepni na `https://`):
    ```
-   COMGATE_RETURN_URL=https://tvoje-domena.cz/api/payments/comgate/return
-   COMGATE_NOTIFY_URL=https://tvoje-domena.cz/api/payments/comgate/notify
+   COMGATE_RETURN_URL=http://tvoje-api-domena.cz/api/payments/comgate/return
+   COMGATE_NOTIFY_URL=http://tvoje-api-domena.cz/api/payments/comgate/notify
    ```
 
 Pro přehledné oddělení doporučujeme:
@@ -153,12 +154,13 @@ U frontend služby můžeš volitelně nastavit `/` s očekávaným HTTP 200 (Ne
 ### Ověření
 
 **API (služba `web`)**
-1. Otevři `https://<web-doména>/health` → mělo by vrátit `{"status": "healthy"}`.
-2. Ověř `/admin/login` nebo `/docs` podle potřeby.
+1. Otevři `http://<web-doména>/health` → mělo by vrátit `{"status": "healthy"}` (po zapnutí SSL použij `https://`).
+2. Zkus `http://<web-doména>/` – měl by se zobrazit JSON se stavem a odkazy na `/docs`.
+3. Ověř `/api/docs` nebo `/admin/login` podle potřeby.
 
 **Frontend (služba `frontend`)**
-1. Otevři `https://<frontend-doména>/login` → zobrazí se Apple glass přihlášení.
-2. Registruj / přihlaš se, ujisti se že requests míří na `https://<web-doména>`.
+1. Otevři `http://<frontend-doména>/login` (nebo `https://` po získání certifikátu) → zobrazí se Apple glass přihlášení.
+2. Registruj / přihlaš se, ujisti se že requests míří na `http://<web-doména>` (později `https://`).
 
 ### Migrace databáze
 

@@ -34,9 +34,22 @@ COMGATE_SECRET=tvuj_comgate_secret
 COMGATE_TEST_MODE=true
 
 # Comgate URLs (nahraď tvoje-domena.cz svou skutečnou doménou)
-# POZNÁMKA: Nastav až po nasazení a získání domény z Coolify!
-COMGATE_RETURN_URL=https://tvoje-domena.cz/api/payments/comgate/return
-COMGATE_NOTIFY_URL=https://tvoje-domena.cz/api/payments/comgate/notify
+# POZNÁMKA: Nech klidně http:// dokud nemáš platný SSL certifikát
+COMGATE_RETURN_URL=http://tvoje-api-domena.cz/api/payments/comgate/return
+COMGATE_NOTIFY_URL=http://tvoje-api-domena.cz/api/payments/comgate/notify
+```
+
+## Frontend ↔ Backend propojení
+
+```bash
+# API doména (FastAPI service `web`)
+NEXT_PUBLIC_API_URL=http://tvoje-api-domena.cz
+
+# Frontend doména (Next.js service `frontend`)
+FRONTEND_URL=http://tvoje-frontend-domena.cz
+
+# Přesně stejný origin jako FRONTEND_URL (čárkami lze přidat více)
+CORS_ORIGINS=http://tvoje-frontend-domena.cz
 ```
 
 ## Volitelné proměnné
@@ -57,10 +70,10 @@ LOG_LEVEL=info
 1. **Nejdřív nastav povinné proměnné** (DATABASE_URL, JWT_SECRET_KEY)
 2. **Deploy aplikaci** v Coolify
 3. **Získej doménu** z Coolify (např. `gym-scanner.coolify.app`)
-4. **Aktualizuj Comgate URLs** s tvou skutečnou doménou:
+4. **Aktualizuj Comgate URLs** s tvou skutečnou doménou (nejprve `http://`, později `https://`):
    ```
-   COMGATE_RETURN_URL=https://gym-scanner.coolify.app/api/payments/comgate/return
-   COMGATE_NOTIFY_URL=https://gym-scanner.coolify.app/api/payments/comgate/notify
+   COMGATE_RETURN_URL=http://gym-scanner.coolify.app/api/payments/comgate/return
+   COMGATE_NOTIFY_URL=http://gym-scanner.coolify.app/api/payments/comgate/notify
    ```
 5. **Restart aplikace** v Coolify
 

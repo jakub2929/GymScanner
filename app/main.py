@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 import os
@@ -24,11 +23,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Resolve allowed CORS origins from environment (comma/space separated)
+def _parse_cors_origins(raw_value: str | None) -> list[str]:
+    if not raw_value:
+        return ["*"]
+    origins = [origin.strip() for origin in raw_value.replace(" ", "").split(",") if origin.strip()]
+    return origins or ["*"]
+
+allowed_cors_origins = _parse_cors_origins(os.getenv("CORS_ORIGINS"))
+allow_credentials = "*" not in allowed_cors_origins
+logger.info(f"Configuring CORS for origins: {allowed_cors_origins}")
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
-    allow_credentials=True,
+    allow_origins=allowed_cors_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -97,15 +107,17 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 
 @app.get("/")
 async def read_root():
-    """Redirect to frontend if configured, otherwise show API info."""
+    """
+    Provide a simple status payload with pointers to docs/health.
+    (Avoid redirecting to the frontend domain so API root stays debuggable.)
+    """
     frontend_url = os.getenv("FRONTEND_URL")
-    if frontend_url:
-        return RedirectResponse(url=frontend_url, status_code=307)
-    # Fallback info when FRONTEND_URL is not provided
     return {
-        "message": "Gym Turnstile API running",
-        "frontend": "http://localhost:3000",
+        "status": "ok",
         "docs": "/docs",
+        "health": "/health",
+        "api_prefix": "/api",
+        "frontend": frontend_url or None,
     }
 
 @app.get("/health")

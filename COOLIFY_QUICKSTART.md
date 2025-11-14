@@ -38,24 +38,26 @@ JWT_SECRET_KEY=tvoje_super_tajne_heslo_min_32_znaku_produkce
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-# Comgate
+# Comgate (dokud Coolify nevystaví SSL, klidně nech HTTP)
 COMGATE_MERCHANT_ID=tvuj_merchant_id
 COMGATE_SECRET=tvuj_secret
 COMGATE_TEST_MODE=false
-COMGATE_RETURN_URL=https://tvoje-domena.cz/api/payments/comgate/return
-COMGATE_NOTIFY_URL=https://tvoje-domena.cz/api/payments/comgate/notify
+COMGATE_RETURN_URL=http://tvoje-api-domena.cz/api/payments/comgate/return
+COMGATE_NOTIFY_URL=http://tvoje-api-domena.cz/api/payments/comgate/notify
 
-# App
+# App / URL párování
 ENVIRONMENT=production
 LOG_LEVEL=info
 PYTHONUNBUFFERED=1
-FRONTEND_URL=https://app.tvoje-domena.cz
+FRONTEND_URL=http://tvoje-frontend-domena.cz
+CORS_ORIGINS=http://tvoje-frontend-domena.cz
 
-Frontend (Next.js):
-```bash
-NEXT_PUBLIC_API_URL=https://<web-doména>
+# Next.js build (stejná hodnota musí být i v Dockerfile ARG)
+NEXT_PUBLIC_API_URL=http://tvoje-api-domena.cz
 NEXT_TELEMETRY_DISABLED=1
 ```
+
+> Jakmile Coolify vystaví HTTPS certifikáty, přepni všechny URL na `https://...` (API, frontend, Comgate, CORS).
 ```
 
 ### 3. Přidání Domény
@@ -75,13 +77,16 @@ Klikni na **"Deploy"** a počkej na dokončení.
 - API (služba `web`): Otevři `https://<web-doména>/health` → `{"status": "healthy"}`
 - Frontend (služba `frontend`): Otevři `https://<frontend-doména>/login` → UI běží
 
-Poznámka: Backend root `/` nyní přesměruje (HTTP 307) na `FRONTEND_URL`, pokud je nastavená.
+Poznámka: Backend root `/` vrací JSON status + odkazy na `/docs` a `/health`, takže se dá snadno ověřit, že API doména žije.
 
 Příklad s sslip.io (podle našich názvů služeb v Compose):
-- `web` (FastAPI): `https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io`
-- `frontend` (Next.js): `https://k4wkoc0oc0kg4sk4kgg4ssws.93.91.159.48.sslip.io`
-- Nastav `NEXT_PUBLIC_API_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io`
-- Nastav `FRONTEND_URL=https://k4wkoc0oc0kg4sk4kgg4ssws.93.91.159.48.sslip.io`
+- `web` (FastAPI): `http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io`
+- `frontend` (Next.js): `http://k4wkoc0oc0kg4sk4kgg4ssws.93.91.159.48.sslip.io`
+- Nastav `NEXT_PUBLIC_API_URL=http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io`
+- Nastav `FRONTEND_URL=http://k4wkoc0oc0kg4sk4kgg4ssws.93.91.159.48.sslip.io`
+- Nastav `CORS_ORIGINS=http://k4wkoc0oc0kg4sk4kgg4ssws.93.91.159.48.sslip.io`
+
+Jakmile Coolify nasadí SSL certifikáty, přepni hodnoty výše na `https://...`.
 
 ## Troubleshooting
 

@@ -16,8 +16,8 @@ services:
       COMGATE_TEST_MODE: ${COMGATE_TEST_MODE:-true}
       COMGATE_RETURN_URL: ${COMGATE_RETURN_URL:-https://example.com/api/payments/comgate/return}
       COMGATE_NOTIFY_URL: ${COMGATE_NOTIFY_URL:-https://example.com/api/payments/comgate/notify}
-      # Optional: used by API root ("/") to redirect to UI
-      FRONTEND_URL: ${FRONTEND_URL:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy
@@ -46,9 +46,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://example.com}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://example.com}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       NEXT_TELEMETRY_DISABLED: 1
       NODE_ENV: production
     depends_on:

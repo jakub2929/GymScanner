@@ -1,70 +1,24 @@
-# Postgres Integration Plan
+# Deployment & API Routing Fix Plan – Status: 🟩 100% complete
 
-**Overall progress:** 20%
+**Goal:** Zprovoznit API doménu `ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io`, aby nevracela 404, frontend volal správné API URL, CORS/ComGate URL reflektovaly skutečné domény a oba kontejnery fungovaly v Coolify bez reverzního proxy „/api“ hacků.
 
-**Status indicators**
-- 🟩 Requirements clarified and repo audited
-- 🟨 Compose & env refactor pending
-- 🟥 Build + Coolify verification pending
+## Tasks
+1. 🟩 Audit Compose services (`web`, `frontend`, `db`) a potvrď porty + veřejné domény, aby bylo jasné, že API běží samostatně.
+2. 🟩 Upravit FastAPI root (`/`) tak, aby vracel JSON místo slepého redirectu na frontend (ať přístup na API doménu funguje pro lidské i automatické kontroly).
+3. 🟩 Sladit veřejné URL proměnné:
+   - `NEXT_PUBLIC_API_URL` = plná API doména
+   - `FRONTEND_URL` / `WEB_ORIGIN` / `NEXT_PUBLIC_WEB_ORIGIN` / `SERVICE_URL_*` = jejich příslušné domény (HTTP zatím)
+4. 🟩 Aktualizovat backend CORS tak, aby četl whitelist z env (`CORS_ORIGINS`) a omezil se na frontend doménu, ne `*`.
+5. 🟩 Potvrdit/aktualizovat ComGate `COMGATE_NOTIFY_URL` / `COMGATE_RETURN_URL`, aby dál mířily na API doménu s `/api/payments/comgate/*`.
+6. 🟩 Zrevidovat dokumentaci (`COOLIFY_ENV_VARS*.md`, `DEPLOY.md`, `COOLIFY_QUICKSTART.md`) pro nové nastavení URL a CORS.
+7. 🟩 Otestovat lokální buildy (`docker compose build`, `pnpm build`) a popsat jak na Coolify ověřit `/health`, `/api/docs`, frontend → API request i ComGate callback.
 
-## Step-by-step plan
-1. **Dependencies & Dockerfile sanity check** – Confirm `psycopg2-binary` is pinned in `requirements.txt` and that `Dockerfile.production` already runs `pip install -r requirements.txt` so Postgres connectivity works inside the image.  
-2. **Environment wiring** – Define definitive defaults for `DATABASE_URL`, `PYTHONUNBUFFERED`, `JWT_SECRET_KEY`, etc., ensuring values are injected via the `web` service `environment:` block while still allowing Coolify overrides.  
-3. **Compose refactor** – Expand `docker-compose.yml` to include the FastAPI web container and a new `db` service (`postgres:15-alpine`), wire `depends_on` with a health check, add a named volume for persistence, and remove any reliance on external/internal Coolify DBs.  
-4. **Documentation touch-up** – Align `COOLIFY_ENV_VARS.md` (and related quickstart docs if needed) with the new DATABASE_URL + Postgres expectations so deployment operators know which env vars remain configurable.  
-5. **Validation tasks (post-implementation)** – Run `docker compose build`, `docker compose up -d`, and `pnpm build` (per repo norms) to ensure both the FastAPI container and PostgreSQL stack come up cleanly under the Coolify-compatible compose.
+## Implementation Notes
+- **Files to touch:** `app/main.py` (root response + CORS config), pravděpodobně config/helper modul pro CORS whitelist, `docker-compose.yml` (default envs), `COOLIFY_ENV_VARS.md` + `COOLIFY_ENV_VARS_ACTUAL.txt` + `COOLIFY_QUICKSTART.md` + `DEPLOY.md` (nové instrukce), případně `frontend/Dockerfile` nebo `.env` příklady.
+- **Env management:** Coolify bude mít plné URL (HTTP prozatím) v `NEXT_PUBLIC_API_URL`, `FRONTEND_URL`, `WEB_ORIGIN`, `CORS_ORIGINS`, `COMGATE_*`. Zmínit, že po zapnutí TLS se přepnou na HTTPS.
+- **Redeploy:** Po úpravách je potřeba v Coolify znovu spustit Compose deploy, aby web + frontend buildy získaly nové env proměnné. Frontend musí být rebuiltnut kvůli `NEXT_PUBLIC_API_URL`.
 
-## Exact file changes required
-- `requirements.txt` – Ensure `psycopg2-binary==2.9.9` is present (append if missing); no other dependency drift.  
-- `Dockerfile.production` – Confirm/install requirements via `pip install -r requirements.txt` (already present, but verify).  
-- `docker-compose.yml` – Replace the single-service definition with the dual-service (web + db) stack including volume + health check + env wiring + depends_on.  
-- `COOLIFY_ENV_VARS.md` & `COOLIFY_ENV_VARS_ACTUAL.txt` (if needed) – Document the new DATABASE_URL default and note Coolify overrides.  
-- Any other deployment docs referencing SQLite or Coolify’s internal PG should be updated for clarity.
-
-## Final `docker-compose.yml`
-```yaml
-services:
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile.production
-    environment:
-      PYTHONUNBUFFERED: "1"
-      DATABASE_URL: postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-changeme}
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: gymuser
-      POSTGRES_PASSWORD: superheslo
-      POSTGRES_DB: gymdb
-    volumes:
-      - gym-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gymuser -d gymdb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-volumes:
-  gym-db-data:
-```
-
-## Required environment variables
-- `DATABASE_URL` – Defaulted in compose to `postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb`; Coolify can override via secrets if needed.  
-- `PYTHONUNBUFFERED` – Set to `1` for deterministic logging.  
-- `JWT_SECRET_KEY` – Provide a secure value through Coolify; compose default is a placeholder.  
-- (Any existing auth/payment secrets) – Continue injecting through Coolify; verify docs mention they override compose defaults.
-
-## Operator runbook
-1. `docker compose build` – Ensure images compile with psycopg2 dependencies.  
-2. `docker compose up -d` (or Coolify deploy) – Boot both services; verify `db` volume `gym-db-data` persists.  
-3. `pnpm install && pnpm build` – Validate the Tailwind/Next frontend build path per repo norm.  
-4. In Coolify, map env/secrets (JWT_SECRET_KEY, etc.) to override compose defaults as required.  
-5. Confirm FastAPI logs show successful connection to `postgresql+psycopg2://gymuser@db:5432/gymdb` and tables auto-create on first boot.
+## Verification
+- `docker compose build` – proběhlo lokálně (hlídá Python image + nové env defaults).
+- `pnpm build` uvnitř `frontend/` – zajišťuje, že Next.js má validní `NEXT_PUBLIC_API_URL`.
+- Po nasazení v Coolify: otevři `http://<api-domain>/` (JSON), `http://<api-domain>/health`, `http://<api-domain>/api/docs`, ověř že frontend (`http://<frontend-domain>`) volá API doménu a že ComGate callbacky míří na `http://<api-domain>/api/payments/comgate/*`.

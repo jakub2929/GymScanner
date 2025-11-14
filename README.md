@@ -1,4 +1,9 @@
 # Gym Turnstile QR System
+COMGATE_MERCHANT_ID=123456
+COMGATE_NOTIFY_URL=http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/payments/comgate/notify
+COMGATE_RETURN_URL=http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/payments/comgate/return
+COMGATE_SECRET=gx4q8OV3TJt6noJnfhjqJKyX3Z6Ych0y
+COMGATE_TEST_MODE=true
 
 ## Projekt
 Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se registrují, přihlásí, získají osobní QR kód a mohou vstoupit do gymu. Systém používá kredity (1 kredit = 1 cvičení) s ochranou proti dvojitému odpíchnutí pomocí cooldown systému.
