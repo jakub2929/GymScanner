@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 import os
@@ -96,11 +97,14 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 
 @app.get("/")
 async def read_root():
-    """Return API status and point to the new Next.js frontend."""
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    """Redirect to frontend if configured, otherwise show API info."""
+    frontend_url = os.getenv("FRONTEND_URL")
+    if frontend_url:
+        return RedirectResponse(url=frontend_url, status_code=307)
+    # Fallback info when FRONTEND_URL is not provided
     return {
         "message": "Gym Turnstile API running",
-        "frontend": frontend_url,
+        "frontend": "http://localhost:3000",
         "docs": "/docs",
     }
 
