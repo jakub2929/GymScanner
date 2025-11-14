@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models import Payment, User
 from datetime import datetime, timezone
-from urllib.parse import parse_qsl
+from base64 import b64encode
 import httpx
 import uuid
 import os
@@ -123,9 +123,12 @@ def prepare_comgate_data(payment: Payment, user: User) -> dict:
     merchant_id = os.getenv("COMGATE_MERCHANT_ID")
     secret = os.getenv("COMGATE_SECRET")
     test_mode = os.getenv("COMGATE_TEST_MODE", "true").lower() == "true"
-    api_url = os.getenv("COMGATE_API_URL", "https://payments.comgate.cz/v1.0/create")
+    api_url = os.getenv("COMGATE_API_URL", "https://payments.comgate.cz/v2.0/payment.json")
     return_url = os.getenv("COMGATE_RETURN_URL", "https://localhost/api/payments/comgate/return")
     notify_url = os.getenv("COMGATE_NOTIFY_URL", "https://localhost/api/payments/comgate/notify")
+    default_phone = os.getenv("COMGATE_DEFAULT_PHONE", "")
+    prepare_only = os.getenv("COMGATE_PREPARE_ONLY", "0")
+    country = os.getenv("COMGATE_COUNTRY", "CZE")
 
     if not merchant_id or not secret:
         logger.warning("Comgate credentials missing, falling back to placeholder redirect URL")
@@ -143,33 +146,42 @@ def prepare_comgate_data(payment: Payment, user: User) -> dict:
 
     payload = {
         "merchant": merchant_id,
-        "test": 1 if test_mode else 0,
-        # Comgate expects price in haléř (CZK cents)
-        "price": (payment.price_czk or 0) * 100,
+        "test": test_mode,
+        "country": country,
+        # Price is expected in whole currency units for REST API
+        "price": payment.price_czk or 0,
         "curr": "CZK",
         "label": f"GymScanner - {payment.token_amount} tokens",
         "refId": payment.payment_id,
+        "method": "ALL",
         "email": user.email,
-        "name": user.name,
+        "phone": default_phone or None,
+        "fullName": user.name or "GymScanner User",
         "notifyUrl": notify_url,
         "returnUrl": return_url,
-        "method": "ALL",
         "lang": "cs",
-        "secret": secret,
+        "prepareOnly": bool(int(str(prepare_only or "0"))),
     }
+    payload = {k: v for k, v in payload.items() if v not in (None, "")}
 
     try:
-        logger.info("Calling Comgate create API for payment %s", payment.payment_id)
+        logger.info("Calling Comgate REST API for payment %s", payment.payment_id)
+        auth_token = b64encode(f"{merchant_id}:{secret}".encode("utf-8")).decode("utf-8")
+        headers = {
+            "Authorization": f"Basic {auth_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
         with httpx.Client(timeout=15.0) as client:
-            response = client.post(api_url, data=payload)
+            response = client.post(api_url, json=payload, headers=headers)
         response.raise_for_status()
-        parsed = dict(parse_qsl(response.text, keep_blank_values=True))
-        code = (parsed.get("code") or parsed.get("result") or "").strip()
-        redirect_url = parsed.get("redirect") or parsed.get("redirectUrl")
+        parsed = response.json()
+        redirect_url = parsed.get("redirectUrl")
+        result = (parsed.get("state") or parsed.get("code") or parsed.get("result") or "").upper()
 
-        if code not in {"0", "OK", "SUCCESS"} or not redirect_url:
-            logger.error("Comgate create failed (code=%s, body=%s)", code, response.text)
-            raise RuntimeError(f"Comgate create failed (code={code})")
+        if not redirect_url or result not in {"CREATED", "OK"}:
+            logger.error("Comgate REST create failed (state=%s, body=%s)", result, parsed)
+            raise RuntimeError(f"Comgate REST create failed (state={result})")
 
         return {
             "redirect_url": redirect_url,
@@ -180,7 +192,7 @@ def prepare_comgate_data(payment: Payment, user: User) -> dict:
             "test_mode": test_mode,
             "notify_url": notify_url,
             "return_url": return_url,
-            "provider_status": code,
+            "provider_status": result,
             "comgate_response": parsed,
         }
     except Exception as exc:
