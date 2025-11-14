@@ -49,7 +49,7 @@ def ensure_access_token_columns():
         alters.append("ALTER TABLE access_tokens ADD COLUMN scan_count INTEGER DEFAULT 0")
     if not alters:
         with engine.begin() as conn:
-            conn.execute(text("UPDATE access_tokens SET is_active = 1 WHERE is_active IS NULL"))
+            conn.execute(text(f"UPDATE access_tokens SET is_active = {default_true} WHERE is_active IS NULL"))
             conn.execute(text("UPDATE access_tokens SET scan_count = 0 WHERE scan_count IS NULL"))
         return
     with engine.begin() as conn:
@@ -58,7 +58,7 @@ def ensure_access_token_columns():
         inspector_after = inspect(engine)
         columns_after = [col['name'] for col in inspector_after.get_columns('access_tokens')]
         if 'is_active' in columns_after:
-            conn.execute(text("UPDATE access_tokens SET is_active = 1 WHERE is_active IS NULL"))
+            conn.execute(text(f"UPDATE access_tokens SET is_active = {default_true} WHERE is_active IS NULL"))
         if 'scan_count' in columns_after:
             conn.execute(text("UPDATE access_tokens SET scan_count = 0 WHERE scan_count IS NULL"))
 
@@ -288,4 +288,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
