@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 from app.models import Payment, User
 from datetime import datetime, timezone
+from urllib.parse import parse_qsl
+import httpx
 import uuid
 import os
 import logging
@@ -91,64 +93,106 @@ def mark_order_paid(db: Session, payment_id: str) -> Payment:
     
     return payment
 
-def prepare_comgate_data(payment: Payment) -> dict:
+def mark_order_failed(db: Session, payment_id: str, status: str = "failed") -> Payment:
     """
-    Prepare data for Comgate API request.
-    
-    When calling Comgate API 'create', these URLs must be sent as parameters:
-    - notifyUrl: Where Comgate will send payment status notifications (POST)
-    - returnUrl: Where user will be redirected after payment (GET)
-    
-    Comgate stores these URLs with the payment and uses them for callbacks.
-    
-    Args:
-        payment: Payment object
-    
-    Returns:
-        Dictionary with Comgate API data including notifyUrl and returnUrl
+    Update payment status to failed/cancelled without crediting tokens.
     """
-    # Get Comgate configuration from environment
-    merchant_id = os.getenv("COMGATE_MERCHANT_ID", "")
+    payment = db.query(Payment).filter(Payment.payment_id == payment_id).first()
+    
+    if not payment:
+        raise ValueError(f"Payment {payment_id} not found")
+    
+    if payment.status == "paid":
+        logger.info("Payment %s already paid, ignoring failure update (%s)", payment_id, status)
+        return payment
+    
+    normalized_status = status or "failed"
+    now = datetime.now(timezone.utc)
+    payment.status = normalized_status
+    payment.updated_at = now
+    db.commit()
+    db.refresh(payment)
+    logger.info("Payment %s updated to status %s", payment_id, normalized_status)
+    return payment
+
+def prepare_comgate_data(payment: Payment, user: User) -> dict:
+    """
+    Call Comgate test/production API and return redirect payload.
+    Falls back to placeholder redirect if configuration/API call fails.
+    """
+    merchant_id = os.getenv("COMGATE_MERCHANT_ID")
+    secret = os.getenv("COMGATE_SECRET")
     test_mode = os.getenv("COMGATE_TEST_MODE", "true").lower() == "true"
-    
-    # Get URLs from environment - these will be sent to Comgate API
+    api_url = os.getenv("COMGATE_API_URL", "https://payments.comgate.cz/v1.0/create")
     return_url = os.getenv("COMGATE_RETURN_URL", "https://localhost/api/payments/comgate/return")
     notify_url = os.getenv("COMGATE_NOTIFY_URL", "https://localhost/api/payments/comgate/notify")
-    
-    # TODO: In future, this will make actual Comgate API call
-    # The API call will include notifyUrl and returnUrl as parameters
-    # Example:
-    # r = requests.post('https://payments.comgate.cz/v1.0/create', params={
-    #     'merchant': merchant_id,
-    #     'test': 1 if test_mode else 0,
-    #     'price': payment.price_czk,
-    #     'curr': 'CZK',
-    #     'refId': payment.payment_id,
-    #     'notifyUrl': notify_url,  # ← Comgate will call this for notifications
-    #     'returnUrl': return_url,  # ← User will be redirected here after payment
-    #     'secret': secret,
-    #     # ... další parametry
-    # })
-    # redirect_url = response.json()['redirectUrl']  # URL na platební stránku Comgate
-    
-    # For now, return placeholder redirect URL
-    # In production, this will be the actual Comgate payment page URL from API response
-    if merchant_id:
-        # If configured, show that we would redirect to Comgate
-        redirect_url = f"https://payments.comgate.cz/v1.0/create?refId={payment.payment_id}&price={payment.price_czk}"
-    else:
-        # If Comgate is not configured, return placeholder
-        redirect_url = f"https://example.com/comgate-placeholder?payment_id={payment.payment_id}&amount={payment.price_czk}"
-        logger.warning("COMGATE_MERCHANT_ID not set, using placeholder redirect URL")
-    
-    return {
-        "redirect_url": redirect_url,
-        "payment_id": payment.payment_id,
-        "amount": payment.price_czk,
-        "currency": "CZK",
-        "merchant_id": merchant_id if merchant_id else "PLACEHOLDER",
-        "test_mode": test_mode,
-        "notify_url": notify_url,  # This will be sent to Comgate API as 'notifyUrl' parameter
-        "return_url": return_url    # This will be sent to Comgate API as 'returnUrl' parameter
+
+    if not merchant_id or not secret:
+        logger.warning("Comgate credentials missing, falling back to placeholder redirect URL")
+        return {
+            "redirect_url": f"https://example.com/comgate-placeholder?payment_id={payment.payment_id}&amount={payment.price_czk}",
+            "payment_id": payment.payment_id,
+            "amount": payment.price_czk,
+            "currency": "CZK",
+            "merchant_id": merchant_id or "PLACEHOLDER",
+            "test_mode": test_mode,
+            "notify_url": notify_url,
+            "return_url": return_url,
+            "provider_status": "missing_credentials",
+        }
+
+    payload = {
+        "merchant": merchant_id,
+        "test": 1 if test_mode else 0,
+        # Comgate expects price in haléř (CZK cents)
+        "price": (payment.price_czk or 0) * 100,
+        "curr": "CZK",
+        "label": f"GymScanner - {payment.token_amount} tokens",
+        "refId": payment.payment_id,
+        "email": user.email,
+        "name": user.name,
+        "notifyUrl": notify_url,
+        "returnUrl": return_url,
+        "method": "ALL",
+        "lang": "cs",
+        "secret": secret,
     }
 
+    try:
+        logger.info("Calling Comgate create API for payment %s", payment.payment_id)
+        with httpx.Client(timeout=15.0) as client:
+            response = client.post(api_url, data=payload)
+        response.raise_for_status()
+        parsed = dict(parse_qsl(response.text, keep_blank_values=True))
+        code = (parsed.get("code") or parsed.get("result") or "").strip()
+        redirect_url = parsed.get("redirect") or parsed.get("redirectUrl")
+
+        if code not in {"0", "OK", "SUCCESS"} or not redirect_url:
+            logger.error("Comgate create failed (code=%s, body=%s)", code, response.text)
+            raise RuntimeError(f"Comgate create failed (code={code})")
+
+        return {
+            "redirect_url": redirect_url,
+            "payment_id": payment.payment_id,
+            "amount": payment.price_czk,
+            "currency": "CZK",
+            "merchant_id": merchant_id,
+            "test_mode": test_mode,
+            "notify_url": notify_url,
+            "return_url": return_url,
+            "provider_status": code,
+            "comgate_response": parsed,
+        }
+    except Exception as exc:
+        logger.exception("Comgate API call failed for payment %s: %s", payment.payment_id, exc)
+        return {
+            "redirect_url": f"https://payments.comgate.cz/v1.0/create?refId={payment.payment_id}&price={payment.price_czk}",
+            "payment_id": payment.payment_id,
+            "amount": payment.price_czk,
+            "currency": "CZK",
+            "merchant_id": merchant_id,
+            "test_mode": test_mode,
+            "notify_url": notify_url,
+            "return_url": return_url,
+            "provider_status": "error",
+        }

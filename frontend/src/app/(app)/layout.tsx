@@ -33,25 +33,35 @@ export default function AppLayout({ children }: PropsWithChildren) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] via-[#f3f6fb] to-[#ecf1f9] text-slate-900">
-      <nav className="max-w-5xl mx-auto flex items-center justify-between px-6 py-6">
-        <Link
-          href="/dashboard"
-          className="text-2xl font-semibold tracking-tight text-slate-900"
-          onClick={() => setMenuOpen(false)}
-        >
-          Gym Access
-        </Link>
-        <div className="hidden md:flex items-center gap-6 text-sm text-slate-500">
+    <div className="min-h-screen bg-[#020610] text-white">
+      <nav className="max-w-5xl mx-auto px-6 py-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center justify-between">
+          <div>
+            <Link
+              href="/dashboard"
+              className="text-2xl font-semibold tracking-tight"
+              onClick={() => setMenuOpen(false)}
+            >
+              Gym Access
+            </Link>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">User console</p>
+          </div>
+          <button
+            className="md:hidden text-slate-200 border border-white/15 rounded-full p-2"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label="Otevřít navigaci"
+          >
+            <span className="block w-5 h-0.5 bg-white mb-1" />
+            <span className="block w-5 h-0.5 bg-white mb-1" />
+            <span className="block w-5 h-0.5 bg-white" />
+          </button>
+        </div>
+        <div className="hidden md:flex flex-wrap items-center gap-4 text-sm text-slate-400">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={
-                pathname === link.href
-                  ? 'text-slate-900 font-medium'
-                  : 'hover:text-slate-900 transition-colors'
-              }
+              className={pathname === link.href ? 'text-white font-medium' : 'hover:text-white transition-colors'}
             >
               {link.label}
             </Link>
@@ -61,28 +71,19 @@ export default function AppLayout({ children }: PropsWithChildren) {
               setMenuOpen(false);
               logout();
             }}
-            className="px-4 py-2 rounded-full border border-slate-200 hover:bg-white transition-colors"
+            className="px-4 py-2 rounded-full border border-white/15 hover:bg-white/10 transition-colors"
           >
             Odhlásit se
           </button>
         </div>
-        <button
-          className="md:hidden text-slate-600 border border-slate-200 rounded-full p-2"
-          onClick={() => setMenuOpen((prev) => !prev)}
-          aria-label="Otevřít navigaci"
-        >
-          <span className="block w-5 h-0.5 bg-slate-800 mb-1" />
-          <span className="block w-5 h-0.5 bg-slate-800 mb-1" />
-          <span className="block w-5 h-0.5 bg-slate-800" />
-        </button>
       </nav>
       {menuOpen && (
-        <div className="md:hidden px-6 pb-4 text-sm text-slate-700 space-y-2">
+        <div className="md:hidden px-6 pb-4 space-y-3 text-sm text-slate-200">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="block rounded-2xl surface-card p-4"
+              className="block rounded-2xl glass-panel p-4"
               onClick={() => setMenuOpen(false)}
             >
               {link.label}
@@ -93,14 +94,14 @@ export default function AppLayout({ children }: PropsWithChildren) {
               setMenuOpen(false);
               logout();
             }}
-            className="w-full rounded-2xl border border-slate-200 bg-white py-3"
+            className="w-full rounded-2xl border border-white/15 py-3"
           >
             Odhlásit se
           </button>
         </div>
       )}
       <main className="px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="max-w-5xl mx-auto w-full">{children}</div>
+        <div className="max-w-5xl mx-auto w-full space-y-8">{children}</div>
       </main>
     </div>
   );

@@ -62,12 +62,12 @@ export default function SettingsPage() {
   return (
     <>
       <div className="grid lg:grid-cols-2 gap-6">
-        <section className="surface-card p-6 space-y-4">
-          <h2 className="text-2xl font-semibold text-slate-900">Informace o účtu</h2>
+        <section className="glass-panel rounded-3xl p-6 space-y-4">
+          <h2 className="text-2xl font-semibold text-white">Informace o účtu</h2>
           {isPending ? (
             <p className="text-slate-500">Načítám...</p>
           ) : (
-            <div className="text-sm text-slate-600 space-y-3">
+            <div className="text-sm text-slate-300 space-y-3">
               <p>
                 <span className="text-slate-400">Jméno:</span> {data?.name}
               </p>
@@ -88,21 +88,36 @@ export default function SettingsPage() {
           )}
         </section>
 
-        <section className="surface-card p-6 space-y-4">
-          <h2 className="text-2xl font-semibold text-slate-900">Změna hesla</h2>
+        <section className="glass-panel rounded-3xl p-6 space-y-4">
+          <h2 className="text-2xl font-semibold text-white">Změna hesla</h2>
           <form className="space-y-4" onSubmit={handleSubmit(onChangePassword)}>
             <div>
-              <input type="password" placeholder="Aktuální heslo" className="input-field" {...register('current_password')} />
+              <input
+                type="password"
+                placeholder="Aktuální heslo"
+                className="input-field bg-slate-900 text-white border border-white/10"
+                {...register('current_password')}
+              />
               {errors.current_password && (
                 <p className="text-sm text-rose-300 mt-1">{errors.current_password.message}</p>
               )}
             </div>
             <div>
-              <input type="password" placeholder="Nové heslo" className="input-field" {...register('new_password')} />
+              <input
+                type="password"
+                placeholder="Nové heslo"
+                className="input-field bg-slate-900 text-white border border-white/10"
+                {...register('new_password')}
+              />
               {errors.new_password && <p className="text-sm text-rose-300 mt-1">{errors.new_password.message}</p>}
             </div>
             <div>
-              <input type="password" placeholder="Potvrď nové heslo" className="input-field" {...register('confirm_password')} />
+              <input
+                type="password"
+                placeholder="Potvrď nové heslo"
+                className="input-field bg-slate-900 text-white border border-white/10"
+                {...register('confirm_password')}
+              />
               {errors.confirm_password && (
                 <p className="text-sm text-rose-300 mt-1">{errors.confirm_password.message}</p>
               )}

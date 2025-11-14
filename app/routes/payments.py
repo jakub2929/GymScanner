@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr, Field
 from app.database import get_db
 from app.models import User, Payment
 from app.auth import get_current_user
-from app.services.payment_service import create_order, mark_order_paid, prepare_comgate_data
+from app.services.payment_service import create_order, mark_order_failed, mark_order_paid, prepare_comgate_data
 import uuid
 from datetime import datetime, timezone
 import logging
@@ -13,6 +13,31 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+SUCCESS_STATUSES = {"PAID", "OK", "SUCCESS", "AUTHORIZED", "CAPTURED", "COMPLETED"}
+FAILED_STATUSES = {"CANCELLED", "REJECTED", "FAILED", "ERROR", "DENIED", "TIMEOUT", "DECLINED"}
+
+
+def _apply_status_from_gateway(db: Session, payment_id: str, status: str | None):
+    """Normalize Comgate status responses and update payment accordingly."""
+    normalized = (status or "").upper()
+    if not normalized:
+        return None
+    if normalized in SUCCESS_STATUSES:
+        try:
+            mark_order_paid(db, payment_id)
+            return "paid"
+        except ValueError as exc:
+            logger.info("mark_order_paid skipped for %s: %s", payment_id, exc)
+            return None
+    if normalized in FAILED_STATUSES:
+        try:
+            mark_order_failed(db, payment_id, normalized.lower())
+            return normalized.lower()
+        except ValueError as exc:
+            logger.info("mark_order_failed skipped for %s: %s", payment_id, exc)
+            return None
+    return normalized.lower()
 
 class PaymentRequest(BaseModel):
     email: EmailStr
@@ -130,7 +155,7 @@ async def create_payment_order(
     )
     
     # Prepare Comgate redirect data
-    comgate_data = prepare_comgate_data(payment)
+    comgate_data = prepare_comgate_data(payment, current_user)
     
     return CreatePaymentResponse(
         payment_id=payment.payment_id,
@@ -142,46 +167,35 @@ async def create_payment_order(
     )
 
 @router.post("/payments/comgate/notify")
-async def comgate_notify(
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    """
-    Callback endpoint for Comgate payment notifications (NOTIFY URL).
-    This endpoint is called by Comgate when payment status changes.
-    
-    TODO: Implement Comgate signature validation
-    TODO: Parse Comgate notification data
-    TODO: Mark payment as paid and add tokens to user
-    """
-    # Get raw body for signature validation
-    body = await request.body()
+async def comgate_notify(request: Request, db: Session = Depends(get_db)):
+    """Callback endpoint for Comgate payment notifications (NOTIFY URL)."""
     form_data = await request.form()
-    
-    logger.info(f"Comgate notify received: {dict(form_data)}")
-    
-    # TODO: Validate Comgate signature
-    # signature = form_data.get("signature")
-    # expected_signature = calculate_comgate_signature(form_data)
-    # if signature != expected_signature:
-    #     logger.error("Invalid Comgate signature")
-    #     raise HTTPException(status_code=400, detail="Invalid signature")
-    
-    # TODO: Parse payment_id from Comgate notification
-    # payment_id = form_data.get("refId")  # or whatever Comgate sends
-    # status = form_data.get("status")  # "PAID", "CANCELLED", etc.
-    
-    # For now, return placeholder response
+    payload = {k: v for (k, v) in form_data.multi_items()}
+    logger.info("Comgate notify received: %s", payload)
+
+    payment_id = payload.get("refId") or payload.get("refid") or payload.get("payment_id")
+    if not payment_id:
+        raise HTTPException(status_code=400, detail="Missing refId in Comgate notification")
+
+    payment = db.query(Payment).filter(Payment.payment_id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    status = payload.get("status") or payload.get("result")
+    applied = _apply_status_from_gateway(db, payment_id, status)
+
     return {
-        "status": "ok",
-        "message": "Comgate notify endpoint - TODO: implement full integration"
+        "status": applied or payment.status,
+        "payment_id": payment_id,
     }
 
 @router.get("/payments/comgate/return")
 async def comgate_return(
-    payment_id: str = None,
-    status: str = None,
-    db: Session = Depends(get_db)
+    payment_id: str | None = None,
+    status: str | None = None,
+    refId: str | None = None,
+    code: str | None = None,
+    db: Session = Depends(get_db),
 ):
     """
     Return URL endpoint for Comgate payment redirect.
@@ -189,6 +203,8 @@ async def comgate_return(
     
     TODO: Implement full Comgate return handling
     """
+    if not payment_id:
+        payment_id = refId
     if not payment_id:
         # Redirect to dashboard with error
         return RedirectResponse(url="/dashboard?payment_error=missing_payment_id")
@@ -198,9 +214,11 @@ async def comgate_return(
     
     if not payment:
         return RedirectResponse(url="/dashboard?payment_error=payment_not_found")
-    
-    # TODO: Verify payment status with Comgate API
-    # For now, just show status page
+    # Apply status info from query parameters if provided (notify may arrive later)
+    status_param = status or code
+    applied_status = _apply_status_from_gateway(db, payment.payment_id, status_param)
+    if applied_status:
+        payment = db.query(Payment).filter(Payment.payment_id == payment_id).first() or payment
     
     if payment.status == "paid":
         message = f"Platba byla úspěšně dokončena! Přidáno {payment.token_amount} tokenů."

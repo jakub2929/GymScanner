@@ -186,15 +186,15 @@ function ScannerConsole() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] via-[#f3f6fb] to-[#ecf1f9]">
+      <div className="min-h-screen bg-[#020610] text-white">
         <header className="max-w-5xl mx-auto flex items-center justify-between px-6 py-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-emerald-500/80">Gym Access</p>
-            <h1 className="text-2xl font-semibold text-slate-900">Turniket Scanner</h1>
+            <p className="text-xs uppercase tracking-[0.35em] text-emerald-300/80">Gym Access</p>
+            <h1 className="text-2xl font-semibold">Turniket Scanner</h1>
           </div>
           <button
             onClick={() => logout('/scanner')}
-            className="px-4 py-2 rounded-full border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+            className="px-4 py-2 rounded-full border border-white/15 hover:bg-white/10 text-sm transition-colors"
           >
             Odhlásit se
           </button>
@@ -205,7 +205,7 @@ function ScannerConsole() {
               <div className="flex flex-col gap-4">
                 <div>
                   <h2 className="text-3xl sm:text-4xl font-semibold">Scanner</h2>
-                  <p className="text-slate-400 mt-2 text-sm">Skenuj QR kódy nebo vlož token ručně.</p>
+                  <p className="text-slate-300 mt-2 text-sm">Skenuj QR kódy nebo vlož token ručně.</p>
                 </div>
                 <div className="glass-subcard rounded-2xl p-4 text-sm">
                   <p
@@ -214,7 +214,7 @@ function ScannerConsole() {
                         ? 'text-emerald-300'
                         : statusType === 'error'
                           ? 'text-rose-300'
-                          : 'text-slate-200'
+                          : 'text-slate-100'
                     }
                   >
                     {status}
@@ -232,7 +232,7 @@ function ScannerConsole() {
                 <div className="space-y-4">
                   <textarea
                     value={manualToken}
-                    className="input-field min-h-[140px]"
+                    className="input-field min-h-[140px] bg-slate-900 text-white border border-white/10"
                     placeholder="Vlož token"
                     onChange={(e) => setManualToken(e.target.value)}
                   />
@@ -240,7 +240,7 @@ function ScannerConsole() {
                     {isSubmitting ? 'Ověřuji...' : 'Ověřit token'}
                   </button>
                   {lastResult && (
-                    <div className="glass-subcard rounded-2xl p-4 text-sm text-slate-300 space-y-2">
+                    <div className="glass-subcard rounded-2xl p-4 text-sm text-slate-200 space-y-2">
                       <p>Status: {lastResult.allowed ? 'Povoleno' : 'Zamítnuto'}</p>
                       <p>Důvod: {lastResult.reason}</p>
                       <p>Zbývá vstupů: {lastResult.credits_left}</p>

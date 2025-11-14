@@ -27,6 +27,7 @@ COMGATE_TEST_MODE=true
 # DŮLEŽITÉ: Dokud Coolify nevystaví HTTPS certifikát, nech HTTP (sslip.io)
 COMGATE_RETURN_URL=http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/payments/comgate/return
 COMGATE_NOTIFY_URL=http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/payments/comgate/notify
+COMGATE_API_URL=https://payments.comgate.cz/v1.0/create
 
 # ============================================
 # VOLITELNÉ

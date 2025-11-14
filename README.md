@@ -5,6 +5,9 @@ COMGATE_RETURN_URL=http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/pay
 COMGATE_SECRET=gx4q8OV3TJt6noJnfhjqJKyX3Z6Ych0y
 COMGATE_TEST_MODE=true
 
+scanner@scanner.cz scanner pristup
+123456789
+
 ## Projekt
 Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se registrují, přihlásí, získají osobní QR kód a mohou vstoupit do gymu. Systém používá kredity (1 kredit = 1 cvičení) s ochranou proti dvojitému odpíchnutí pomocí cooldown systému.
 
@@ -32,6 +35,28 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 - Cooldown ochrana (60 sekund mezi úspěšnými vstupy)
 - Admin dashboard pro správu uživatelů a kreditů
 - Access log pro audit vstupů
+
+## Comgate test API
+
+Produkční nákupy tokenů teď používají Comgate platební bránu. Backend volá endpoint `https://payments.comgate.cz/v1.0/create` (přepiš pomocí `COMGATE_API_URL`, pokud Coolify používá jinou testovací URL) a předává `refId` = interní `payment_id`.  
+Po úspěšném vytvoření objednávky backend vrací `redirect_url`, na kterou frontend přesměruje uživatele.  
+Callbacky:
+
+- `COMGATE_NOTIFY_URL` → POST `/api/payments/comgate/notify` (potvrdí platbu a přičte tokeny)
+- `COMGATE_RETURN_URL` → GET `/api/payments/comgate/return` (zobrazení stavu platby)
+
+Nutné proměnné:
+
+```
+COMGATE_MERCHANT_ID=...
+COMGATE_SECRET=...
+COMGATE_TEST_MODE=true
+COMGATE_RETURN_URL=http://<api-domain>/api/payments/comgate/return
+COMGATE_NOTIFY_URL=http://<api-domain>/api/payments/comgate/notify
+COMGATE_API_URL=https://payments.comgate.cz/v1.0/create  # nebo tvoje testovací URL
+```
+
+Frontend (`/dashboard`) nyní volá `/api/payments/create` a po úspěchu automaticky přesměruje na Comgate. Po návratu/notify získává uživatel nové kredity.
 
 ## Struktura projektu
 ```
