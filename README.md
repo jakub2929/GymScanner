@@ -85,7 +85,7 @@ Dev server běží ve výchozím stavu na `http://localhost:3000`. `NEXT_PUBLIC_
 
 - Zdrojáky najdeš v `frontend/src/app/` rozdělené do segmentů `(auth)` pro login/registraci, `(app)` pro chráněné uživatelské stránky a `admin/(auth|protected)` pro nové admin rozhraní.
 - Globální stav tokenu je v Jotai (`lib/authStore`), data se načítají přes TanStack Query a `apiClient` automaticky doplňuje JWT z `sessionStorage`.
-- Vytvoř si `.env.local` (nebo použij proměnnou při `npm run dev`) s `NEXT_PUBLIC_API_URL=http://localhost:8000` / adresou FastAPI.
+- Vytvoř si `.env.local` (nebo použij proměnnou při `npm run dev`) s `NEXT_PUBLIC_API_URL=https://localhost:8443` / adresou FastAPI.
 - Pro produkční deployment je připraven `frontend/Dockerfile` (Next.js standalone build) – viz `DEPLOY.md`.
 
 ### Užitečné příkazy v `frontend/`
