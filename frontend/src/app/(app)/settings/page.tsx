@@ -107,7 +107,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-rose-300 mt-1">{errors.confirm_password.message}</p>
               )}
             </div>
-            <button type="submit" className="accent-button" disabled={isSubmitting}>
+            <button type="submit" className="accent-button w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Ukládám...' : 'Uložit heslo'}
             </button>
           </form>

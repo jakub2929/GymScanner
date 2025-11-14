@@ -97,7 +97,7 @@ export default function ScannerPage() {
                 placeholder="Vlož token"
                 onChange={(e) => setManualToken(e.target.value)}
               />
-              <button className="accent-button" onClick={() => handleVerify(manualToken)} disabled={isSubmitting}>
+              <button className="accent-button w-full" onClick={() => handleVerify(manualToken)} disabled={isSubmitting}>
                 {isSubmitting ? 'Ověřuji...' : 'Ověřit token'}
               </button>
               {lastResult && (

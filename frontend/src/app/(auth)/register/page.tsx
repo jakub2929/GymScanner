@@ -53,7 +53,7 @@ export default function RegisterPage() {
             <input type="password" placeholder="Heslo" className="input-field" {...register('password')} />
             {errors.password && <p className="text-sm text-rose-300 mt-1">{errors.password.message}</p>}
           </div>
-          <button type="submit" className="accent-button" disabled={isSubmitting}>
+          <button type="submit" className="accent-button w-full" disabled={isSubmitting}>
             {isSubmitting ? 'Registruji...' : 'Registrovat'}
           </button>
         </form>
