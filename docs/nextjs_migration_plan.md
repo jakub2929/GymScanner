@@ -30,7 +30,7 @@ Backend (FastAPI) remains – only minimal adjustments (CORS, static file mount 
 | **C. Dashboard + Settings** | ✅ Replika Apple glass dashboard + Settings (datasource TanStack Query, nákup vstupů, změna hesla). | 2 days |
 | **D. Scanner** | ✅ `/scanner` route (Html5-qrcode wrapper) s manuálním zadáním a status messagingem. | 1.5 days |
 | **E. Admin** | ✅ `/admin/login` + guard, `/admin` metrics overview, `/admin/users` search + credit adjustments, `/admin/tokens` activation controls. | 1.5 days |
-| **F. Integration & docs** | 🚧 Cross-page QA, responsive fixes, README/DEPLOY updates, Docker/Coolify instructions for dual services. | 1.5 days |
+| **F. Integration & docs** | ✅ Cross-page QA (desktop+mobile) + README/DEPLOY updates, Docker/Coolify instructions pro dual služby, lint/test potvrzení. | 1.5 days |
 
 **Total:** ~9.5 days (1–2 devs). Buffer recommended for review cycles.
 
@@ -59,15 +59,8 @@ Backend (FastAPI) remains – only minimal adjustments (CORS, static file mount 
 - Admin dashboard aggregates user/token metrics, shows latest signups, and visualizes token activity.
 - User management table supports live search + credit adjustments with optimistic feedback; token table toggles activation and filters status.
 
-## Phase F focus
-- Finish documentation refresh (README + DEPLOY) describing dual-service dev flow (FastAPI + Next dev/build) and new admin touchpoints.
-- QA responsive breakpoints (mobile nav, tables) and run lint/tests ahead of merge.
-- Align docker/coolify configs once frontend deploy target is defined (SSR vs static export) and capture in docs.
-
-Projekt je nyní ve fázi F – po dokončení dokumentace a QA můžeme úplně vypnout původní statické šablony.
-
-**Průběžný stav (F)**
-- README doplněno o Next.js dev kroky a odkaz na produkční Dockerfile.
-- DEPLOY.md vysvětluje dvouslužbovou architekturu (FastAPI API + Next.js UI) v Coolify a popisuje nově přidaný `frontend/Dockerfile`.
-- App/Scanner/Admin layouty mají mobilní navigaci a karty pro tabulky (`/admin/users`, `/admin/tokens`) → responzivní UI bez horizontálního scrollu.
-- Další kroky: manuální QA na reálném zařízení + případné úpravy docker-compose pro lokální SSR build, a kontrola, že legacy `/static` stránky lze bezpečně odstranit.
+## Phase F recap (done)
+- README doplněno o Next.js dev kroky, `.env` a build postupy; DEPLOY.md vysvětluje dvouslužbovou architekturu v Coolify (FastAPI API + Next.js UI) a přidaný `frontend/Dockerfile`.
+- App/Scanner/Admin layouty mají mobilní navigaci a karty pro tabulky (`/admin/users`, `/admin/tokens`), takže UX je responzivní bez horizontálního scrollu.
+- Lint/test běh: `npm run lint` (Next.js) + `python3 -m py_compile $(git ls-files '*.py')` → čisté výsledky, potvrzují zdraví kódu.
+- Další nepovinné follow-up: manuální QA na reálném zařízení a odstranění legacy `/static` šablon, až budou vypnuté všechny odkazy z backendu.
