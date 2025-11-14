@@ -7,12 +7,10 @@ Tato aplikace je připravena pro deployment na Coolify. Coolify je self-hosted p
 ## Požadavky
 
 - Coolify instance (self-hosted nebo cloud)
-- PostgreSQL databáze (doporučeno pro produkci) nebo SQLite (pro testování)
-- Veřejná doména pro aplikaci
+- PostgreSQL databáze (povinné pro produkci i lokální běh)
+- Veřejná doména pro aplikaci (kvůli HTTPS a Comgate callbackům)
 
 ## Krok 1: Příprava databáze
-
-### PostgreSQL (doporučeno pro produkci)
 
 V Coolify vytvoř PostgreSQL databázi:
 - Database name: `gymturnstile`
@@ -24,12 +22,7 @@ Získej connection string:
 postgresql://gymuser:gympass@postgres-host:5432/gymturnstile
 ```
 
-### SQLite (pro testování)
-
-SQLite funguje, ale není doporučeno pro produkci. Pro SQLite použij:
-```
-sqlite:///./data/gym_turnstile.db
-```
+Pokud potřebuješ offline/debug režim se SQLite, podívej se na `SQLITE_SETUP.md`. Produkční nasazení vyžaduje PostgreSQL.
 
 ## Krok 2: Vytvoření aplikace v Coolify
 
@@ -104,11 +97,9 @@ Coolify automaticky přidá HTTPS přes reverse proxy.
    COMGATE_NOTIFY_URL=https://tvoje-domena.cz/api/payments/comgate/notify
    ```
 
-## Krok 6: Volumes (volitelné)
+## Krok 6: Volumes
 
-Pokud používáš SQLite, přidej volume pro persistentní data:
-- **Path:** `/app/data`
-- **Mount:** `gymturnstile-data`
+PostgreSQL data spravuj přímo ve službě Coolify (sekce Databases) – Coolify vytvoří persistentní storage automaticky. Volume pro aplikaci nejsou potřeba. Pokud někdy použiješ SQLite fallback, přidej volume dle `SQLITE_SETUP.md`.
 
 ## Krok 7: Health Check
 
@@ -182,10 +173,11 @@ pg_dump $DATABASE_URL > backup.sql
 psql $DATABASE_URL < backup.sql
 ```
 
-### SQLite
+### Legacy SQLite
+
+Pouze pokud běžíš na dočasném SQLite fallbacku (viz `SQLITE_SETUP.md`):
 
 ```bash
-# Zkopíruj soubor
 cp /app/data/gym_turnstile.db backup.db
 ```
 
@@ -218,4 +210,3 @@ Coolify poskytuje:
 
 Pro problémy s Coolify: https://coolify.io/docs
 Pro problémy s aplikací: zkontroluj logy v Coolify dashboard
-

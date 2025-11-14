@@ -87,12 +87,10 @@ async def initialize_database():
         logger.warning("DATABASE CONNECTION FAILED - Application will continue")
         logger.warning("=" * 60)
         logger.warning("Possible solutions:")
-        logger.warning("1. Use SQLite: Set DATABASE_URL=sqlite:///./data/gym_turnstile.db")
-        logger.warning("2. Fix PostgreSQL connection:")
-        logger.warning("   - Ensure app and PostgreSQL are in same network")
-        logger.warning("   - Check DATABASE_URL hostname is correct")
-        logger.warning("   - Verify PostgreSQL is running")
-        logger.warning("3. Add Volume for SQLite: Path=/app/data, Mount=gymturnstile-data")
+        logger.warning("1. Zkontroluj PostgreSQL připojení (docker compose logs postgres)")
+        logger.warning("2. Ověř, že DATABASE_URL míří na správného hostitele/uživatele/DB")
+        logger.warning("3. Pokud ladíš bez Postgresu, nastav dočasně SQLite: DATABASE_URL=sqlite:///./data/gym_turnstile.db")
+        logger.warning("4. Pro lokální běh použij `docker compose -f docker-compose.local.yml up -d postgres`")
         logger.warning("=" * 60)
         # Don't raise - let app start (but DB operations will fail)
 
@@ -164,4 +162,3 @@ async def health_check():
         "database": db_status,
         "app": "running"
     }
-

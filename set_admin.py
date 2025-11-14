@@ -14,7 +14,8 @@ from app.models import User
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     print("❌ Chyba: DATABASE_URL není nastaven v environment variables!")
-    print("Nastav DATABASE_URL nebo použij: export DATABASE_URL='sqlite:///./data/gym_turnstile.db'")
+    print("Nastav DATABASE_URL, např. postgres připojení:")
+    print("  export DATABASE_URL='postgresql+psycopg2://gymuser:gympass@localhost:5432/gym_turnstile'")
     sys.exit(1)
 
 # Vytvoř engine
@@ -87,4 +88,3 @@ if __name__ == "__main__":
     else:
         email = sys.argv[1]
         set_admin(email)
-

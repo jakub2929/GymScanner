@@ -5,7 +5,7 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 
 ## Technologie
 - **Backend**: FastAPI (Python)
-- **Database**: SQLite (s možností PostgreSQL)
+- **Database**: PostgreSQL (Docker Compose service, možnost fallback na SQLite pro debugging)
 - **Frontend**: HTML/JavaScript s Tailwind CSS (čistý, moderní design)
 - **Containerization**: Docker & Docker Compose
 - **Authentication**: JWT tokens
@@ -53,26 +53,32 @@ GymTurniket/
 │   ├── admin.html           # Admin dashboard
 │   └── admin_login.html     # Admin přihlášení
 ├── ssl/                     # SSL certifikáty pro HTTPS
-├── data/                    # SQLite databáze (volume)
+├── data/                    # Legacy SQLite databáze (pouze fallback/debug)
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
 ```
 
-## Jak spustit
+## Jak spustit (PostgreSQL + Docker Compose)
 
-1. **Vygeneruj SSL certifikáty (pro HTTPS):**
+1. **Vytvoř `.env` a certifikáty:**
 ```bash
-bash generate_cert.sh
+cp .env.example .env
+bash generate_cert.sh  # volitelné pro HTTPS v lokálním běhu
 ```
 
-2. **Build a start Docker:**
+2. **Spusť PostgreSQL a aplikaci:**
 ```bash
-docker-compose build
-docker-compose up -d
+docker compose -f docker-compose.local.yml up -d
+# první start stáhne image postgres:15-alpine a vytvoří volume postgres_data
 ```
 
-3. **Otevři v prohlížeči:**
+3. **Sleduj logy / ověř běh:**
+```bash
+docker compose -f docker-compose.local.yml logs -f web
+```
+
+4. **Otevři v prohlížeči:**
 - Login/Register: `https://localhost` nebo `https://localhost:443`
 - Dashboard: `https://localhost/dashboard`
 - Settings: `https://localhost/settings`
@@ -179,31 +185,38 @@ docker-compose up -d
 
 ## Docker (lokální vývoj)
 
-Pro lokální vývoj použij `docker-compose.local.yml`:
+`docker-compose.local.yml` obsahuje dvě služby:
+- `postgres` (PostgreSQL 15 + persistentní volume `postgres_data`)
+- `web` (FastAPI aplikace)
+
+Užitečné příkazy:
 
 ```bash
-# Build
-docker-compose -f docker-compose.local.yml build
+# Build (přegeneruje image web služby)
+docker compose -f docker-compose.local.yml build web
 
-# Start
-docker-compose -f docker-compose.local.yml up -d
+# Start obou služeb v pozadí
+docker compose -f docker-compose.local.yml up -d
 
-# Stop
-docker-compose -f docker-compose.local.yml down
+# Zastavení
+docker compose -f docker-compose.local.yml down
 
-# Restart
-docker-compose -f docker-compose.local.yml restart web
+# Restart jen backendu
+docker compose -f docker-compose.local.yml restart web
 
-# Logs
-docker-compose -f docker-compose.local.yml logs -f web
-
-# Rebuild a restart (po změnách kódu)
-docker-compose -f docker-compose.local.yml down
-docker-compose -f docker-compose.local.yml build
-docker-compose -f docker-compose.local.yml up -d
+# Logy backendu
+docker compose -f docker-compose.local.yml logs -f web
 ```
 
-**Poznámka:** `docker-compose.yml` je pro Coolify (bez portu 443). Pro lokální vývoj s HTTPS použij `docker-compose.local.yml`.
+Pokud potřebuješ rebuild + restart:
+
+```bash
+docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml build web
+docker compose -f docker-compose.local.yml up -d
+```
+
+**Poznámka:** `docker-compose.yml` je určený pro Coolify (řeší porty/SSL). Lokální HTTPS vyžaduje `docker-compose.local.yml` se self-signed certifikáty a Postgres službou.
 
 ## Deployment na Coolify
 
@@ -230,7 +243,8 @@ Aplikace je připravena pro deployment na Coolify (self-hosted platforma).
 
 Vytvoř soubor `.env` na základě `.env.example`:
 
-- `DATABASE_URL` - Database connection string (default: `sqlite:///./data/gym_turnstile.db`)
+- `DATABASE_URL` - PostgreSQL connection string (default: `postgresql+psycopg2://gymuser:gympass@localhost:5432/gym_turnstile`)
+  - V Docker Compose je tato hodnota přepsaná na `postgresql+psycopg2://gymuser:gympass@postgres:5432/gym_turnstile`
 - `JWT_SECRET_KEY` - Secret key pro JWT tokeny (důležité pro produkci!)
 - `JWT_ALGORITHM` - Algorithm pro JWT (default: `HS256`)
 - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` - Expirace tokenu v minutách (default: `60`)
@@ -265,7 +279,7 @@ docker-compose logs -f web
 
 - ✅ Systém je připraven k použití
 - ✅ Mock platby (ne skutečné platební brány)
-- ✅ SQLite databáze v `./data/` složce (persistentní přes Docker volume)
+- ✅ PostgreSQL databáze (docker volume `postgres_data`)
 - ✅ HTTPS s self-signed certifikáty (pro produkci doporučujeme Let's Encrypt)
 - ✅ Čistý, moderní UI design s Tailwind CSS (bez emojis, bez přehnaných gradientů)
 - ✅ Cooldown ochrana proti dvojitému odpíchnutí

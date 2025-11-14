@@ -1,44 +1,38 @@
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: gymuser
+      POSTGRES_PASSWORD: gympass
+      POSTGRES_DB: gym_turnstile
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymuser -d gym_turnstile"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   web:
     build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
       - "443:443"  # Port 443 pouze pro lokální vývoj s SSL certifikáty
     env_file:
       - .env
     environment:
-      - PYTHONUNBUFFERED=1
+      DATABASE_URL: postgresql+psycopg2://gymuser:gympass@postgres:5432/gym_turnstile
+      PYTHONUNBUFFERED: 1
     volumes:
-      - ./data:/app/data
       - ./static:/app/static
       - ./ssl:/app/ssl
     restart: unless-stopped
     # POZNÁMKA: Pro Coolify použij Dockerfile.production přímo (bez docker-compose.yml)
     # Coolify automaticky řeší HTTPS přes reverse proxy
 
-  # Optional: Uncomment to use Postgres instead of SQLite
-  # postgres:
-  #   image: postgres:15-alpine
-  #   environment:
-  #     POSTGRES_USER: gymuser
-  #     POSTGRES_PASSWORD: gympass
-  #     POSTGRES_DB: gymturnstile
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   restart: unless-stopped
-  #
-  # web:
-  #   build: .
-  #   ports:
-  #     - "8000:8000"
-  #   volumes:
-  #     - ./static:/app/static
-  #   environment:
-  #     - DATABASE_URL=postgresql://gymuser:gympass@postgres:5432/gymturnstile
-  #   depends_on:
-  #     - postgres
-  #   restart: unless-stopped
-
-# volumes:
-#   postgres_data:
-
+volumes:
+  postgres_data:

@@ -5,12 +5,11 @@
 ### Lokálně (pokud máš přístup k serveru):
 
 1. Připoj se k serveru nebo otevři terminál v lokálním prostředí
-2. Nastav `DATABASE_URL`:
+2. Nastav `DATABASE_URL` na PostgreSQL instanci:
    ```bash
-   export DATABASE_URL="sqlite:///./data/gym_turnstile.db"
-   # nebo pro PostgreSQL:
-   export DATABASE_URL="postgresql://user:pass@host:5432/dbname"
+   export DATABASE_URL="postgresql+psycopg2://gymuser:gympass@localhost:5432/gym_turnstile"
    ```
+   (Pokud z nějakého důvodu používáš SQLite fallback, nastav `sqlite:///./data/gym_turnstile.db`)
 3. Spusť skript:
    ```bash
    python set_admin.py <tvuj-email>
@@ -36,21 +35,21 @@
 
 ## Metoda 2: Přímý SQL dotaz
 
-### Pro SQLite:
-
-```sql
-UPDATE users SET is_admin = 1 WHERE email = 'tvuj-email@example.com';
-```
-
 ### Pro PostgreSQL:
 
 ```sql
 UPDATE users SET is_admin = TRUE WHERE email = 'tvuj-email@example.com';
 ```
 
+### Legacy SQLite:
+
+```sql
+UPDATE users SET is_admin = 1 WHERE email = 'tvuj-email@example.com';
+```
+
 **Jak spustit SQL:**
-- **SQLite**: `sqlite3 data/gym_turnstile.db` → pak SQL příkaz
-- **PostgreSQL**: Připoj se k databázi přes psql nebo Coolify → PostgreSQL → Terminal
+- **PostgreSQL**: Připoj se k databázi přes `psql` nebo Coolify → PostgreSQL → Terminal
+- **SQLite** (fallback): `sqlite3 data/gym_turnstile.db` → pak SQL příkaz
 
 ## Metoda 3: Přes API (pokud už máš admina)
 
@@ -75,4 +74,3 @@ Pokud už máš jednoho admina, můžeš vytvořit dalšího přes admin API end
 ### "DATABASE_URL není nastaven"
 - Nastav environment variable `DATABASE_URL` před spuštěním skriptu
 - Nebo použij SQL metodu
-
