@@ -20,7 +20,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8181:8000"
+      - "8000:8000"
     env_file:
       - .env
     environment:
@@ -29,6 +29,22 @@ services:
     restart: unless-stopped
     # POZNÁMKA: Pro Coolify použij Dockerfile.production přímo (bez docker-compose.yml)
     # Coolify automaticky řeší HTTPS přes reverse proxy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+      NEXT_TELEMETRY_DISABLED: 1
+    depends_on:
+      web:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
 
 volumes:
   postgres_data:
