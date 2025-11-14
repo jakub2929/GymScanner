@@ -62,12 +62,12 @@ export default function SettingsPage() {
   return (
     <>
       <div className="grid lg:grid-cols-2 gap-6">
-        <section className="glass-panel rounded-3xl p-6 space-y-4">
-          <h2 className="text-2xl font-semibold">Informace o účtu</h2>
+        <section className="surface-card p-6 space-y-4">
+          <h2 className="text-2xl font-semibold text-slate-900">Informace o účtu</h2>
           {isPending ? (
-            <p className="text-slate-400">Načítám...</p>
+            <p className="text-slate-500">Načítám...</p>
           ) : (
-            <div className="text-sm text-slate-300 space-y-3">
+            <div className="text-sm text-slate-600 space-y-3">
               <p>
                 <span className="text-slate-400">Jméno:</span> {data?.name}
               </p>
@@ -88,8 +88,8 @@ export default function SettingsPage() {
           )}
         </section>
 
-        <section className="glass-panel rounded-3xl p-6 space-y-4">
-          <h2 className="text-2xl font-semibold">Změna hesla</h2>
+        <section className="surface-card p-6 space-y-4">
+          <h2 className="text-2xl font-semibold text-slate-900">Změna hesla</h2>
           <form className="space-y-4" onSubmit={handleSubmit(onChangePassword)}>
             <div>
               <input type="password" placeholder="Aktuální heslo" className="input-field" {...register('current_password')} />
