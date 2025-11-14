@@ -20,6 +20,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const logout = useLogout('/admin/login');
   const [state, setState] = useState<'checking' | 'allowed'>('checking');
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,13 +80,28 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   return (
     <div className="min-h-screen bg-[#020610] text-white">
       <nav className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-6 py-6">
-        <div>
-          <Link href="/admin" className="text-2xl font-semibold tracking-tight">
-            Gym Admin
-          </Link>
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">Liquid glass control</p>
+        <div className="flex w-full items-center justify-between md:block">
+          <div>
+            <Link
+              href="/admin"
+              className="text-2xl font-semibold tracking-tight"
+              onClick={() => setOpen(false)}
+            >
+              Gym Admin
+            </Link>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">Liquid glass control</p>
+          </div>
+          <button
+            className="md:hidden text-slate-200 border border-white/15 rounded-full p-2"
+            onClick={() => setOpen((prev) => !prev)}
+            aria-label="Otevřít admin navigaci"
+          >
+            <span className="block w-5 h-0.5 bg-white mb-1" />
+            <span className="block w-5 h-0.5 bg-white mb-1" />
+            <span className="block w-5 h-0.5 bg-white" />
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+        <div className="hidden md:flex flex-wrap items-center gap-3 text-sm text-slate-400">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -99,13 +115,42 @@ export default function AdminLayout({ children }: PropsWithChildren) {
             Uživatelský pohled
           </Link>
           <button
-            onClick={logout}
+            onClick={() => {
+              setOpen(false);
+              logout();
+            }}
             className="px-4 py-2 rounded-full border border-white/15 hover:bg-white/10 transition-colors"
           >
             Odhlásit
           </button>
         </div>
       </nav>
+      {open && (
+        <div className="md:hidden px-6 pb-4 space-y-2 text-sm text-slate-200">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="block rounded-2xl glass-panel p-4"
+              onClick={() => setOpen(false)}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <Link href="/dashboard" className="block rounded-2xl glass-panel p-4" onClick={() => setOpen(false)}>
+            Uživatelský pohled
+          </Link>
+          <button
+            onClick={() => {
+              setOpen(false);
+              logout();
+            }}
+            className="w-full rounded-2xl border border-white/20 py-3"
+          >
+            Odhlásit
+          </button>
+        </div>
+      )}
       <main className="px-4 sm:px-6 lg:px-8 pb-16 max-w-6xl mx-auto w-full">{children}</main>
     </div>
   );

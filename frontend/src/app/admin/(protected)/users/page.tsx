@@ -26,6 +26,7 @@ export default function AdminUsersPage() {
         ? apiClient(`/api/admin/users/search?q=${encodeURIComponent(effectiveSearch)}`)
         : apiClient('/api/admin/users'),
   });
+  const users = usersQuery.data ?? [];
 
   const mutation = useMutation({
     mutationFn: async (payload: { userId: number; change: number; reason: string }) =>
@@ -72,7 +73,7 @@ export default function AdminUsersPage() {
               />
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto hidden md:block">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-slate-400 text-left">
@@ -85,7 +86,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {usersQuery.data?.map((user) => (
+                {users.map((user) => (
                   <tr key={user.id} className="text-slate-100">
                     <td className="py-4 font-medium">{user.name}</td>
                     <td className="py-4 text-slate-400">{user.email}</td>
@@ -111,16 +112,43 @@ export default function AdminUsersPage() {
                 ))}
               </tbody>
             </table>
-            {usersQuery.isPending && <p className="text-slate-400 text-sm mt-4">Načítám uživatele...</p>}
-            {usersQuery.isError && (
-              <p className="text-rose-300 text-sm mt-4">
-                Nepodařilo se načíst uživatele. Zkus obnovit stránku.
-              </p>
-            )}
-            {!usersQuery.isPending && !usersQuery.data?.length && (
-              <p className="text-slate-400 text-sm mt-4">Nic nenalezeno.</p>
-            )}
           </div>
+          <div className="md:hidden space-y-3">
+            {users.map((user) => (
+              <div key={user.id} className="glass-subcard rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{user.name}</p>
+                    <p className="text-slate-400 text-xs">{user.email}</p>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs ${
+                      user.is_admin ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/5 text-slate-300'
+                    }`}
+                  >
+                    {user.is_admin ? 'Admin' : 'Uživatel'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <p className="text-slate-400">Kredity</p>
+                  <p className="font-semibold">{user.credits}</p>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Registrován: {user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}
+                </p>
+                <button className="accent-button" onClick={() => openModal(user)}>
+                  Upravit kredity
+                </button>
+              </div>
+            ))}
+          </div>
+          {usersQuery.isPending && <p className="text-slate-400 text-sm mt-4">Načítám uživatele...</p>}
+          {usersQuery.isError && (
+            <p className="text-rose-300 text-sm mt-4">Nepodařilo se načíst uživatele. Zkus obnovit stránku.</p>
+          )}
+          {!usersQuery.isPending && !users.length && (
+            <p className="text-slate-400 text-sm mt-4">Nic nenalezeno.</p>
+          )}
         </section>
       </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { PropsWithChildren, useEffect } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { tokenAtom } from '@/lib/authStore';
 import { useRouter, usePathname } from 'next/navigation';
@@ -18,6 +18,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const router = useRouter();
   const pathname = usePathname();
   const logout = useLogout();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const localToken = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
   const effectiveToken = token || localToken;
@@ -35,7 +36,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   return (
     <div className="min-h-screen bg-[#04060f] text-white">
       <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-6">
-        <Link href="/dashboard" className="text-2xl font-semibold tracking-tight">
+        <Link href="/dashboard" className="text-2xl font-semibold tracking-tight" onClick={() => setMenuOpen(false)}>
           Gym Access
         </Link>
         <div className="hidden md:flex items-center gap-6 text-sm text-slate-400">
@@ -49,13 +50,48 @@ export default function AppLayout({ children }: PropsWithChildren) {
             </Link>
           ))}
           <button
-            onClick={logout}
+            onClick={() => {
+              setMenuOpen(false);
+              logout();
+            }}
             className="px-4 py-2 rounded-full border border-white/15 hover:bg-white/10 transition-colors"
           >
             Odhlásit se
           </button>
         </div>
+        <button
+          className="md:hidden text-slate-200 border border-white/15 rounded-full p-2"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          aria-label="Otevřít navigaci"
+        >
+          <span className="block w-5 h-0.5 bg-white mb-1" />
+          <span className="block w-5 h-0.5 bg-white mb-1" />
+          <span className="block w-5 h-0.5 bg-white" />
+        </button>
       </nav>
+      {menuOpen && (
+        <div className="md:hidden px-6 pb-4 text-sm text-slate-200 space-y-2">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="block rounded-2xl glass-panel p-4"
+              onClick={() => setMenuOpen(false)}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              logout();
+            }}
+            className="w-full rounded-2xl border border-white/20 py-3"
+          >
+            Odhlásit se
+          </button>
+        </div>
+      )}
       <main className="px-4 sm:px-6 lg:px-8 pb-16">{children}</main>
     </div>
   );

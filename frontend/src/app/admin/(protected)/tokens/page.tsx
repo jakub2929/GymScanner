@@ -16,7 +16,6 @@ export default function AdminTokensPage() {
     queryKey: ['admin-tokens'],
     queryFn: () => apiClient('/api/admin/tokens'),
   });
-
   const toggleMutation = useMutation({
     mutationFn: async (payload: { tokenId: number; action: 'activate' | 'deactivate' }) =>
       apiClient(`/api/admin/tokens/${payload.tokenId}/${payload.action}`, {
@@ -32,9 +31,10 @@ export default function AdminTokensPage() {
   });
 
   const filteredTokens = useMemo(() => {
-    if (!tokensQuery.data) return [];
-    if (statusFilter === 'all') return tokensQuery.data;
-    return tokensQuery.data.filter((token) => (statusFilter === 'active' ? token.is_active : !token.is_active));
+    const source = tokensQuery.data ?? [];
+    if (!source.length) return [];
+    if (statusFilter === 'all') return source;
+    return source.filter((token) => (statusFilter === 'active' ? token.is_active : !token.is_active));
   }, [statusFilter, tokensQuery.data]);
 
   return (
@@ -65,7 +65,7 @@ export default function AdminTokensPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto hidden md:block">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-slate-400 text-left">
@@ -127,15 +127,51 @@ export default function AdminTokensPage() {
                 ))}
               </tbody>
             </table>
-            {tokensQuery.isPending && <p className="text-slate-400 text-sm mt-4">Načítám tokeny...</p>}
-            {tokensQuery.isError && (
-              <p className="text-rose-300 text-sm mt-4">Nepodařilo se načíst tokeny. Obnov prosím stránku.</p>
-            )}
-            {!tokensQuery.isPending && !filteredTokens.length && (
-              <p className="text-slate-400 text-sm mt-4">Žádné tokeny pro zvolený filtr.</p>
-            )}
           </div>
-        </section>
+          <div className="md:hidden space-y-3">
+            {filteredTokens.map((token) => (
+              <div key={token.id} className="glass-subcard rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-mono text-slate-400 break-all">{token.token}</p>
+                    <p className="font-semibold">{token.user_name ?? 'Neznámý'}</p>
+                    <p className="text-slate-500 text-xs">{token.user_email ?? '---'}</p>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs ${
+                      token.is_active ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
+                    }`}
+                  >
+                    {token.is_active ? 'Aktivní' : 'Vypnuto'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-slate-300">
+                  <span>Scan: {token.scan_count}</span>
+                  <span>Vytvořeno: {token.created_at ? new Date(token.created_at).toLocaleDateString('cs-CZ') : '---'}</span>
+                </div>
+                <button
+                  className="accent-button"
+                  disabled={toggleMutation.isPending}
+                  onClick={() =>
+                    toggleMutation.mutate({
+                      tokenId: token.id,
+                      action: token.is_active ? 'deactivate' : 'activate',
+                    })
+                  }
+                >
+                  {token.is_active ? 'Deaktivovat' : 'Aktivovat'}
+                </button>
+              </div>
+            ))}
+          </div>
+          {tokensQuery.isPending && <p className="text-slate-400 text-sm mt-4">Načítám tokeny...</p>}
+          {tokensQuery.isError && (
+            <p className="text-rose-300 text-sm mt-4">Nepodařilo se načíst tokeny. Obnov prosím stránku.</p>
+          )}
+        {!tokensQuery.isPending && !filteredTokens.length && (
+          <p className="text-slate-400 text-sm mt-4">Žádné tokeny pro zvolený filtr.</p>
+        )}
+      </section>
       </div>
 
       <Toast toast={toast} />

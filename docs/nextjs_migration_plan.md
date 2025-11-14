@@ -69,4 +69,5 @@ Projekt je nyní ve fázi F – po dokončení dokumentace a QA můžeme úplně
 **Průběžný stav (F)**
 - README doplněno o Next.js dev kroky a odkaz na produkční Dockerfile.
 - DEPLOY.md vysvětluje dvouslužbovou architekturu (FastAPI API + Next.js UI) v Coolify a popisuje nově přidaný `frontend/Dockerfile`.
-- Další kroky: mobilní QA (App/Scanner/Admin), případné úpravy docker-compose pro lokální SSR build a kontrola, že legacy `/static` stránky lze bezpečně odstranit.
+- App/Scanner/Admin layouty mají mobilní navigaci a karty pro tabulky (`/admin/users`, `/admin/tokens`) → responzivní UI bez horizontálního scrollu.
+- Další kroky: manuální QA na reálném zařízení + případné úpravy docker-compose pro lokální SSR build, a kontrola, že legacy `/static` stránky lze bezpečně odstranit.
