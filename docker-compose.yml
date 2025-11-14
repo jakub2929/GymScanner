@@ -1,10 +1,26 @@
-version: '3.8'
-
 services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: gymuser
+      POSTGRES_PASSWORD: superheslo
+      POSTGRES_DB: gymdb
+    volumes:
+      - gym-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymuser -d gymdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   api:
     build:
       context: .
       dockerfile: Dockerfile.production
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       PYTHONUNBUFFERED: "1"
       DATABASE_URL: postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
@@ -18,9 +34,6 @@ services:
       COMGATE_NOTIFY_URL: ${COMGATE_NOTIFY_URL:-https://example.com/api/payments/comgate/notify}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
-    depends_on:
-      db:
-        condition: service_healthy
     # Expose internal port so Coolify can detect the API service
     # DO NOT use ports: - Coolify manages port mapping via its reverse proxy
     expose:
@@ -28,21 +41,6 @@ services:
     labels:
       # Help Coolify identify this as the API service
       - "coolify.managed=true"
-    restart: unless-stopped
-
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: gymuser
-      POSTGRES_PASSWORD: superheslo
-      POSTGRES_DB: gymdb
-    volumes:
-      - gym-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gymuser -d gymdb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: unless-stopped
 
   frontend:
