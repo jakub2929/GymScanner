@@ -17,6 +17,19 @@ COPY . .
 # Expose port (Coolify will handle HTTPS via reverse proxy)
 EXPOSE 8000
 
+# Production environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Create a non-root user for running the app
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser \
+        && chown -R appuser:appgroup /app
+
+USER appuser
+
+# Healthcheck for Coolify (checks local HTTP endpoint)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8000/health || exit 1
+
 # Run the application (HTTP only, Coolify handles SSL)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
 
