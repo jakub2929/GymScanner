@@ -21,14 +21,11 @@ services:
         condition: service_healthy
     ports:
       - "8181:8000"
-      - "8443:443"  # 8443 host port -> 443 in container (HTTPS)
     env_file:
       - .env
     environment:
       DATABASE_URL: postgresql+psycopg2://gymuser:gympass@postgres:5432/gym_turnstile
       PYTHONUNBUFFERED: 1
-    volumes:
-      - ./ssl:/app/ssl
     restart: unless-stopped
     # POZNÁMKA: Pro Coolify použij Dockerfile.production přímo (bez docker-compose.yml)
     # Coolify automaticky řeší HTTPS přes reverse proxy

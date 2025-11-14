@@ -14,9 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Expose ports (HTTP and HTTPS)
-EXPOSE 8000 443
+# Expose HTTP port
+EXPOSE 8000
 
-# Run the application with HTTPS
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "443", "--ssl-keyfile", "/app/ssl/key.pem", "--ssl-certfile", "/app/ssl/cert.pem"]
-
+# Run the application (HTTP; terminate TLS in reverse proxy if needed)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

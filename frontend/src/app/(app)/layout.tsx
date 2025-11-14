@@ -9,7 +9,6 @@ import { useLogout } from '@/hooks/useLogout';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/scanner', label: 'Scanner' },
   { href: '/settings', label: 'Nastavení' },
 ];
 

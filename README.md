@@ -55,7 +55,7 @@ GymScanner/
 1. **Vytvoř `.env` a certifikáty:**
 ```bash
 cp .env.example .env
-bash generate_cert.sh  # volitelné pro HTTPS v lokálním běhu
+# (Volitelné) Pokud chceš lokální HTTPS, spusť generate_cert.sh a uprav docker-compose podle README.
 ```
 
 2. **Spusť PostgreSQL a FastAPI backend:**
@@ -73,19 +73,19 @@ docker compose -f docker-compose.local.yml logs -f web
 ```bash
 cd frontend
 npm install
-NEXT_PUBLIC_API_URL=https://localhost:8443 npm run dev
+NEXT_PUBLIC_API_URL=http://localhost:8181 npm run dev
 ```
-Dev server běží ve výchozím stavu na `http://localhost:3000`. `NEXT_PUBLIC_API_URL` musí směřovat na FastAPI (`https://localhost:8443` v lokálním Dockeru; potvrď self-signed certifikát v prohlížeči aby fetchy fungovaly).
+Dev server běží ve výchozím stavu na `http://localhost:3000`. `NEXT_PUBLIC_API_URL` musí směřovat na FastAPI (`http://localhost:8181` v lokálním Dockeru).
 
 5. **Otevři v prohlížeči:** `http://localhost:3000/login`, `/register`, `/dashboard`, `/scanner`, `/settings`, `/admin/login`, `/admin`.
 
-**Poznámka:** Kontejner by default běží na HTTPS (`https://localhost:8443`). Pro vlastní HTTP běh uprav `Dockerfile`/`docker-compose` a spusť uvicorn na portu 8000 bez SSL.
+**Poznámka:** Docker compose vystavuje FastAPI na `http://localhost:8181`. Pokud chceš HTTPS, povol SSL (viz `generate_cert.sh`) a přidej odpovídající port/certifikáty.
 
 ## Next.js frontend (React/TypeScript)
 
 - Zdrojáky najdeš v `frontend/src/app/` rozdělené do segmentů `(auth)` pro login/registraci, `(app)` pro chráněné uživatelské stránky a `admin/(auth|protected)` pro nové admin rozhraní.
 - Globální stav tokenu je v Jotai (`lib/authStore`), data se načítají přes TanStack Query a `apiClient` automaticky doplňuje JWT z `sessionStorage`.
-- Vytvoř si `.env.local` (nebo použij proměnnou při `npm run dev`) s `NEXT_PUBLIC_API_URL=https://localhost:8443` / adresou FastAPI.
+- Vytvoř si `.env.local` (nebo použij proměnnou při `npm run dev`) s `NEXT_PUBLIC_API_URL=http://localhost:8181` / adresou FastAPI.
 - Pro produkční deployment je připraven `frontend/Dockerfile` (Next.js standalone build) – viz `DEPLOY.md`.
 
 ### Užitečné příkazy v `frontend/`
@@ -198,7 +198,7 @@ npm run lint   # ESLint (musí projít před commitem)
 
 `docker-compose.local.yml` obsahuje dvě služby:
 - `postgres` (PostgreSQL 15 + persistentní volume `postgres_data`)
-- `web` (FastAPI aplikace, porty mapované na `8181 -> 8000` a `8443 -> 443`)
+- `web` (FastAPI aplikace, port mapovaný na `8181 -> 8000`)
 
 Užitečné příkazy:
 
@@ -227,12 +227,12 @@ docker compose -f docker-compose.local.yml build web
 docker compose -f docker-compose.local.yml up -d
 ```
 
-**Poznámka:** `docker-compose.yml` je určený pro Coolify (řeší porty/SSL). Lokální HTTPS vyžaduje `docker-compose.local.yml` se self-signed certifikáty a Postgres službou.
+**Poznámka:** `docker-compose.yml` je určený pro Coolify. Lokální HTTPS je volitelné – pokud ho potřebuješ, přidej certifikáty (viz `generate_cert.sh`) a uprav docker-compose podle svých potřeb.
 
 ## Frontend (Next.js) development
 
 - Zdrojové kódy: `frontend/` (Next.js 14, TypeScript, Tailwind).
-- `.env.example` uvnitř obsahuje `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`). Zkopíruj na `.env.local`.
+- `.env.example` uvnitř obsahuje `NEXT_PUBLIC_API_URL` (default `http://localhost:8181`). Zkopíruj na `.env.local`.
 - Instalace závislostí:
 
 ```bash
@@ -276,6 +276,7 @@ Vytvoř soubor `.env` na základě `.env.example`:
 - `DATABASE_URL` - PostgreSQL connection string (default: `postgresql+psycopg2://gymuser:gympass@localhost:5432/gym_turnstile`)
   - V Docker Compose je tato hodnota přepsaná na `postgresql+psycopg2://gymuser:gympass@postgres:5432/gym_turnstile`
 - `FRONTEND_URL` - veřejná URL Next.js aplikace (default `http://localhost:3000`, používá ji FastAPI root endpoint pro odkázání na UI)
+  - Pokud ti Next.js dev server běží na jiném portu (např. `http://localhost:3200`), nastav tuto hodnotu, aby root API vracel správný odkaz.
 - `JWT_SECRET_KEY` - Secret key pro JWT tokeny (důležité pro produkci!)
 - `JWT_ALGORITHM` - Algorithm pro JWT (default: `HS256`)
 - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` - Expirace tokenu v minutách (default: `60`)
