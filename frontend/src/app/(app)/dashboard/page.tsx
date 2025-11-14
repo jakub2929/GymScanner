@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import { Toast, useToast } from '@/components/toast';
 import Image from 'next/image';
-import Link from 'next/link';
 
 interface QrResponse {
   token: string;
@@ -135,9 +134,6 @@ export default function DashboardPage() {
             <button onClick={regenerate} className="secondary-button" disabled={isPending || isRegenerating}>
               {isRegenerating ? 'Generuji...' : 'Vygenerovat nový QR'}
             </button>
-            <Link href="/scanner" className="secondary-button text-center" prefetch={false}>
-              Otevřít scanner
-            </Link>
           </div>
         </section>
 
@@ -155,11 +151,8 @@ export default function DashboardPage() {
           <section className="glass-panel rounded-3xl p-6 space-y-4 text-sm text-slate-300">
             <h2 className="text-2xl font-semibold text-white">Rychlé akce</h2>
             <p>Vygeneruj nový QR při ztrátě nebo podezření na zneužití.</p>
-            <p>Pokud se skener nechytá, použij ruční zadání.</p>
+            <p>Pokud se skenování nedaří, využij podporu nebo ruční ověření u obsluhy.</p>
             <p>Kontaktuj podporu v Nastavení.</p>
-            <Link href="/scanner" className="accent-button text-center" prefetch={false}>
-              Spustit scanner
-            </Link>
           </section>
         </div>
       </div>

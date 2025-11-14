@@ -77,7 +77,8 @@ NEXT_PUBLIC_API_URL=http://localhost:8181 npm run dev
 ```
 Dev server běží ve výchozím stavu na `http://localhost:3000`. `NEXT_PUBLIC_API_URL` musí směřovat na FastAPI (`http://localhost:8181` v lokálním Dockeru).
 
-5. **Otevři v prohlížeči:** `http://localhost:3000/login`, `/register`, `/dashboard`, `/scanner`, `/settings`, `/admin/login`, `/admin`.
+5. **Otevři v prohlížeči:** `http://localhost:3000/login`, `/register`, `/dashboard`, `/settings`, `/admin/login`, `/admin`.
+   - Scanner (`/scanner`) je stále dostupný pro kiosk/tablet, ale není součástí hlavní navigace.
 
 **Poznámka:** Docker compose vystavuje FastAPI na `http://localhost:8181`. Pokud chceš HTTPS, povol SSL (viz `generate_cert.sh`) a přidej odpovídající port/certifikáty.
 
