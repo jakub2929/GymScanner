@@ -284,6 +284,9 @@ docker-compose logs -f web
 - Cooldown ochrana proti dvojitému odpíchnutí
 - Kompletní error handling a transakční bezpečnost
 
+## Design modernization
+- Připravujeme Apple-inspirovaný “liquid glass” vzhled všech stránek. Detailní plán kroků (`tooling → auth → dashboard → scanner → admin`) je v `docs/apple_liquid_design_plan.md`.
+
 ## Historie změn
 
 ### Verze 1.2.0 (aktuální)
