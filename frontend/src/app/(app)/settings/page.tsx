@@ -13,6 +13,7 @@ interface UserInfoResponse {
   name: string;
   created_at: string;
   qr_count: number;
+  is_admin: boolean;
 }
 
 const passwordSchema = z

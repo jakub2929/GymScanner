@@ -1,7 +1,20 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 
-export default function AuthCard({ title, subtitle, children }: PropsWithChildren<{ title: string; subtitle?: string }>) {
+interface AuthCardProps {
+  title: string;
+  subtitle?: string;
+  navLinks?: { href: string; label: string }[];
+}
+
+export default function AuthCard({ title, subtitle, navLinks, children }: PropsWithChildren<AuthCardProps>) {
+  const links =
+    navLinks ??
+    [
+      { href: '/login', label: 'Přihlášení' },
+      { href: '/register', label: 'Registrace' },
+    ];
+
   return (
     <div className="min-h-screen bg-[#04060f] text-white flex flex-col">
       <nav className="max-w-6xl mx-auto w-full px-6 py-6 flex items-center justify-between">
@@ -9,12 +22,11 @@ export default function AuthCard({ title, subtitle, children }: PropsWithChildre
           Gym Access
         </Link>
         <div className="flex items-center gap-6 text-sm text-slate-400">
-          <Link href="/login" className="hover:text-white transition-colors">
-            Přihlášení
-          </Link>
-          <Link href="/register" className="hover:text-white transition-colors">
-            Registrace
-          </Link>
+          {links.map((link) => (
+            <Link key={link.href} href={link.href} className="hover:text-white transition-colors">
+              {link.label}
+            </Link>
+          ))}
         </div>
       </nav>
       <main className="flex-1 flex items-center justify-center px-4 py-12">

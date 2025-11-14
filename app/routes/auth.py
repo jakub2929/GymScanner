@@ -53,6 +53,7 @@ class LoginResponse(BaseModel):
     user_id: int
     user_name: str
     user_email: str
+    is_admin: bool = False
 
 @router.post("/register", response_model=RegisterResponse)
 async def register(
@@ -128,7 +129,8 @@ async def login(
             token_type="bearer",
             user_id=user.id,
             user_name=user.name,
-            user_email=user.email
+            user_email=user.email,
+            is_admin=bool(user.is_admin)
         )
     except HTTPException:
         raise
@@ -171,6 +173,7 @@ class UserInfoResponse(BaseModel):
     created_at: str
     qr_count: int
     email_verified: bool = False  # Email verification not implemented yet
+    is_admin: bool = False
 
 @router.get("/user/info", response_model=UserInfoResponse)
 async def get_user_info(
@@ -195,7 +198,8 @@ async def get_user_info(
         name=current_user.name,
         created_at=created_at_str,
         qr_count=qr_count,
-        email_verified=False  # Email verification not implemented yet
+        email_verified=False,  # Email verification not implemented yet
+        is_admin=bool(current_user.is_admin)
     )
 
 @router.post("/user/change-password", response_model=ChangePasswordResponse)
@@ -234,4 +238,3 @@ async def change_password(
     return ChangePasswordResponse(
         message="Password changed successfully"
     )
-

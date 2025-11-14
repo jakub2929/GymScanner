@@ -6,7 +6,7 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 ## Technologie
 - **Backend**: FastAPI (Python)
 - **Database**: PostgreSQL (Docker Compose service)
-- **Frontend**: HTML/JavaScript s Tailwind CSS (čistý, moderní design)
+- **Frontend**: Next.js 14 + React 19 + TypeScript, Tailwind CSS 4, TanStack Query, React Hook Form, html5-qrcode (Apple „liquid glass“ design)
 - **Containerization**: Docker & Docker Compose
 - **Authentication**: JWT tokens
 - **Password Hashing**: Argon2
@@ -30,35 +30,28 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 
 ## Struktura projektu
 ```
-GymTurniket/
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI aplikace
-│   ├── database.py          # DB konfigurace a migrace
-│   ├── auth.py              # JWT autentizace
-│   ├── models.py            # SQLAlchemy modely
-│   └── routes/
-│       ├── auth.py          # Login/Register endpoints + nastavení
-│       ├── user_qr.py       # QR generování pro uživatele
-│       ├── verify.py        # Ověření QR kódu (turnstile scanner)
-│       ├── credits.py       # Nákup kreditů
-│       ├── payments.py      # Mock platby
-│       ├── qr.py            # Starý QR endpoint (payment-based)
-│       └── admin.py         # Admin dashboard
-├── static/
-│   ├── index.html           # Login/Register stránka
-│   ├── dashboard.html       # User dashboard s QR kódem (Tailwind CSS, download QR)
-│   ├── scanner.html         # QR scanner pro turnstile (moderní gym design)
-│   ├── settings.html        # Nastavení účtu
-│   ├── admin.html           # Admin dashboard
-│   └── admin_login.html     # Admin přihlášení
-├── ssl/                     # SSL certifikáty pro HTTPS
+GymScanner/
+├── app/                     # FastAPI backend + SQLAlchemy modely
+│   ├── main.py
+│   ├── database.py
+│   ├── models.py
+│   └── routes/ (auth, user_qr, verify, credits, admin, …)
+├── frontend/                # Next.js 14 aplikace (React/TypeScript, Tailwind)
+│   ├── package.json
+│   └── src/app/
+│       ├── (auth)/login + register
+│       ├── (app)/(dashboard|scanner|settings)
+│       └── admin/(auth|protected) – nové admin UI
+├── docs/                    # Migrační plány a design guidelines
+│   ├── apple_liquid_design_plan.md
+│   └── nextjs_migration_plan.md
+├── static/                  # Legacy HTML šablony (ponechány do úplného vyřazení)
+├── docker-compose.local.yml # FastAPI + Postgres lokálně
 ├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
+└── README.md
 ```
 
-## Jak spustit (PostgreSQL + Docker Compose)
+## Jak spustit (PostgreSQL + Docker Compose + Next.js dev)
 
 1. **Vytvoř `.env` a certifikáty:**
 ```bash
@@ -66,34 +59,52 @@ cp .env.example .env
 bash generate_cert.sh  # volitelné pro HTTPS v lokálním běhu
 ```
 
-2. **Spusť PostgreSQL a aplikaci:**
+2. **Spusť PostgreSQL a FastAPI backend:**
 ```bash
 docker compose -f docker-compose.local.yml up -d
 # první start stáhne image postgres:15-alpine a vytvoří volume postgres_data
 ```
 
-3. **Sleduj logy / ověř běh:**
+3. **Sleduj logy / ověř běh backendu:**
 ```bash
 docker compose -f docker-compose.local.yml logs -f web
 ```
 
-4. **Otevři v prohlížeči:**
-- Login/Register: `https://localhost:8443`
-- Dashboard: `https://localhost:8443/dashboard`
-- Settings: `https://localhost:8443/settings`
-- Scanner: `https://localhost:8443/scanner`
-- Admin Login: `https://localhost:8443/admin/login`
-- Admin Dashboard: `https://localhost:8443/admin`
+4. **Spusť Next.js dev server (nové UI):**
+```bash
+cd frontend
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
+Dev server běží ve výchozím stavu na `http://localhost:3000`. `NEXT_PUBLIC_API_URL` musí směřovat na FastAPI (`http://localhost:8000` uvnitř docker network nebo dle reverse proxy).
+
+5. **Otevři v prohlížeči:**
+   - **Next.js UI:** `http://localhost:3000/login`, `/register`, `/dashboard`, `/scanner`, `/settings`, `/admin/login`, `/admin`.
+   - **Legacy statické stránky (přímo z FastAPI):** `https://localhost:8443` a podstránky (`/dashboard`, `/scanner`, `/settings`, `/admin`). Tyto budou odstraněny po dokončení fáze F migrace.
 
 **Poznámka:** Pokud nepotřebuješ HTTPS, API je dostupné i na `http://localhost:8181`. Kvůli self-signed certifikátům pro HTTPS bude prohlížeč zobrazovat varování – klikni na "Pokračovat" / "Advanced".
+
+## Next.js frontend (React/TypeScript)
+
+- Zdrojáky najdeš v `frontend/src/app/` rozdělené do segmentů `(auth)` pro login/registraci, `(app)` pro chráněné uživatelské stránky a `admin/(auth|protected)` pro nové admin rozhraní.
+- Globální stav tokenu je v Jotai (`lib/authStore`), data se načítají přes TanStack Query a `apiClient` automaticky doplňuje JWT z `sessionStorage`.
+- Vytvoř si `.env.local` (nebo použij proměnnou při `npm run dev`) s `NEXT_PUBLIC_API_URL=http://localhost:8000` / adresou FastAPI.
+
+### Užitečné příkazy v `frontend/`
+```bash
+npm run dev    # Next.js dev server (Turbopack)
+npm run build  # produkční build
+npm run start  # spuštění buildu
+npm run lint   # ESLint (musí projít před commitem)
+```
 
 ## API Endpoints
 
 ### Autentizace
 - `POST /api/register` - Registrace nového uživatele
-- `POST /api/login` - Přihlášení (vrací JWT token)
+- `POST /api/login` - Přihlášení (vrací JWT token + `user_name`, `user_email`, `is_admin`)
 - `POST /api/logout` - Odhlášení
-- `GET /api/user/info` - Informace o aktuálním uživateli (vyžaduje auth)
+- `GET /api/user/info` - Informace o aktuálním uživateli (`is_admin`, `qr_count`, datum registrace) – vyžaduje auth
 - `POST /api/user/change-password` - Změna hesla (vyžaduje auth)
 
 ### QR kódy a vstup
@@ -108,9 +119,12 @@ docker compose -f docker-compose.local.yml logs -f web
 - `GET /api/my_credits` - Zobrazení kreditů (vyžaduje auth)
 
 ### Admin
-- `GET /api/admin/users/search` - Vyhledávání uživatelů (vyžaduje admin)
-- `POST /api/admin/users/{user_id}/credits` - Přidání kreditů uživateli (vyžaduje admin)
-- `GET /api/admin/users` - Seznam všech uživatelů (vyžaduje admin)
+- `GET /api/admin/users` - Posledních 100 uživatelů (vyžaduje admin)
+- `GET /api/admin/users/search` - Vyhledávání uživatelů dle jména/e-mailu (vyžaduje admin)
+- `POST /api/admin/users/{user_id}/credits` - Přidání/odečtení kreditů (vyžaduje admin)
+- `GET /api/admin/tokens` - Přehled tokenů včetně QR preview (vyžaduje admin)
+- `POST /api/admin/tokens/{token_id}/activate` - Aktivuj token (vyžaduje admin)
+- `POST /api/admin/tokens/{token_id}/deactivate` - Deaktivuj token (vyžaduje admin)
 
 ### Logs
 - `GET /api/access_logs` - Access log (pro debugging/admin)

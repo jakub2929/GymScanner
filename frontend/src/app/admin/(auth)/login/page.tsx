@@ -5,9 +5,8 @@ import { Toast, useToast } from '@/components/toast';
 import { apiClient } from '@/lib/apiClient';
 import { setTokenAtom } from '@/lib/authStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useSetAtom } from 'jotai';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -16,17 +15,19 @@ const schema = z.object({
   password: z.string().min(6, 'Heslo musí mít alespoň 6 znaků'),
 });
 
-export default function LoginPage() {
-  const router = useRouter();
+type FormValues = z.infer<typeof schema>;
+
+export default function AdminLoginPage() {
   const setToken = useSetAtom(setTokenAtom);
+  const router = useRouter();
   const { toast, showToast } = useToast();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  async function onSubmit(values: z.infer<typeof schema>) {
+  async function onSubmit(values: FormValues) {
     try {
       const response = await apiClient<{
         access_token: string;
@@ -38,14 +39,21 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ username: values.email, password: values.password }).toString(),
       });
+
+      if (!response.is_admin) {
+        showToast('Tento účet nemá administrátorská práva', 'error');
+        return;
+      }
+
       setToken(response.access_token);
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('user_name', response.user_name);
         sessionStorage.setItem('user_email', response.user_email);
-        sessionStorage.setItem('is_admin', response.is_admin ? 'true' : 'false');
+        sessionStorage.setItem('is_admin', 'true');
       }
-      showToast('Přihlášení proběhlo úspěšně');
-      router.push('/dashboard');
+
+      showToast('Vítej zpět, admine');
+      router.push('/admin');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Chyba při přihlášení', 'error');
     }
@@ -53,7 +61,14 @@ export default function LoginPage() {
 
   return (
     <>
-      <AuthCard title="Přihlášení" subtitle="Vstup do dashboardu">
+      <AuthCard
+        title="Admin přihlášení"
+        subtitle="Spravuj uživatele, tokeny a kredity"
+        navLinks={[
+          { href: '/login', label: 'Klientské přihlášení' },
+          { href: '/admin/login', label: 'Admin' },
+        ]}
+      >
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div>
             <input type="email" placeholder="Email" className="input-field" {...register('email')} />
@@ -64,15 +79,9 @@ export default function LoginPage() {
             {errors.password && <p className="text-sm text-rose-300 mt-1">{errors.password.message}</p>}
           </div>
           <button type="submit" className="accent-button" disabled={isSubmitting}>
-            {isSubmitting ? 'Přihlašuji...' : 'Přihlásit se'}
+            {isSubmitting ? 'Přihlašuji...' : 'Vstoupit do adminu'}
           </button>
         </form>
-        <p className="text-sm text-slate-400 text-center">
-          Nemáš účet?{' '}
-          <Link href="/register" className="auth-link">
-            Registruj se
-          </Link>
-        </p>
       </AuthCard>
       <Toast toast={toast} />
     </>
