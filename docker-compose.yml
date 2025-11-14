@@ -24,6 +24,9 @@ services:
     # Expose internal port so Coolify can detect the web service
     expose:
       - "8000"
+    labels:
+      # Help Coolify identify this as the API service
+      - "coolify.managed=true"
     restart: unless-stopped
 
   db:
@@ -64,6 +67,9 @@ services:
     # Expose internal port so Coolify can detect the frontend service
     expose:
       - "3000"
+    labels:
+      # Help Coolify identify this as the frontend service
+      - "coolify.managed=true"
     restart: unless-stopped
 
 volumes:
