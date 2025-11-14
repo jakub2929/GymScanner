@@ -26,8 +26,8 @@ Backend (FastAPI) remains – only minimal adjustments (CORS, static file mount 
 | Phase | Deliverables | Duration |
 |-------|--------------|----------|
 | **A. Bootstrap (Next.js + tooling)** | ✅ `frontend/` vytvořeno (`create-next-app --ts --tailwind`), Tailwind config + ESLint/Prettier/Husky, `apiClient`, `.env`. | 1 day |
-| **B. Auth shell** | ⚙️ `/login` a `/register` s Hook Form + Zod, token handling, shared layout. | 2 days |
-| **C. Dashboard + Settings** | Components: QRCard, CreditsCTA, Toast, Modals; `/dashboard` + `/settings` routes with TanStack Query data hooks. | 2 days |
+| **B. Auth shell** | ✅ `/login` a `/register` (Hook Form + Zod), token handling, shared layout/navigation. | 2 days |
+| **C. Dashboard + Settings** | ⚙️ Replika Apple glass dashboard + Settings (data přes TanStack Query, nákup vstupů, změna hesla). | 2 days |
 | **D. Scanner** | `/scanner` route with `react-html5-qrcode`, manual entry, status messaging. | 1.5 days |
 | **E. Admin** | `/admin/login`, `/admin` overview, `/admin/users` table with search, credit adjustments. | 1.5 days |
 | **F. Integration & docs** | Cross-page QA, responsive fixes, README/DEPLOY updates, Docker/Coolify instructions for dual services. | 1.5 days |
