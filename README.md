@@ -5,7 +5,7 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 
 ## Technologie
 - **Backend**: FastAPI (Python)
-- **Database**: PostgreSQL (Docker Compose service, možnost fallback na SQLite pro debugging)
+- **Database**: PostgreSQL (Docker Compose service)
 - **Frontend**: HTML/JavaScript s Tailwind CSS (čistý, moderní design)
 - **Containerization**: Docker & Docker Compose
 - **Authentication**: JWT tokens
@@ -53,7 +53,6 @@ GymTurniket/
 │   ├── admin.html           # Admin dashboard
 │   └── admin_login.html     # Admin přihlášení
 ├── ssl/                     # SSL certifikáty pro HTTPS
-├── data/                    # Legacy SQLite databáze (pouze fallback/debug)
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -79,14 +78,14 @@ docker compose -f docker-compose.local.yml logs -f web
 ```
 
 4. **Otevři v prohlížeči:**
-- Login/Register: `https://localhost` nebo `https://localhost:443`
-- Dashboard: `https://localhost/dashboard`
-- Settings: `https://localhost/settings`
-- Scanner: `https://localhost/scanner`
-- Admin Login: `https://localhost/admin/login`
-- Admin Dashboard: `https://localhost/admin`
+- Login/Register: `https://localhost:8443`
+- Dashboard: `https://localhost:8443/dashboard`
+- Settings: `https://localhost:8443/settings`
+- Scanner: `https://localhost:8443/scanner`
+- Admin Login: `https://localhost:8443/admin/login`
+- Admin Dashboard: `https://localhost:8443/admin`
 
-**Poznámka:** Protože používáme self-signed certifikáty, prohlížeč zobrazí varování o zabezpečení. V Chromu/Firefoxu klikněte na "Pokračovat" nebo "Advanced" → "Proceed to localhost".
+**Poznámka:** Pokud nepotřebuješ HTTPS, API je dostupné i na `http://localhost:8181`. Kvůli self-signed certifikátům pro HTTPS bude prohlížeč zobrazovat varování – klikni na "Pokračovat" / "Advanced".
 
 ## API Endpoints
 
@@ -187,7 +186,7 @@ docker compose -f docker-compose.local.yml logs -f web
 
 `docker-compose.local.yml` obsahuje dvě služby:
 - `postgres` (PostgreSQL 15 + persistentní volume `postgres_data`)
-- `web` (FastAPI aplikace)
+- `web` (FastAPI aplikace, porty mapované na `8181 -> 8000` a `8443 -> 443`)
 
 Užitečné příkazy:
 
