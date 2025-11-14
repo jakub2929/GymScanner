@@ -110,10 +110,10 @@ Tato chyba se objevuje, když DATABASE_URL má prefix `postgres://` a SQLAlchemy
 
 ## Výhody PostgreSQL vs SQLite
 
-✅ **Automaticky persistentní** - data se neztratí při redeploy  
-✅ **Lepší výkon** - pro více uživatelů  
-✅ **Lepší škálovatelnost** - podpora pro více serverů  
-✅ **Bez volume** - nepotřebuješ nastavovat volume v Coolify
+- **Automaticky persistentní** - data se neztratí při redeploy  
+- **Lepší výkon** - pro více uživatelů  
+- **Lepší škálovatelnost** - podpora pro více serverů  
+- **Bez volume** - nepotřebuješ nastavovat volume v Coolify
 
 ## Migrace z SQLite na PostgreSQL
 
@@ -125,4 +125,3 @@ Pokud už máš data v SQLite a chceš je přenést:
 4. Redeploy aplikaci
 
 **POZNÁMKA:** Aplikace automaticky vytvoří tabulky v PostgreSQL, ale data musíš přenést ručně.
-

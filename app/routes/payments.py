@@ -212,7 +212,7 @@ async def comgate_return(
             <meta http-equiv="refresh" content="3;url=/dashboard">
         </head>
         <body style="font-family: Arial; text-align: center; padding: 50px;">
-            <h1>✅ Platba úspěšná</h1>
+            <h1>Platba úspěšná</h1>
             <p>{message}</p>
             <p>Přesměrování na dashboard za 3 sekundy...</p>
             <a href="/dashboard">Klikněte zde, pokud se nepřesměrujete automaticky</a>
@@ -229,7 +229,7 @@ async def comgate_return(
             <meta http-equiv="refresh" content="5;url=/dashboard">
         </head>
         <body style="font-family: Arial; text-align: center; padding: 50px;">
-            <h1>⏳ Platba zpracovávána</h1>
+            <h1>Platba zpracovávána</h1>
             <p>{message}</p>
             <p>Přesměrování na dashboard za 5 sekund...</p>
             <a href="/dashboard">Klikněte zde, pokud se nepřesměrujete automaticky</a>
@@ -246,11 +246,10 @@ async def comgate_return(
             <meta http-equiv="refresh" content="5;url=/dashboard">
         </head>
         <body style="font-family: Arial; text-align: center; padding: 50px;">
-            <h1>❌ Platba selhala</h1>
+            <h1>Platba selhala</h1>
             <p>{message}</p>
             <p>Přesměrování na dashboard za 5 sekund...</p>
             <a href="/dashboard">Klikněte zde, pokud se nepřesměrujete automaticky</a>
         </body>
         </html>
         """)
-

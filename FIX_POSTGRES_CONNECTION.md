@@ -41,10 +41,10 @@ Pokud máš PostgreSQL jako samostatný resource:
 ## Co jsem upravil v kódu:
 
 Aplikace nyní:
-- ✅ Nezcrashne při chybě připojení k databázi
-- ✅ Zaloguje jasnou chybovou zprávu
-- ✅ Spustí se i když databáze není dostupná (ale funkce nebudou fungovat)
-- ✅ Zobrazí užitečné tipy v logách
+- Nezcrashne při chybě připojení k databázi
+- Zaloguje jasnou chybovou zprávu
+- Spustí se i když databáze není dostupná (ale funkce nebudou fungovat)
+- Zobrazí užitečné tipy v logách
 
 ## Ověření:
 

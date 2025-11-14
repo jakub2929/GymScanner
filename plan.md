@@ -1,6 +1,6 @@
 # Plán projektu GymTurniket
 
-## 🟩 100% – Fix PostgreSQL dialect / DATABASE_URL v produkci
+## [DONE] 100% – Fix PostgreSQL dialect / DATABASE_URL v produkci
 
 **Problém:** SQLAlchemy vyhazuje `sqlalchemy.exc.NoSuchModuleError: sqlalchemy.dialects:postgres` když DATABASE_URL má prefix `postgres://` místo `postgresql+psycopg2://`.
 
@@ -11,29 +11,29 @@
 - Ověřit, že `psycopg2-binary` je v requirements.txt
 - Aktualizovat dokumentaci s poznámkou o automatické konverzi
 
-### Backend – Normalizace DATABASE_URL 🟩
+### Backend – Normalizace DATABASE_URL [DONE]
 - **Soubor:** `app/database.py`
 - **Změny:**
-  - ✅ Přidána normalizace: pokud DATABASE_URL začíná `postgres://`, přepíše se na `postgresql+psycopg2://`
-  - ✅ Přidáno logování změny pro debugging
-  - ✅ Aplikace nyní automaticky převádí `postgres://...` connection string z Coolify na správný formát
+  - Přidána normalizace: pokud DATABASE_URL začíná `postgres://`, přepíše se na `postgresql+psycopg2://`
+  - Přidáno logování změny pro debugging
+  - Aplikace nyní automaticky převádí `postgres://...` connection string z Coolify na správný formát
 
-### Kontrola PostgreSQL driveru 🟩
+### Kontrola PostgreSQL driveru [DONE]
 - **Soubor:** `requirements.txt`
-- **Ověření:** ✅ `psycopg2-binary==2.9.9` je přítomen v requirements.txt
+- **Ověření:**  `psycopg2-binary==2.9.9` je přítomen v requirements.txt
 
-### Dokumentace / .env.example 🟩
+### Dokumentace / .env.example [DONE]
 - **Soubory:** `POSTGRES_SETUP_COOLIFY.md`, `COOLIFY_ENV_VARS_ACTUAL.txt`
 - **Změny:**
-  - ✅ Aktualizován příklad connection stringu na `postgresql+psycopg2://username:password@host:5432/database_name`
-  - ✅ Přidána poznámka o automatické konverzi `postgres://` → `postgresql+psycopg2://`
-  - ✅ Přidána sekce troubleshooting pro `NoSuchModuleError`
+  - Aktualizován příklad connection stringu na `postgresql+psycopg2://username:password@host:5432/database_name`
+  - Přidána poznámka o automatické konverzi `postgres://` → `postgresql+psycopg2://`
+  - Přidána sekce troubleshooting pro `NoSuchModuleError`
 
-### Deploy & ověření 🟨
-- ⏳ Commit a push změn (čeká na uživatele)
-- ⏳ Redeploy na Coolify (čeká na uživatele)
-- ⏳ Ověřit logy: nesmí se objevit `NoSuchModuleError` (čeká na deploy)
-- ⏳ Ověřit, že Uvicorn úspěšně naběhne (čeká na deploy)
+### Deploy & ověření [IN PROGRESS]
+- [PENDING] Commit a push změn (čeká na uživatele)
+- [PENDING] Redeploy na Coolify (čeká na uživatele)
+- [PENDING] Ověřit logy: nesmí se objevit `NoSuchModuleError` (čeká na deploy)
+- [PENDING] Ověřit, že Uvicorn úspěšně naběhne (čeká na deploy)
 
 **Poznámka:** Po dokončení implementace spusť Docker build a ověř, že build proběhne úspěšně:
 ```bash
@@ -44,25 +44,25 @@ docker build -t gymturniket -f Dockerfile.production .
 
 # Plán integrace platební brány Comgate + nákup tokenů
 
-**Celkový progress:** 🟩 100% – Integrace platební brány (Comgate) + nákup tokenů dokončena
+**Celkový progress:** [DONE] 100% – Integrace platební brány (Comgate) + nákup tokenů dokončena
 
 ## Analýza existujícího kódu
 
 ### Existující struktura
 
 **Modely:**
-- ✅ `User` model má `credits` (Integer, default=0) - toto je to, co potřebujeme
-- ✅ `Payment` model už existuje s poli: id, user_id, amount (Float), status (String), payment_id (String, unique), created_at, completed_at
-- ✅ `AccessToken` má vztah k Payment přes `payment_id` (nullable)
+- `User` model má `credits` (Integer, default=0) - toto je to, co potřebujeme
+- `Payment` model už existuje s poli: id, user_id, amount (Float), status (String), payment_id (String, unique), created_at, completed_at
+- `AccessToken` má vztah k Payment přes `payment_id` (nullable)
 
 **Existující payment logika:**
-- ✅ `app/routes/credits.py` - má `/api/buy_credits` (mock payment, okamžitě přidává kredity)
-- ✅ `app/routes/payments.py` - má `/api/create_payment` (starý mock endpoint)
+- `app/routes/credits.py` - má `/api/buy_credits` (mock payment, okamžitě přidává kredity)
+- `app/routes/payments.py` - má `/api/create_payment` (starý mock endpoint)
 
 **Frontend:**
-- ✅ `static/dashboard.html` - hlavní stránka s QR kódem, zobrazuje kredity v `creditsDisplay` elementu
-- ✅ Používá Tailwind CSS
-- ✅ Má tlačítka "Stáhnout QR" a "Vygenerovat nový QR kód"
+- `static/dashboard.html` - hlavní stránka s QR kódem, zobrazuje kredity v `creditsDisplay` elementu
+- Používá Tailwind CSS
+- Má tlačítka "Stáhnout QR" a "Vygenerovat nový QR kód"
 
 ### Co potřebujeme přidat/upravit
 
@@ -89,7 +89,7 @@ docker build -t gymturniket -f Dockerfile.production .
 
 ## 1) Backend – Platební logika & modely
 
-### 1.1 Rozšíření Payment modelu 🟩
+### 1.1 Rozšíření Payment modelu [DONE]
 - **Popis:** Přidat pole pro Comgate integraci do existujícího Payment modelu
 - **Soubor:** `app/models.py`
 - **Změny:**
@@ -101,7 +101,7 @@ docker build -t gymturniket -f Dockerfile.production .
   - Změnit `status` na enum: "pending", "paid", "failed", "cancelled"
   - **Migrace:** Vytvořit migrační funkci v `app/database.py` pro přidání nových sloupců
 
-### 1.2 Vytvoření Payment Service vrstvy 🟩
+### 1.2 Vytvoření Payment Service vrstvy [DONE]
 - **Popis:** Vytvořit abstrakci pro platební logiku (připravit pro Comgate)
 - **Soubor:** `app/services/payment_service.py` (nový)
 - **Funkce:**
@@ -110,7 +110,7 @@ docker build -t gymturniket -f Dockerfile.production .
   - `prepare_comgate_data(payment) -> dict` - připraví data pro budoucí Comgate redirect (zatím placeholder)
   - **Důležité:** Použít transakce pro atomické operace (připsání tokenů + update payment)
 
-### 1.3 Nové payment endpointy 🟩
+### 1.3 Nové payment endpointy [DONE]
 - **Soubor:** `app/routes/payments.py` (upravit existující)
 - **Endpointy:**
   - `POST /api/payments/create`:
@@ -131,7 +131,7 @@ docker build -t gymturniket -f Dockerfile.production .
     - Zobrazí status platby (úspěch/neúspěch)
     - Přesměruje na dashboard s informací o připsaných tokenech
 
-### 1.4 Migrace databáze 🟩
+### 1.4 Migrace databáze [DONE]
 - **Soubor:** `app/database.py`
 - **Funkce:** `ensure_payment_comgate_columns()`
 - **Změny:**
@@ -142,13 +142,13 @@ docker build -t gymturniket -f Dockerfile.production .
 
 ## 2) Frontend – Tlačítko "Koupit tokeny" + tabulka balíčků
 
-### 2.1 Přidání tlačítka "Koupit tokeny" 🟩
+### 2.1 Přidání tlačítka "Koupit tokeny" [DONE]
 - **Soubor:** `static/dashboard.html`
 - **Změny:**
   - Přidat tlačítko "Koupit tokeny" na dashboard (např. vedle "Vygenerovat nový QR kód" nebo jako samostatnou sekci)
   - Stylově sladěné s Tailwind CSS (modrá barva, podobné jako ostatní tlačítka)
 
-### 2.2 Modal s tabulkou balíčků 🟩
+### 2.2 Modal s tabulkou balíčků [DONE]
 - **Soubor:** `static/dashboard.html`
 - **Změny:**
   - Po kliknutí na "Koupit tokeny" otevřít modal/panel
@@ -159,7 +159,7 @@ docker build -t gymturniket -f Dockerfile.production .
   - U každého balíčku tlačítko "Koupit"
   - Design: čistý, moderní, s Tailwind CSS
 
-### 2.3 Integrace s backend API 🟩
+### 2.3 Integrace s backend API [DONE]
 - **Soubor:** `static/dashboard.html` (JavaScript sekce)
 - **Funkce:**
   - `openBuyTokensModal()` - otevře modal
@@ -170,7 +170,7 @@ docker build -t gymturniket -f Dockerfile.production .
     - Do budoucna: automatický redirect na Comgate
   - Po chybě: zobrazí error message
 
-### 2.4 Aktualizace zobrazení kreditů 🟩
+### 2.4 Aktualizace zobrazení kreditů [DONE]
 - **Soubor:** `static/dashboard.html`
 - **Změny:**
   - Po úspěšné platbě (simulace) aktualizovat `creditsDisplay`
@@ -180,7 +180,7 @@ docker build -t gymturniket -f Dockerfile.production .
 
 ## 3) Environment & konfigurace
 
-### 3.1 Přidání Comgate proměnných do .env 🟩
+### 3.1 Přidání Comgate proměnných do .env [DONE]
 - **Soubor:** `.env.example` a `.env`
 - **Proměnné:**
   ```
@@ -192,7 +192,7 @@ docker build -t gymturniket -f Dockerfile.production .
   ```
 - **Důležité:** Nepoužívat hard-coded hodnoty v kódu
 
-### 3.2 Načítání konfigurace v backendu 🟩
+### 3.2 Načítání konfigurace v backendu [DONE]
 - **Soubor:** `app/services/payment_service.py`
 - **Změny:**
   - Použít `os.getenv()` pro načtení Comgate dat
@@ -202,7 +202,7 @@ docker build -t gymturniket -f Dockerfile.production .
 
 ## 4) Napojení tokenů
 
-### 4.1 Logika připsání tokenů po platbě 🟩
+### 4.1 Logika připsání tokenů po platbě [DONE]
 - **Soubor:** `app/services/payment_service.py`
 - **Funkce:** `mark_order_paid(payment_id)`
 - **Logika:**
@@ -215,7 +215,7 @@ docker build -t gymturniket -f Dockerfile.production .
   - Commit transakce
   - **Důležité:** Použít DB transakci pro atomičnost
 
-### 4.2 Validace a ochrana 🟩
+### 4.2 Validace a ochrana [DONE]
 - **Ochrana proti dvojímu připsání:**
   - Kontrola statusu před připsáním (musí být "pending")
   - Použití DB transakce
@@ -225,24 +225,24 @@ docker build -t gymturniket -f Dockerfile.production .
 
 ## 5) Testování
 
-### 5.1 Test vytvoření objednávky 🟥
+### 5.1 Test vytvoření objednávky [TODO]
 - Přihlásit uživatele
 - Kliknout na "Koupit tokeny"
 - Vybrat balíček (1, 5, 10 tokenů)
 - Ověřit, že se vytvoří Payment v DB se statusem "pending"
 - Ověřit, že se vrátí správná odpověď s redirect_url
 
-### 5.2 Test simulace zaplacení 🟥
+### 5.2 Test simulace zaplacení [TODO]
 - Ručně zavolat funkci `mark_order_paid(payment_id)`
 - Ověřit, že se Payment označí jako "paid"
 - Ověřit, že se správně přičtou tokeny uživateli
 - Ověřit, že se kredity zobrazí na dashboardu
 
-### 5.3 Test ochrany proti dvojímu připsání 🟥
+### 5.3 Test ochrany proti dvojímu připsání [TODO]
 - Zkusit zavolat `mark_order_paid()` dvakrát na stejný payment
 - Ověřit, že se tokeny přičtou pouze jednou
 
-### 5.4 Test stávajících funkcí 🟥
+### 5.4 Test stávajících funkcí [TODO]
 - Ověřit, že QR kód se stále zobrazuje
 - Ověřit, že regenerace QR funguje
 - Ověřit, že scanner funguje

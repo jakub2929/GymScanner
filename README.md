@@ -15,18 +15,18 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 ## Funkce
 
 ### Pro uživatele
-- ✅ Registrace a přihlášení s JWT autentizací
-- ✅ Osobní QR kód pro vstup do gymu
-- ✅ Stahování QR kódu jako obrázek (PNG)
-- ✅ Kreditový systém (1 kredit = 1 cvičení)
-- ✅ Nastavení účtu (změna hesla, info o účtu)
-- ✅ Čistý, moderní UI design s Tailwind CSS
+- Registrace a přihlášení s JWT autentizací
+- Osobní QR kód pro vstup do gymu
+- Stahování QR kódu jako obrázek (PNG)
+- Kreditový systém (1 kredit = 1 cvičení)
+- Nastavení účtu (změna hesla, info o účtu)
+- Čistý, moderní UI design s Tailwind CSS
 
 ### Pro správu gymu
-- ✅ QR scanner pro turnstile (mobilní zařízení)
-- ✅ Cooldown ochrana (60 sekund mezi úspěšnými vstupy)
-- ✅ Admin dashboard pro správu uživatelů a kreditů
-- ✅ Access log pro audit vstupů
+- QR scanner pro turnstile (mobilní zařízení)
+- Cooldown ochrana (60 sekund mezi úspěšnými vstupy)
+- Admin dashboard pro správu uživatelů a kreditů
+- Access log pro audit vstupů
 
 ## Struktura projektu
 ```
@@ -232,11 +232,11 @@ Aplikace je připravena pro deployment na Coolify (self-hosted platforma).
 5. Deploy!
 
 **Výhody Coolify:**
-- ✅ Automatické SSL certifikáty (Let's Encrypt)
-- ✅ Reverse proxy s HTTPS
-- ✅ Snadný deployment z Git
-- ✅ Automatické health checks
-- ✅ Monitoring a logy
+- Automatické SSL certifikáty (Let's Encrypt)
+- Reverse proxy s HTTPS
+- Snadný deployment z Git
+- Automatické health checks
+- Monitoring a logy
 
 ## Environment variables
 
@@ -276,33 +276,33 @@ docker-compose logs -f web
 
 ## Poznámky
 
-- ✅ Systém je připraven k použití
-- ✅ Mock platby (ne skutečné platební brány)
-- ✅ PostgreSQL databáze (docker volume `postgres_data`)
-- ✅ HTTPS s self-signed certifikáty (pro produkci doporučujeme Let's Encrypt)
-- ✅ Čistý, moderní UI design s Tailwind CSS (bez emojis, bez přehnaných gradientů)
-- ✅ Cooldown ochrana proti dvojitému odpíchnutí
-- ✅ Kompletní error handling a transakční bezpečnost
+- Systém je připraven k použití
+- Mock platby (ne skutečné platební brány)
+- PostgreSQL databáze (docker volume `postgres_data`)
+- HTTPS s self-signed certifikáty (pro produkci doporučujeme Let's Encrypt)
+- Čistý, moderní UI design s Tailwind CSS (bez emojis, bez přehnaných gradientů)
+- Cooldown ochrana proti dvojitému odpíchnutí
+- Kompletní error handling a transakční bezpečnost
 
 ## Historie změn
 
 ### Verze 1.2.0 (aktuální)
-- ✅ Refaktor designu dashboard stránky na Tailwind CSS
-- ✅ Odstranění emojis z UI (čistší, profesionálnější vzhled)
-- ✅ Přidání tlačítka "Stáhnout QR" pro stažení QR kódu jako PNG
-- ✅ Nová barevná paleta (čisté barvy, žádné přehnané gradienty)
-- ✅ Zachování všech funkcí (QR zobrazení, kredity, regenerace)
+- Refaktor designu dashboard stránky na Tailwind CSS
+- Odstranění emojis z UI (čistší, profesionálnější vzhled)
+- Přidání tlačítka "Stáhnout QR" pro stažení QR kódu jako PNG
+- Nová barevná paleta (čisté barvy, žádné přehnané gradienty)
+- Zachování všech funkcí (QR zobrazení, kredity, regenerace)
 
 ### Verze 1.1.0
-- ✅ Oprava HTTP 500 chyby v verify endpointu
-- ✅ Přidání cooldown ochrany (60s na úrovni uživatele)
-- ✅ Moderní gym UI design (scanner, dashboard)
-- ✅ Nastavení účtu (změna hesla, info)
-- ✅ HTTPS podpora
-- ✅ Vylepšený error handling
-- ✅ Ochrana proti záporným kreditům
+- Oprava HTTP 500 chyby v verify endpointu
+- Přidání cooldown ochrany (60s na úrovni uživatele)
+- Moderní gym UI design (scanner, dashboard)
+- Nastavení účtu (změna hesla, info)
+- HTTPS podpora
+- Vylepšený error handling
+- Ochrana proti záporným kreditům
 
 ### Verze 1.0.0
-- ✅ Základní funkcionalita (registrace, login, QR kódy)
-- ✅ Kreditový systém
-- ✅ Admin dashboard
+- Základní funkcionalita (registrace, login, QR kódy)
+- Kreditový systém
+- Admin dashboard

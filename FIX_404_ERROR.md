@@ -113,7 +113,7 @@ COMGATE_RETURN_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/pa
 COMGATE_SECRET=gx4q8OV3TJt6noJnfhjqJKyX3Z6Ych0y
 COMGATE_TEST_MODE=true
 
-# ⚠️ DŮLEŽITÉ: postgresql:// ne postgres://
+# DŮLEŽITÉ: postgresql:// ne postgres://
 DATABASE_URL=postgresql://postgres:xU1iNzI1bDgSAkklExHXzUisr88Xr5M9bIbLjeKFBrUaoizYrRxgbUO0POm1sAmz@kgo0ksc40s8k84wg4kwk0cso:5432/postgres
 
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
@@ -122,4 +122,3 @@ JWT_SECRET_KEY=22316a650ece222be8b494406413e5ee93d213455ae2a0f3c2d037139e1922a3
 
 PYTHONUNBUFFERED=1
 ```
-

@@ -163,7 +163,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🏋️ Admin Panel</h1>
+            <h1>Admin Panel</h1>
             <div>
                 <button class="btn-secondary" onclick="loadUsers()">↻ Obnovit</button>
                 <button class="btn-secondary" onclick="logout()" style="margin-left:10px;">Odhlásit se</button>
@@ -177,8 +177,8 @@
             <h2 style="margin-top:0;">Vyhledávání uživatelů</h2>
             <div class="search-box">
                 <input type="search" id="searchInput" placeholder="Zadej jméno nebo email..." onkeyup="if(event.key==='Enter') searchUsers()">
-                <button class="btn-primary" onclick="searchUsers()">🔍 Hledat</button>
-                <button class="btn-secondary" onclick="loadUsers()">📋 Všechny uživatelé</button>
+                <button class="btn-primary" onclick="searchUsers()">Hledat</button>
+                <button class="btn-secondary" onclick="loadUsers()">Všichni uživatelé</button>
             </div>
         </div>
 
@@ -325,7 +325,7 @@
                         <td><strong>${user.credits || 0}</strong></td>
                         <td>
                             <span class="badge ${user.is_admin ? 'badge-admin' : 'badge-user'}">
-                                ${user.is_admin ? '👑 Admin' : '👤 Uživatel'}
+                                ${user.is_admin ? 'Admin' : 'Uživatel'}
                             </span>
                         </td>
                         <td>${user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '—'}</td>

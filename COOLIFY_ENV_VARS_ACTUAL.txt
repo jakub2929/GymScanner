@@ -4,7 +4,7 @@
 # ============================================
 # POVINNÉ - DATABASE
 # ============================================
-# ⚠️ DŮLEŽITÉ: Nahraď "postgres-host" skutečným hostem z Coolify PostgreSQL databáze!
+# DŮLEŽITÉ: Nahraď "postgres-host" skutečným hostem z Coolify PostgreSQL databáze!
 # Získej connection string z Coolify → PostgreSQL databáze → Connection String
 # 
 # Formát: postgresql+psycopg2://username:password@host:5432/database_name
@@ -27,7 +27,7 @@ COMGATE_MERCHANT_ID=123456
 COMGATE_SECRET=gx4q8OV3TJt6noJnfhjqJKyX3Z6Ych0y
 COMGATE_TEST_MODE=true
 
-# ⚠️ DŮLEŽITÉ: Použij HTTPS a svou skutečnou doménu!
+# DŮLEŽITÉ: Použij HTTPS a svou skutečnou doménu!
 COMGATE_RETURN_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/payments/comgate/return
 COMGATE_NOTIFY_URL=https://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io/api/payments/comgate/notify
 
@@ -42,4 +42,3 @@ PYTHONUNBUFFERED=1
 # Tyto proměnné Coolify nastaví automaticky, nemusíš je přidávat:
 # SERVICE_FQDN_WEB=ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io
 # SERVICE_URL_WEB=http://ko0k4okk0k8wc444os8880gw.93.91.159.48.sslip.io
-

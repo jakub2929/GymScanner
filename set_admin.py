@@ -13,7 +13,7 @@ from app.models import User
 # Získej DATABASE_URL z environment nebo použij default
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    print("❌ Chyba: DATABASE_URL není nastaven v environment variables!")
+    print("ERROR: DATABASE_URL není nastaven v environment variables!")
     print("Nastav PostgreSQL connection string, např.:")
     print("  export DATABASE_URL='postgresql+psycopg2://gymuser:gympass@localhost:5432/gym_turnstile'")
     sys.exit(1)
@@ -22,7 +22,7 @@ if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
 
 if not DATABASE_URL.startswith(("postgresql://", "postgresql+")):
-    print("❌ Tato aplikace nyní podporuje pouze PostgreSQL. Zadaný DATABASE_URL je neplatný.")
+    print("ERROR: Tato aplikace nyní podporuje pouze PostgreSQL. Zadaný DATABASE_URL je neplatný.")
     sys.exit(1)
 
 engine = create_engine(DATABASE_URL)
@@ -35,7 +35,7 @@ def set_admin(email: str):
     try:
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            print(f"❌ Uživatel s emailem '{email}' nebyl nalezen!")
+            print(f"ERROR: Uživatel s emailem '{email}' nebyl nalezen!")
             print("\nDostupní uživatelé:")
             users = db.query(User).all()
             if users:
@@ -46,16 +46,16 @@ def set_admin(email: str):
             return False
         
         if user.is_admin:
-            print(f"✅ Uživatel '{email}' už je admin!")
+            print(f"OK: Uživatel '{email}' už je admin.")
             return True
         
         user.is_admin = True
         db.commit()
-        print(f"✅ Uživatel '{email}' byl nastaven jako admin!")
+        print(f"OK: Uživatel '{email}' byl nastaven jako admin.")
         return True
     except Exception as e:
         db.rollback()
-        print(f"❌ Chyba při nastavování admina: {e}")
+        print(f"ERROR: Chyba při nastavování admina: {e}")
         return False
     finally:
         db.close()
@@ -66,13 +66,13 @@ def list_users():
     try:
         users = db.query(User).all()
         if not users:
-            print("📭 V databázi nejsou žádní uživatelé.")
+            print("V databázi nejsou žádní uživatelé.")
             return
         
-        print("\n📋 Seznam uživatelů:")
+        print("\nSeznam uživatelů:")
         print("-" * 60)
         for user in users:
-            admin_status = "✅ Admin" if user.is_admin else "❌ User"
+            admin_status = "ADMIN" if user.is_admin else "USER"
             print(f"  {user.email:30} | {admin_status} | Credits: {user.credits}")
         print("-" * 60)
     finally:
@@ -80,7 +80,7 @@ def list_users():
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("📝 Použití: python set_admin.py <email>")
+        print("Použití: python set_admin.py <email>")
         print("   nebo:   python set_admin.py --list")
         print("\nPříklad:")
         print("  python set_admin.py admin@example.com")

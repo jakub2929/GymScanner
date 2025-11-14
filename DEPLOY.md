@@ -31,12 +31,12 @@ Pokud potřebuješ offline/debug režim se SQLite, podívej se na `SQLITE_SETUP.
 3. Pokud GitHub:
    - Připoj svůj GitHub repository
    - Branch: `main` (nebo jiný)
-   - **Build Pack: `Dockerfile`** ⚠️ **NEPOUŽÍVEJ Docker Compose!**
+   - **Build Pack: `Dockerfile`** – **NEPOUŽÍVEJ Docker Compose!**
    - Dockerfile path: `Dockerfile.production`
 4. Pokud Dockerfile:
    - Upload nebo zadej Dockerfile.production obsah
 
-**⚠️ DŮLEŽITÉ:** 
+**DŮLEŽITÉ:** 
 - **NEPOUŽÍVEJ** `docker-compose.yml` v Coolify (Coolify spravuje porty sám)
 - Použij **pouze** `Dockerfile.production` přímo
 - Coolify automaticky řeší networking, reverse proxy a porty (používá EXPOSE z Dockerfile)
@@ -199,12 +199,12 @@ Coolify poskytuje:
 
 ## Bezpečnost
 
-- ✅ HTTPS automaticky přes Coolify
-- ✅ Environment proměnné jsou šifrované
-- ✅ JWT secret key v environment proměnných
-- ✅ Comgate secret v environment proměnných
-- ⚠️ Změň `JWT_SECRET_KEY` na silné heslo pro produkci
-- ⚠️ Použij silné heslo pro PostgreSQL
+-  HTTPS automaticky přes Coolify
+-  Environment proměnné jsou šifrované
+-  JWT secret key v environment proměnných
+-  Comgate secret v environment proměnných
+- Změň `JWT_SECRET_KEY` na silné heslo pro produkci
+- Použij silné heslo pro PostgreSQL
 
 ## Podpora
 

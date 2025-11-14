@@ -149,7 +149,7 @@
         }
 
         .status-message.success::before {
-            content: '✅';
+            content: '[OK]';
             font-size: 2rem;
             position: absolute;
             top: 1rem;
@@ -167,7 +167,7 @@
         }
 
         .status-message.error::before {
-            content: '❌';
+            content: '[ERROR]';
             font-size: 2rem;
             position: absolute;
             top: 1rem;
@@ -185,7 +185,7 @@
         }
 
         .status-message.cooldown::before {
-            content: '⏱️';
+            content: '[WAIT]';
             font-size: 2rem;
             position: absolute;
             top: 1rem;
@@ -277,7 +277,7 @@
         }
 
         .loading::before {
-            content: '⏳ ';
+            content: '[WAIT] ';
         }
         
         .manual-input {
@@ -353,7 +353,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🏋️ Vstup do posilovny</h1>
+        <h1>Vstup do posilovny</h1>
         <p class="subtitle">Naskenujte svůj QR kód pro vstup</p>
         
         <div id="reader"></div>
@@ -371,10 +371,10 @@
         </div>
         
         <button class="button" id="startButton" onclick="startScanner()">
-            <span>🎥 Spustit skener</span>
+            <span>Spustit skener</span>
         </button>
         <button class="button" id="stopButton" onclick="stopScanner()" style="display: none;">
-            <span>⏹️ Zastavit skener</span>
+            <span>Zastavit skener</span>
         </button>
     </div>
     
@@ -393,12 +393,12 @@
             
             // Add credits info if available
             if (creditsLeft !== null && creditsLeft !== undefined) {
-                html += `<div class="credits-info">💰 Zbývá kreditů: ${creditsLeft}</div>`;
+                html += `<div class="credits-info"> Zbývá kreditů: ${creditsLeft}</div>`;
             }
             
             // Add cooldown timer if active
             if (cooldownSeconds !== null && cooldownSeconds > 0) {
-                html += `<div class="cooldown-timer">⏱️ Počkej ${cooldownSeconds} sekund</div>`;
+                html += `<div class="cooldown-timer">[WAIT] Počkej ${cooldownSeconds} sekund</div>`;
                 
                 // Start countdown if not already running
                 if (cooldownTimer) {
@@ -411,13 +411,13 @@
                         clearInterval(cooldownTimer);
                         const timerEl = statusMessage.querySelector('.cooldown-timer');
                         if (timerEl) {
-                            timerEl.textContent = '✅ Cooldown vypršel - můžeš znovu naskenovat';
+                            timerEl.textContent = '[OK] Cooldown vypršel - můžeš znovu naskenovat';
                             timerEl.style.color = '#00c853';
                         }
                     } else {
                         const timerEl = statusMessage.querySelector('.cooldown-timer');
                         if (timerEl) {
-                            timerEl.textContent = `⏱️ Počkej ${secondsLeft} sekund`;
+                            timerEl.textContent = `[WAIT] Počkej ${secondsLeft} sekund`;
                         }
                     }
                 }, 1000);
@@ -457,7 +457,7 @@
             
             const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             if (!uuidPattern.test(cleanToken)) {
-                showMessage('❌ Neplatný formát tokenu. Token musí být UUID.', 'error');
+                showMessage('[ERROR] Neplatný formát tokenu. Token musí být UUID.', 'error');
                 return;
             }
             
@@ -498,7 +498,7 @@
                     // Handle 500 errors gracefully
                     if (response.status === 500) {
                         console.error('Server error:', errorData);
-                        showMessage('❌ Chyba na serveru. Zkus to prosím znovu později.', 'error');
+                        showMessage('[ERROR] Chyba na serveru. Zkus to prosím znovu později.', 'error');
                         return;
                     }
                     
@@ -509,12 +509,12 @@
                 
                 // Handle new response structure with allowed: bool
                 if (data.allowed === true) {
-                    let successMsg = '✅ Přístup povolen! Vítejte v posilovně.\n\n';
+                    let successMsg = '[OK] Přístup povolen! Vítejte v posilovně.\n\n';
                     if (data.user_name) {
-                        successMsg += `👤 Jméno: ${data.user_name}\n`;
+                        successMsg += `Jméno: ${data.user_name}\n`;
                     }
                     if (data.user_email) {
-                        successMsg += `📧 Email: ${data.user_email}\n`;
+                        successMsg += `Email: ${data.user_email}\n`;
                     }
                     showMessage(successMsg, 'success', data.credits_left, null);
                 } else {
@@ -524,31 +524,31 @@
                     
                     switch (data.reason) {
                         case 'no_credits':
-                            errorMsg = '❌ Nemůžeš vstoupit - nemáš žádné kredity.\n\n💰 Nakup si kredity v nastavení účtu.';
+                            errorMsg = '[ERROR] Nemůžeš vstoupit - nemáš žádné kredity.\n\n Nakup si kredity v nastavení účtu.';
                             messageType = 'error';
                             break;
                         case 'cooldown':
-                            errorMsg = '⏱️ Příliš rychlé další odpíchnutí!\n\nPočkej chvíli, než se můžeš znovu odpíchnout.';
+                            errorMsg = '[WAIT] Příliš rychlé další odpíchnutí!\n\nPočkej chvíli, než se můžeš znovu odpíchnout.';
                             messageType = 'cooldown';
                             break;
                         case 'token_not_found':
-                            errorMsg = '❌ Neplatný token.\n\nToken nebyl nalezen v databázi.';
+                            errorMsg = '[ERROR] Neplatný token.\n\nToken nebyl nalezen v databázi.';
                             messageType = 'error';
                             break;
                         case 'token_deactivated':
-                            errorMsg = '❌ Token je deaktivován.\n\nVygeneruj si nový QR kód.';
+                            errorMsg = '[ERROR] Token je deaktivován.\n\nVygeneruj si nový QR kód.';
                             messageType = 'error';
                             break;
                         case 'user_not_found':
-                            errorMsg = '❌ Uživatel nebyl nalezen.\n\nKontaktuj prosím podporu.';
+                            errorMsg = '[ERROR] Uživatel nebyl nalezen.\n\nKontaktuj prosím podporu.';
                             messageType = 'error';
                             break;
                         case 'invalid_token':
-                            errorMsg = '❌ Neplatný token.\n\nToken není aktivní nebo je neplatný.';
+                            errorMsg = '[ERROR] Neplatný token.\n\nToken není aktivní nebo je neplatný.';
                             messageType = 'error';
                             break;
                         default:
-                            errorMsg = `❌ Přístup zamítnut: ${data.reason || 'Neznámý důvod'}`;
+                            errorMsg = `[ERROR] Přístup zamítnut: ${data.reason || 'Neznámý důvod'}`;
                             messageType = 'error';
                     }
                     
@@ -559,7 +559,7 @@
                 
                 // Handle network errors
                 if (error.name === 'TypeError' || error.message.includes('Failed to fetch')) {
-                    showMessage('❌ Chyba připojení k serveru. Zkontroluj připojení k internetu.', 'error');
+                    showMessage('[ERROR] Chyba připojení k serveru. Zkontroluj připojení k internetu.', 'error');
                     return;
                 }
                 
@@ -567,7 +567,7 @@
                 if (error.message.includes('pattern')) {
                     errorMsg = 'Neplatný formát tokenu';
                 }
-                showMessage('❌ Chyba při ověřování: ' + errorMsg, 'error');
+                showMessage('[ERROR] Chyba při ověřování: ' + errorMsg, 'error');
             } finally {
                 const resetDelay = fromScanner ? SCAN_COOLDOWN_MS : 0;
                 setTimeout(() => {
@@ -602,7 +602,7 @@
                 showMessage('Skener spuštěn. Namiřte kameru na QR kód.', 'info');
             }).catch((err) => {
                 console.error('Error starting scanner:', err);
-                showMessage('❌ Chyba při spuštění kamery: ' + err, 'error');
+                showMessage('[ERROR] Chyba při spuštění kamery: ' + err, 'error');
             });
         }
         
@@ -616,7 +616,7 @@
                 showMessage('Skener zastaven.', 'info');
             }).catch((err) => {
                 console.error('Error stopping scanner:', err);
-                showMessage('❌ Chyba při zastavení skeneru: ' + err, 'error');
+                showMessage('[ERROR] Chyba při zastavení skeneru: ' + err, 'error');
             });
         }
         

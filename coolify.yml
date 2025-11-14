@@ -4,7 +4,7 @@
 # Tento soubor slouží jako dokumentace a reference pro nastavení v Coolify dashboard.
 #
 # V Coolify dashboard nastav:
-# - Build Pack: Dockerfile ⚠️ NEPOUŽÍVEJ Docker Compose!
+# - Build Pack: Dockerfile – NEPOUŽÍVEJ Docker Compose!
 # - Dockerfile Path: Dockerfile.production
 # - Port: 8000
 # - Protocol: HTTP (Coolify přidá HTTPS automaticky)
@@ -32,4 +32,3 @@
 
 # Health check endpoint: /health
 # Coolify automaticky detekuje a používá tento endpoint
-
