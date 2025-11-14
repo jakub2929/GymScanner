@@ -9,7 +9,10 @@ dist/
 downloads/
 eggs/
 .eggs/
+# Python build libs
 lib/
+# but keep Next.js sources
+!frontend/src/lib/
 lib64/
 parts/
 sdist/
@@ -31,4 +34,3 @@ ssl/
 
 # Environment variables
 .env
-

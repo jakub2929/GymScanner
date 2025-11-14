@@ -25,8 +25,8 @@ Backend (FastAPI) remains – only minimal adjustments (CORS, static file mount 
 ## 3. Work packages & timeline (concrete)
 | Phase | Deliverables | Duration |
 |-------|--------------|----------|
-| **A. Bootstrap (Next.js + tooling)** | `frontend/` created with `create-next-app --ts --tailwind`, Tailwind config with Apple palette, ESLint/Prettier/Husky, global `apiClient`, env wiring. | 1 day |
-| **B. Auth shell** | `/login` and `/register` pages with Hook Form + Zod, token handling (sessionStorage), shared layout (nav + footer). | 2 days |
+| **A. Bootstrap (Next.js + tooling)** | ✅ `frontend/` vytvořeno (`create-next-app --ts --tailwind`), Tailwind config + ESLint/Prettier/Husky, `apiClient`, `.env`. | 1 day |
+| **B. Auth shell** | ⚙️ `/login` a `/register` s Hook Form + Zod, token handling, shared layout. | 2 days |
 | **C. Dashboard + Settings** | Components: QRCard, CreditsCTA, Toast, Modals; `/dashboard` + `/settings` routes with TanStack Query data hooks. | 2 days |
 | **D. Scanner** | `/scanner` route with `react-html5-qrcode`, manual entry, status messaging. | 1.5 days |
 | **E. Admin** | `/admin/login`, `/admin` overview, `/admin/users` table with search, credit adjustments. | 1.5 days |
