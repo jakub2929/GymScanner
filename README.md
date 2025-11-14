@@ -217,6 +217,25 @@ docker compose -f docker-compose.local.yml up -d
 
 **Poznámka:** `docker-compose.yml` je určený pro Coolify (řeší porty/SSL). Lokální HTTPS vyžaduje `docker-compose.local.yml` se self-signed certifikáty a Postgres službou.
 
+## Frontend (Next.js) development
+
+- Zdrojové kódy: `frontend/` (Next.js 14, TypeScript, Tailwind).
+- `.env.example` uvnitř obsahuje `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`). Zkopíruj na `.env.local`.
+- Instalace závislostí:
+
+```bash
+cd frontend
+npm install
+```
+
+- Spuštění dev serveru (běží na `http://localhost:3000`):
+
+```bash
+npm run dev
+```
+
+API requests jsou proxy‑ovány na FastAPI (`NEXT_PUBLIC_API_URL`). Po dokončení migrace nahradí Next.js statické stránky v `static/`.
+
 ## Deployment na Coolify
 
 Aplikace je připravena pro deployment na Coolify (self-hosted platforma).

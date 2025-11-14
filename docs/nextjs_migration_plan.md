@@ -6,49 +6,39 @@
 - **Modern build pipeline** – Tailwind/PostCSS integrated, SSR/ISR available for authenticated pages, easier to deploy on Vercel/Render.
 - **DX** – Hot reload, ESLint, Prettier, Storybook options.
 
-## 2. Recommended stack snapshot
-| Layer | Choice | Reason |
-|-------|--------|--------|
-| Framework | **Next.js 14 (App Router)** | Hybrid SSR/CSR, file-based routing, built-in bundler (Turbopack / Webpack) and image/font optimizations. |
-| Language | **TypeScript** | Static typing across API DTOs, form state, and service hooks. |
-| UI | **React 18** | Component ecosystem, concurrent features, integrates with Next.js seamlessly. |
-| Styling | **Tailwind CSS w/ PostCSS** | Utility-first styling + custom tokens for liquid glass themes. |
-| Data fetching | **TanStack Query (React Query)** | Request caching, retries, loading/error states for `/api/**` endpoints. |
-| Forms | **React Hook Form** | Lightweight form state for login/register/settings. |
-| Charts (if needed) | Recharts/Nivo (opt-in) | Future metrics (usage, credits). |
-| Scanner | `react-html5-qrcode` or custom hook | Wraps camera access in React-friendly API. |
-| Auth storage | `sessionStorage` or HTTP-only cookie | Avoids XSS risk; easy to share between pages. |
-| Lint/Format | ESLint + Prettier + Husky | Enforces consistent code style. |
+## 2. Stack (2025 best-practice)
+| Category | Tech Used | Notes |
+|----------|-----------|-------|
+| Runtime | **Next.js 14 (App Router) + React 18** | App directory, server & client components, Turbopack dev server. |
+| Language | **TypeScript** (strict mode) | Shared types for API requests/responses (`zod` for validation). |
+| Styling | **Tailwind CSS 3 + PostCSS** | Custom theme tokens (`tailwind.config.js`) for liquid glass palette. |
+| State & fetching | **TanStack Query** + custom fetch wrapper | Handles JWT header injection, caching, optimistic updates. |
+| Forms | **React Hook Form + Zod Resolver** | Login/register/settings forms with validation. |
+| Scanner | **react-html5-qrcode** | React-friendly QR/UPC scanning component. |
+| Icons/Typography | **Radix UI Icons + SF Pro** | Consistent design system. |
+| Build tooling | ESLint (Next.js config) + Prettier + Husky | Lint/format on commit (`lint-staged`). |
+| Testing | Vitest + React Testing Library (smoke tests) | Optional for key components. |
+| Auth storage | In-memory + `sessionStorage`, optional secure cookie | No localStorage usage for tokens. |
 
 Backend (FastAPI) remains – only minimal adjustments (CORS, static file mount removal).
 
-## 3. Work packages & estimates
-1. **Setup / Tooling (1 day)**
-   - `npx create-next-app@latest frontend --ts --tailwind`.
-   - Configure path aliases, Prettier, ESLint, Husky.
-   - Define shared `apiClient` wrapper w/ interceptors and typed responses.
-2. **Auth + Layout (2 days)**
-   - Build `app/(auth)/page.tsx` with login/register forms, replicating Apple glass style.
-   - Implement context/state for token management (store in memory + cookies if needed).
-   - Navigation shell (Dashboard, Settings, Scanner, Admin).
-3. **Dashboard & Settings (2 days)**
-   - Componentize QR card, entries CTA, toast, modals.
-   - Settings page with forms (change password, account info).
-4. **Scanner page (1.5 days)**
-   - Wrap QR scanner library, manual token entry, status messaging.
-5. **Admin pages (1.5 days)**
-   - Admin login, list/search users, update credits, tokens table.
-6. **Integration + polish (1.5 days)**
-   - Wire typed fetchers to all endpoints, handle errors globally.
-   - QA on desktop/mobile, adjust theming tokens, update README/deploy docs.
+## 3. Work packages & timeline (concrete)
+| Phase | Deliverables | Duration |
+|-------|--------------|----------|
+| **A. Bootstrap (Next.js + tooling)** | `frontend/` created with `create-next-app --ts --tailwind`, Tailwind config with Apple palette, ESLint/Prettier/Husky, global `apiClient`, env wiring. | 1 day |
+| **B. Auth shell** | `/login` and `/register` pages with Hook Form + Zod, token handling (sessionStorage), shared layout (nav + footer). | 2 days |
+| **C. Dashboard + Settings** | Components: QRCard, CreditsCTA, Toast, Modals; `/dashboard` + `/settings` routes with TanStack Query data hooks. | 2 days |
+| **D. Scanner** | `/scanner` route with `react-html5-qrcode`, manual entry, status messaging. | 1.5 days |
+| **E. Admin** | `/admin/login`, `/admin` overview, `/admin/users` table with search, credit adjustments. | 1.5 days |
+| **F. Integration & docs** | Cross-page QA, responsive fixes, README/DEPLOY updates, Docker/Coolify instructions for dual services. | 1.5 days |
 
-**Total:** ~9 calendar days (1–2 people). Add buffer for acceptance/iterations.
+**Total:** ~9.5 days (1–2 devs). Buffer recommended for review cycles.
 
 ## 4. Migration strategy
-1. **Parallel frontend** – keep FastAPI running on `localhost:8000`, serve Next.js dev server on `localhost:3000`. Configure proxy for API requests.
-2. **Gradual switch** – once pages are ready, update FastAPI to serve `frontend/out` (Next.js static export) or deploy separately behind reverse proxy.
-3. **Routing alignment** – maintain same paths (`/dashboard`, `/settings`, `/scanner`, etc.) for seamless backend compatibility.
-4. **Token handling** – continue using JWT from FastAPI; store in secure cookie or `sessionStorage`. Refresh logic can remain manual (no refresh tokens yet).
+1. **Parallel dev servers** – FastAPI (`:8000`) + Next dev server (`:3000`) with `/api` proxy (Next middleware rewrites to FastAPI). 
+2. **Feature parity** – replace one page at a time (Auth → Dashboard → Settings → Scanner → Admin) while keeping old static pages as fallback.
+3. **Deployment** – Once stable, build Next.js (`npm run build && next export` or SSR mode). Option A: serve static export via FastAPI `StaticFiles`. Option B: deploy as separate service (Coolify) and point DNS accordingly.
+4. **Token handling** – Continue using FastAPI JWT; on login store token in memory + `sessionStorage`, attach via `apiClient` interceptor. Later optional: HTTP-only cookie via FastAPI response.
 
 ## 5. Deliverables
 - `frontend/` Next.js project (TypeScript, Tailwind).
