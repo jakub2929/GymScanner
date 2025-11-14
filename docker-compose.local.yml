@@ -7,12 +7,18 @@ services:
       POSTGRES_DB: gym_turnstile
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymuser -d gym_turnstile"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   web:
     build: .
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     env_file:

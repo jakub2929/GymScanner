@@ -34,6 +34,11 @@ services:
       POSTGRES_DB: gymdb
     volumes:
       - gym-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymuser -d gymdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   frontend:
@@ -47,7 +52,8 @@ services:
       NEXT_TELEMETRY_DISABLED: 1
       NODE_ENV: production
     depends_on:
-      - db
+      web:
+        condition: service_started
     # Expose internal port so Coolify can detect the frontend service
     expose:
       - "3000"
