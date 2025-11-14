@@ -22,6 +22,7 @@ services:
       db:
         condition: service_healthy
     # Expose internal port so Coolify can detect the API service
+    # DO NOT use ports: - Coolify manages port mapping via its reverse proxy
     expose:
       - "8000"
     labels:
