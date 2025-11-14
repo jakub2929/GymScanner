@@ -46,8 +46,15 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
+        # ⚠️ IMPORTANT: Set NEXT_PUBLIC_API_URL to your public API URL in Coolify
+        # This must be the public URL that browsers can access (not localhost!)
+        # Example: https://api.yourdomain.com or http://your-api-domain.coolify.app
+        # Default is localhost:8000 for local development only
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     environment:
+      # ⚠️ IMPORTANT: Set NEXT_PUBLIC_API_URL to your public API URL in Coolify
+      # Example: https://api.yourdomain.com or http://your-api-domain.coolify.app
+      # Default is localhost:8000 for local development only
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       NEXT_TELEMETRY_DISABLED: 1
       NODE_ENV: production

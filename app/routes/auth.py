@@ -61,10 +61,16 @@ async def register(
     db: Session = Depends(get_db)
 ):
     """Register a new user"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
+        logger.info(f"Registration attempt for email: {request.email}")
+        
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == request.email).first()
         if existing_user:
+            logger.warning(f"Registration failed: email already exists - {request.email}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
@@ -81,6 +87,8 @@ async def register(
         db.commit()
         db.refresh(user)
         
+        logger.info(f"User registered successfully: {user.email} (ID: {user.id})")
+        
         return RegisterResponse(
             message="User registered successfully",
             user_id=user.id
@@ -89,9 +97,8 @@ async def register(
         raise
     except Exception as e:
         # Database connection error or other error
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Registration error: {e}", exc_info=True)
+        logger.error(f"Registration error for {request.email}: {e}", exc_info=True)
+        db.rollback()  # Rollback on error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}"

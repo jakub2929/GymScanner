@@ -137,3 +137,22 @@ async def health_check():
         "database": db_status,
         "app": "running"
     }
+
+@app.get("/api/routes")
+async def list_routes():
+    """List all available API routes for debugging"""
+    routes = []
+    for route in app.routes:
+        if hasattr(route, "path") and hasattr(route, "methods"):
+            for method in route.methods:
+                if method != "HEAD":  # Skip HEAD method
+                    routes.append({
+                        "method": method,
+                        "path": route.path,
+                        "name": getattr(route, "name", "unknown")
+                    })
+    return {
+        "routes": sorted(routes, key=lambda x: (x["path"], x["method"])),
+        "api_prefix": "/api",
+        "total": len(routes)
+    }

@@ -1,4 +1,15 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+// Get API URL - must be set via NEXT_PUBLIC_API_URL environment variable
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000');
+
+// Warn if API_URL seems incorrect (localhost in production or empty)
+if (typeof window !== 'undefined' && API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
+  console.warn(
+    '⚠️ NEXT_PUBLIC_API_URL is set to localhost but app is running on',
+    window.location.hostname,
+    '- API calls may fail. Set NEXT_PUBLIC_API_URL to your public API URL.'
+  );
+}
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -15,7 +26,12 @@ export async function apiClient<TResponse>(path: string, options: ApiClientOptio
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const url = `${API_URL}${path}`;
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    console.debug(`[API Client] ${options.method || 'GET'} ${url}`);
+  }
+
+  const response = await fetch(url, {
     ...options,
     headers,
   });
