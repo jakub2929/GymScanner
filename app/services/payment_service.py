@@ -127,6 +127,8 @@ def prepare_comgate_data(payment: Payment, user: User) -> dict:
     return_url = os.getenv("COMGATE_RETURN_URL", "https://localhost/api/payments/comgate/return")
     notify_url = os.getenv("COMGATE_NOTIFY_URL", "https://localhost/api/payments/comgate/notify")
     default_phone = os.getenv("COMGATE_DEFAULT_PHONE", "")
+    delivery = os.getenv("COMGATE_DELIVERY", "HOME_DELIVERY")
+    category = os.getenv("COMGATE_CATEGORY", "PHYSICAL_GOODS_ONLY")
     prepare_only = os.getenv("COMGATE_PREPARE_ONLY", "0")
 
     if not merchant_id or not secret:
@@ -153,7 +155,10 @@ def prepare_comgate_data(payment: Payment, user: User) -> dict:
         "refId": payment.payment_id,
         "method": "ALL",
         "email": user.email,
+        "fullName": user.name or "GymScanner User",
         "phone": default_phone or "",
+        "delivery": delivery,
+        "category": category,
         "notifyUrl": notify_url,
         "returnUrl": return_url,
         "secret": secret,

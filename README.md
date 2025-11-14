@@ -56,6 +56,8 @@ COMGATE_NOTIFY_URL=http://<api-domain>/api/payments/comgate/notify
 COMGATE_API_URL=https://payments.comgate.cz/v1.0/create        # HTTP-POST endpoint (lze přepsat)
 COMGATE_DEFAULT_PHONE=+420777111222                    # fallback telefon, pokud uživatel nemá číslo
 COMGATE_PREPARE_ONLY=0                                 # 1 = pouze předautorizace, 0 = rovnou platba
+COMGATE_DELIVERY=HOME_DELIVERY                         # Comgate delivery param
+COMGATE_CATEGORY=PHYSICAL_GOODS_ONLY                   # Comgate category param
 ```
 
 Frontend (`/dashboard`) nyní volá `/api/payments/create` a po úspěchu automaticky přesměruje na Comgate. Po návratu/notify získává uživatel nové kredity.
