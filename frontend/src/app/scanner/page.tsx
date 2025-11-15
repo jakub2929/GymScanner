@@ -1,13 +1,11 @@
 'use client';
 
-import AuthCard from '@/components/auth-card';
 import QrScanner from '@/components/qr-scanner';
 import { Toast, useToast } from '@/components/toast';
-import { useLogout } from '@/hooks/useLogout';
 import { apiClient } from '@/lib/apiClient';
 import { setTokenAtom, tokenAtom } from '@/lib/authStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useSetAtom, useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -36,103 +34,36 @@ interface VerifyResponse {
 }
 
 type LoginValues = z.infer<typeof loginSchema>;
+type StoredUserInfo = { name: string | null; email: string | null };
+type ShowToast = (message: string, type?: 'success' | 'error') => void;
 
 export default function ScannerPage() {
-  const token = useAtomValue(tokenAtom);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    // We intentionally flip the mounted flag after hydration to safely access sessionStorage.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
-
-  const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
-  const effectiveToken = token || sessionToken;
-
-  return effectiveToken ? <ScannerConsole /> : <ScannerLoginForm />;
-}
-
-function ScannerLoginForm() {
   const { toast, showToast } = useToast();
-  const setToken = useSetAtom(setTokenAtom);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: SCANNER_EMAIL },
-  });
-
-  async function onSubmit(values: LoginValues) {
-    setIsSubmitting(true);
-    try {
-      const response = await apiClient<LoginResponse>('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ username: values.email, password: values.password }).toString(),
-      });
-      setToken(response.access_token);
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('user_name', response.user_name);
-        sessionStorage.setItem('user_email', response.user_email);
-        sessionStorage.setItem('is_admin', response.is_admin ? 'true' : 'false');
-      }
-      showToast('Přihlášení úspěšné', 'success');
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Chyba při přihlášení', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 
   return (
     <>
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-12">
-        <AuthCard title="Scanner Login" subtitle="Přihlaš se dedikovaným účtem">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <input
-                type="email"
-                className="input-field bg-slate-900 text-slate-100 border border-slate-800"
-                {...register('email')}
-                readOnly
-              />
-              {errors.email && <p className="text-xs text-rose-300 mt-1">{errors.email.message}</p>}
-              <p className="text-xs text-slate-400 mt-1">Účet: {SCANNER_EMAIL}</p>
-            </div>
-            <div>
-              <input
-                type="password"
-                placeholder="Heslo"
-                className="input-field bg-slate-900 text-slate-100 border border-slate-800"
-                {...register('password')}
-              />
-              {errors.password && <p className="text-xs text-rose-300 mt-1">{errors.password.message}</p>}
-            </div>
-            <button type="submit" className="accent-button w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Přihlašuji...' : 'Přihlásit se'}
-            </button>
-            <p className="text-xs text-center text-slate-500">
-              Registrace zde není dostupná. Přístup je jen pro servisní účet skeneru.
-            </p>
-          </form>
-        </AuthCard>
+      <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] via-[#f3f6fb] to-[#ecf1f9]">
+        <header className="max-w-6xl mx-auto px-6 py-10">
+          <p className="text-xs uppercase tracking-[0.35em] text-emerald-500/70">Gym Access</p>
+          <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 mt-2">Turniket Scanner</h1>
+          <p className="text-slate-500 text-sm mt-2">
+            URL je veřejně dostupná i bez přihlášení. Servisní login pro účet {SCANNER_EMAIL} je stále k dispozici na
+            stejné stránce.
+          </p>
+        </header>
+        <main className="px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="max-w-6xl mx-auto grid gap-6 lg:grid-cols-[2fr,1fr]">
+            <ScannerConsole showToast={showToast} />
+            <ScannerAccessPanel showToast={showToast} />
+          </div>
+        </main>
       </div>
       <Toast toast={toast} />
     </>
   );
 }
 
-function ScannerConsole() {
-  const { toast, showToast } = useToast();
-  const logout = useLogout('/scanner');
+function ScannerConsole({ showToast }: { showToast: ShowToast }) {
   const [manualToken, setManualToken] = useState('');
   const [status, setStatus] = useState<string>('Připraveno ke skenování');
   const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
@@ -185,75 +116,172 @@ function ScannerConsole() {
   }
 
   return (
-    <>
-      <div className="min-h-screen bg-[#020610] text-white">
-        <header className="max-w-5xl mx-auto flex items-center justify-between px-6 py-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-emerald-300/80">Gym Access</p>
-            <h1 className="text-2xl font-semibold">Turniket Scanner</h1>
-          </div>
-          <button
-            onClick={() => logout('/scanner')}
-            className="px-4 py-2 rounded-full border border-white/15 hover:bg-white/10 text-sm transition-colors"
-          >
-            Odhlásit se
-          </button>
-        </header>
-        <main className="px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="max-w-5xl mx-auto w-full space-y-8">
-            <section className="glass-panel rounded-3xl p-6 sm:p-10">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h2 className="text-3xl sm:text-4xl font-semibold">Scanner</h2>
-                  <p className="text-slate-300 mt-2 text-sm">Skenuj QR kódy nebo vlož token ručně.</p>
-                </div>
-                <div className="glass-subcard rounded-2xl p-4 text-sm">
-                  <p
-                    className={
-                      statusType === 'success'
-                        ? 'text-emerald-300'
-                        : statusType === 'error'
-                          ? 'text-rose-300'
-                          : 'text-slate-100'
-                    }
-                  >
-                    {status}
-                  </p>
-                  {lastResult?.cooldown_seconds_left && lastResult.cooldown_seconds_left > 0 && (
-                    <p className="text-slate-400 text-xs mt-2">Cooldown: {lastResult.cooldown_seconds_left}s</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6 grid lg:grid-cols-2 gap-6">
-                <div className="glass-subcard rounded-2xl p-4">
-                  <QrScanner onDecode={(text) => handleVerify(text)} />
-                </div>
-                <div className="space-y-4">
-                  <textarea
-                    value={manualToken}
-                    className="input-field min-h-[140px] bg-slate-900 text-white border border-white/10"
-                    placeholder="Vlož token"
-                    onChange={(e) => setManualToken(e.target.value)}
-                  />
-                  <button className="accent-button w-full" onClick={() => handleVerify(manualToken)} disabled={isSubmitting}>
-                    {isSubmitting ? 'Ověřuji...' : 'Ověřit token'}
-                  </button>
-                  {lastResult && (
-                    <div className="glass-subcard rounded-2xl p-4 text-sm text-slate-200 space-y-2">
-                      <p>Status: {lastResult.allowed ? 'Povoleno' : 'Zamítnuto'}</p>
-                      <p>Důvod: {lastResult.reason}</p>
-                      <p>Zbývá vstupů: {lastResult.credits_left}</p>
-                      {lastResult.user_name && <p>Uživatel: {lastResult.user_name}</p>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-          </div>
-        </main>
+    <section className="glass-panel rounded-3xl p-6 sm:p-10 space-y-6">
+      <div>
+        <h2 className="text-3xl sm:text-4xl font-semibold">Scanner</h2>
+        <p className="text-slate-400 mt-2 text-sm">Skenuj QR kódy nebo vlož token ručně.</p>
       </div>
-      <Toast toast={toast} />
-    </>
+      <div className="glass-subcard rounded-2xl p-4 text-sm">
+        <p className={statusType === 'success' ? 'text-emerald-300' : statusType === 'error' ? 'text-rose-300' : 'text-slate-200'}>
+          {status}
+        </p>
+        {lastResult?.cooldown_seconds_left && lastResult.cooldown_seconds_left > 0 && (
+          <p className="text-slate-400 text-xs mt-2">Cooldown: {lastResult.cooldown_seconds_left}s</p>
+        )}
+      </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="glass-subcard rounded-2xl p-4">
+          <QrScanner onDecode={(text) => handleVerify(text)} />
+        </div>
+        <div className="space-y-4">
+          <textarea
+            value={manualToken}
+            className="input-field min-h-[140px]"
+            placeholder="Vlož token"
+            onChange={(e) => setManualToken(e.target.value)}
+          />
+          <button className="accent-button w-full" onClick={() => handleVerify(manualToken)} disabled={isSubmitting}>
+            {isSubmitting ? 'Ověřuji...' : 'Ověřit token'}
+          </button>
+          {lastResult && (
+            <div className="glass-subcard rounded-2xl p-4 text-sm text-slate-300 space-y-2">
+              <p>Status: {lastResult.allowed ? 'Povoleno' : 'Zamítnuto'}</p>
+              <p>Důvod: {lastResult.reason}</p>
+              <p>Zbývá vstupů: {lastResult.credits_left}</p>
+              {lastResult.user_name && <p>Uživatel: {lastResult.user_name}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
+}
+
+function ScannerAccessPanel({ showToast }: { showToast: ShowToast }) {
+  const setToken = useSetAtom(setTokenAtom);
+  const token = useAtomValue(tokenAtom);
+  const [userInfo, setUserInfo] = useState(() => getStoredUserInfo());
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: SCANNER_EMAIL },
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUserInfo(getStoredUserInfo());
+    }
+  }, [token]);
+
+  async function onSubmit(values: LoginValues) {
+    setIsSubmitting(true);
+    try {
+      const response = await apiClient<LoginResponse>('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: values.email, password: values.password }).toString(),
+      });
+      setToken(response.access_token);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('user_name', response.user_name);
+        sessionStorage.setItem('user_email', response.user_email);
+        sessionStorage.setItem('is_admin', response.is_admin ? 'true' : 'false');
+      }
+      setUserInfo({ name: response.user_name, email: response.user_email });
+      showToast('Přihlášení úspěšné');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Chyba při přihlášení', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await apiClient('/api/logout', { method: 'POST' });
+    } catch (error) {
+      console.warn('Logout call failed', error);
+    } finally {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('user_name');
+        sessionStorage.removeItem('user_email');
+        sessionStorage.removeItem('is_admin');
+      }
+      setToken(null);
+      setUserInfo({ name: null, email: null });
+      showToast('Odhlášení proběhlo', 'success');
+    }
+  }
+
+  const isLoggedIn = Boolean(token);
+
+  return (
+    <section className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
+      <div>
+        <h2 className="text-2xl font-semibold text-slate-100">Servisní přístup</h2>
+        <p className="text-slate-400 text-sm mt-1">Přihlas se speciálním účtem pro autorizovaný režim.</p>
+      </div>
+      <div className="glass-subcard rounded-2xl p-4 text-sm text-slate-200 space-y-1">
+        <p>
+          Stav:{' '}
+          <span className={isLoggedIn ? 'text-emerald-300' : 'text-rose-300'}>
+            {isLoggedIn ? 'Přihlášeno' : 'Nepřihlášeno'}
+          </span>
+        </p>
+        {userInfo.email && <p>Účet: {userInfo.email}</p>}
+      </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div>
+          <label className="text-xs uppercase tracking-[0.25em] text-slate-400">E-mail</label>
+          <input
+            type="email"
+            className="input-field mt-2 bg-[#05070f] text-white border border-white/10"
+            readOnly
+            {...register('email')}
+          />
+          <p className="text-xs text-slate-500 mt-1">Uživatel pro scanner: {SCANNER_EMAIL}</p>
+          {errors.email && <p className="text-xs text-rose-300 mt-1">{errors.email.message}</p>}
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.25em] text-slate-400">Heslo</label>
+          <input
+            type="password"
+            placeholder="Heslo"
+            className="input-field mt-2 bg-[#05070f] text-white border border-white/10"
+            {...register('password')}
+          />
+          {errors.password && <p className="text-xs text-rose-300 mt-1">{errors.password.message}</p>}
+        </div>
+        <button type="submit" className="accent-button w-full" disabled={isSubmitting}>
+          {isSubmitting ? 'Přihlašuji...' : 'Přihlásit servisní účet'}
+        </button>
+        <p className="text-xs text-slate-500 text-center">
+          Registrace tady není dostupná. Využij předpřipravený účet pro zařízení scanneru.
+        </p>
+      </form>
+      {isLoggedIn && (
+        <button
+          type="button"
+          className="surface-card w-full rounded-2xl border border-white/10 py-3 text-sm text-slate-100"
+          onClick={handleLogout}
+        >
+          Odhlásit servisní účet
+        </button>
+      )}
+    </section>
+  );
+}
+
+function getStoredUserInfo(): StoredUserInfo {
+  if (typeof window === 'undefined') {
+    return { name: null, email: null };
+  }
+  return {
+    name: sessionStorage.getItem('user_name'),
+    email: sessionStorage.getItem('user_email'),
+  };
 }

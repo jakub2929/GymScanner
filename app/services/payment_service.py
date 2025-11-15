@@ -147,7 +147,7 @@ def prepare_comgate_data(payment: Payment, user: User) -> dict:
 
     payload = {
         "merchant": merchant_id,
-        "test": 1 if test_mode else 0,
+        "test": 1,
         # HTTP POST expects price in haléřích (cents)
         "price": (payment.price_czk or 0) * 100,
         "curr": "CZK",
