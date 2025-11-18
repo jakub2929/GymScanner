@@ -12,6 +12,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    # Volumes nejsou potřeba - data jsou v databázi (PostgreSQL)
-    # Coolify automaticky řeší networking a reverse proxy
+    volumes:
+      - branding_uploads:/app/static
 
+volumes:
+  branding_uploads:

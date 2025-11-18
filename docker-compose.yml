@@ -41,6 +41,8 @@ services:
     labels:
       # Help Coolify identify this as the API service
       - "coolify.managed=true"
+    volumes:
+      - branding_uploads:/app/static
     restart: unless-stopped
 
   frontend:
@@ -73,3 +75,4 @@ services:
 
 volumes:
   gym-db-data:
+  branding_uploads:

@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 import os
 import logging
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -12,8 +14,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Import modules first (these should not fail)
-from app.database import engine, Base, ensure_access_token_columns, ensure_user_password_column
-from app.routes import payments, qr, verify, admin, auth, user_qr, credits
+from app.database import (
+    engine,
+    Base,
+    ensure_access_token_columns,
+    ensure_user_password_column,
+)
+from app.routes import payments, qr, verify, admin, auth, user_qr, credits, branding, owner
+from app.database import ensure_user_owner_column
+from app.services.owner import ensure_owner_account, ensure_branding_defaults
 
 logger.info("Starting application initialization...")
 
@@ -79,9 +88,12 @@ async def initialize_database():
         ensure_user_credits_column()
         ensure_access_token_nullable_columns()
         ensure_user_admin_column()
+        ensure_user_owner_column()
         ensure_last_scan_at_column()
         ensure_payment_comgate_columns()
         logger.info("Database migrations completed")
+        ensure_owner_account()
+        ensure_branding_defaults()
         
     except Exception as db_error:
         logger.error(f"Database initialization failed: {db_error}")
@@ -104,6 +116,13 @@ app.include_router(payments.router, prefix="/api", tags=["payments"])
 app.include_router(qr.router, prefix="/api", tags=["qr"])
 app.include_router(verify.router, prefix="/api", tags=["verify"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(owner.router, prefix="/api", tags=["owner"])
+app.include_router(branding.router, prefix="/api", tags=["branding"])
+
+static_dir = Path(os.getenv("STATIC_DIR", "static"))
+static_dir.mkdir(parents=True, exist_ok=True)
+(static_dir / "branding").mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/")
 async def read_root():

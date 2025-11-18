@@ -36,6 +36,13 @@ Systém pro správu vstupu do posilovny pomocí QR kódů. Uživatelé se regist
 - Admin dashboard pro správu uživatelů a kreditů
 - Access log pro audit vstupů
 
+### Owner / Global branding
+- Samostatné owner přihlášení `/owner/login` (JWT s claimem `role=owner`, oddělené sezení od user/admin tokenu)
+- Chráněná stránka `/owner/branding` s formulářem pro název značky/konzole, tagline, support email, primární barvu, footer text a URL loga + upload (PNG/JPG/SVG, max 1 MB)
+- Uploadované logo se ukládá do `static/branding` a je dostupné přes `/static/...`, Compose mapuje složku na hostitele kvůli persistenci
+- Backend má nové endpointy `/api/owner/*` (login, me, branding, upload) a veřejné `/api/branding` pro SSR načtení brandingu ve frontendu
+- Frontend načítá branding už v root layoutu (Next.js SSR) a promítá hodnoty do loginů, dashboardů, admin UI i patičky přes CSS proměnné (`--brand-primary`)
+
 ## Comgate test API
 
 Produkční nákupy tokenů teď používají Comgate platební bránu. Backend volá HTTP POST endpoint `https://payments.comgate.cz/v1.0/create` (přepiš pomocí `COMGATE_API_URL`, pokud Coolify používá jinou testovací URL) a předává `refId` = interní `payment_id`.  
@@ -115,6 +122,7 @@ Dev server běží ve výchozím stavu na `http://localhost:3000`. `NEXT_PUBLIC_
    - Scanner (`/scanner`) je stále dostupný pro kiosk/tablet, ale není součástí hlavní navigace.
 
 **Poznámka:** Docker compose vystavuje FastAPI na `http://localhost:8181`. Pokud chceš HTTPS, povol SSL (viz `generate_cert.sh`) a přidej odpovídající port/certifikáty.
+Uploads owner loga se ukládají do `./static/branding` (mapováno do kontejneru jako `/app/static`), takže složka musí existovat a mít práva k zápisu.
 
 ## Next.js frontend (React/TypeScript)
 
@@ -315,6 +323,10 @@ Vytvoř soubor `.env` na základě `.env.example`:
 - `JWT_SECRET_KEY` - Secret key pro JWT tokeny (důležité pro produkci!)
 - `JWT_ALGORITHM` - Algorithm pro JWT (default: `HS256`)
 - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` - Expirace tokenu v minutách (default: `60`)
+- `OWNER_EMAIL` / `OWNER_PASSWORD` / `OWNER_NAME` - pokud ještě není vytvořen owner účet, při startu se založí podle těchto hodnot (jinak se v logu objeví varování)
+- `OWNER_ACCESS_TOKEN_EXPIRE_MINUTES` - volitelné odlišné TTL pro owner JWT (fallback na `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`)
+- `BRANDING_UPLOAD_DIR`, `BRANDING_LOGO_MAX_BYTES`, `BRANDING_DEFAULT_*` - konfigurace uploadu loga a výchozí white-label hodnoty (viz `.env.example`)
+- `STATIC_DIR` - cesta ke statické složce pro loga (default `static`), přimountuj ji ve `docker-compose*.yml`, aby uploady přežily redeploy
 
 ## HTTPS konfigurace
 

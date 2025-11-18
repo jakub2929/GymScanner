@@ -88,6 +88,17 @@ def ensure_user_admin_column():
             # Set default is_admin for existing users
             conn.execute(text("UPDATE users SET is_admin = FALSE WHERE is_admin IS NULL"))
 
+def ensure_user_owner_column():
+    """Ensure users table has is_owner column"""
+    inspector = inspect(engine)
+    if 'users' not in inspector.get_table_names():
+        return
+    columns = [col['name'] for col in inspector.get_columns('users')]
+    if 'is_owner' not in columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_owner BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("UPDATE users SET is_owner = FALSE WHERE is_owner IS NULL"))
+
 def ensure_access_token_nullable_columns():
     """Ensure access_tokens table has nullable payment_id and expires_at"""
     print("[MIGRATION] ensure_access_token_nullable_columns called")

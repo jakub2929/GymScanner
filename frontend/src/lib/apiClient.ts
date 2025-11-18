@@ -24,19 +24,24 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type ApiClientOptions = RequestInit & { method?: HttpMethod };
 
-export async function apiClient<TResponse>(path: string, options: ApiClientOptions = {}): Promise<TResponse> {
+function shouldSetJsonHeader(body: BodyInit | null | undefined) {
+  if (!body) return false;
+  if (typeof FormData !== 'undefined' && body instanceof FormData) return false;
+  return true;
+}
+
+async function request<TResponse>(path: string, options: ApiClientOptions, tokenKey: string): Promise<TResponse> {
   const headers = new Headers(options.headers);
-  if (!headers.has('Content-Type') && options.body) {
+  if (!headers.has('Content-Type') && shouldSetJsonHeader(options.body)) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const token = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem(tokenKey) : null;
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
   const url = `${API_URL}${path}`;
-  // Always log API calls in production to help debug
   if (typeof window !== 'undefined') {
     console.log(`[API Client] ${options.method || 'GET'} ${url}`);
   }
@@ -45,8 +50,7 @@ export async function apiClient<TResponse>(path: string, options: ApiClientOptio
     ...options,
     headers,
   });
-  
-  // Log response for debugging
+
   if (typeof window !== 'undefined' && !response.ok) {
     console.error(`[API Client] ${response.status} ${response.statusText} for ${options.method || 'GET'} ${url}`);
   }
@@ -61,6 +65,14 @@ export async function apiClient<TResponse>(path: string, options: ApiClientOptio
   }
 
   return (await response.json()) as TResponse;
+}
+
+export async function apiClient<TResponse>(path: string, options: ApiClientOptions = {}): Promise<TResponse> {
+  return request<TResponse>(path, options, 'access_token');
+}
+
+export async function ownerApiClient<TResponse>(path: string, options: ApiClientOptions = {}): Promise<TResponse> {
+  return request<TResponse>(path, options, 'owner_access_token');
 }
 
 async function safeParseError(response: Response): Promise<string | null> {

@@ -68,6 +68,21 @@ DATABASE_URL=postgresql+psycopg2://gymuser:superheslo@db:5432/gymdb
 JWT_SECRET_KEY=tvoje_super_tajne_heslo_produkce_min_32_znaku
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+OWNER_EMAIL=owner@example.com
+OWNER_PASSWORD=silne_heslo
+OWNER_NAME=Platform Owner
+OWNER_ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+# Branding / uploads
+BRANDING_UPLOAD_DIR=static/branding
+BRANDING_LOGO_MAX_BYTES=1048576
+BRANDING_DEFAULT_BRAND_NAME=Gym Access
+BRANDING_DEFAULT_CONSOLE_NAME=Control Console
+BRANDING_DEFAULT_TAGLINE=Smart access management
+BRANDING_DEFAULT_SUPPORT_EMAIL=support@example.com
+BRANDING_DEFAULT_PRIMARY_COLOR=#0EA5E9
+BRANDING_DEFAULT_FOOTER_TEXT=© 2025 GymScanner
+BRANDING_DEFAULT_LOGO_URL=
 
 # Comgate (drž HTTP dokud Coolify nevystaví SSL)
 COMGATE_MERCHANT_ID=tvuj_merchant_id
@@ -136,6 +151,7 @@ Pro přehledné oddělení doporučujeme:
 ## Krok 7: Volumes
 
 Docker Compose definuje volume `gym-db-data`, které Coolify vytvoří automaticky při deployi a připojí k `/var/lib/postgresql/data`. Není potřeba zakládat samostatnou DB službu v Coolify. Pokud někdy použiješ SQLite fallback, přidej volume dle `SQLITE_SETUP.md`.
+Owner uploady loga se ukládají do `/app/static` uvnitř backend kontejneru, proto compose zároveň mapuje volume `branding_uploads`. V Coolify tak uvidíš další persistentní disk; bez něj by se loga po redeployi ztratila.
 
 ## Krok 8: Health Check
 

@@ -14,6 +14,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     credits = Column(Integer, default=0)  # Number of credits (1 credit = 1 workout)
     is_admin = Column(Boolean, default=False)  # Admin privileges
+    is_owner = Column(Boolean, default=False)  # Platform owner flag (max 1 account)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     payments = relationship("Payment", back_populates="user")
@@ -80,3 +81,19 @@ class AccessLog(Base):
     
     token = relationship("AccessToken", back_populates="access_logs")
 
+class BrandingSettings(Base):
+    __tablename__ = "branding_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    brand_name = Column(String(100), nullable=False, default="Gym Access")
+    console_name = Column(String(100), nullable=False, default="Console")
+    tagline = Column(String(255), nullable=True)
+    support_email = Column(String(255), nullable=True)
+    primary_color = Column(String(7), nullable=False, default="#0EA5E9")
+    footer_text = Column(String(255), nullable=True)
+    logo_url = Column(String(512), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_by_owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    updated_by_owner = relationship("User")

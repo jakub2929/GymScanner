@@ -7,6 +7,7 @@ import { tokenAtom } from '@/lib/authStore';
 import { usePathname, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 import { useLogout } from '@/hooks/useLogout';
+import { useBranding } from '@/components/branding-context';
 
 const navLinks = [
   { href: '/admin', label: 'Přehled' },
@@ -21,6 +22,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   const logout = useLogout('/admin/login');
   const [state, setState] = useState<'checking' | 'allowed'>('checking');
   const [open, setOpen] = useState(false);
+  const branding = useBranding();
 
   useEffect(() => {
     let cancelled = false;
@@ -81,15 +83,24 @@ export default function AdminLayout({ children }: PropsWithChildren) {
     <div className="min-h-screen bg-[#020610] text-white">
       <nav className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-6 py-6">
         <div className="flex w-full items-center justify-between md:block">
-          <div>
-            <Link
-              href="/admin"
-              className="text-2xl font-semibold tracking-tight"
-              onClick={() => setOpen(false)}
-            >
-              Gym Admin
-            </Link>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">Liquid glass control</p>
+          <div className="flex items-center gap-3">
+            {branding.logoUrl && (
+              <img
+                src={branding.logoUrl}
+                alt={`${branding.brandName} logo`}
+                className="h-10 w-10 rounded-2xl border border-white/10 object-contain bg-white/5 p-2"
+              />
+            )}
+            <div>
+              <Link
+                href="/admin"
+                className="text-2xl font-semibold tracking-tight"
+                onClick={() => setOpen(false)}
+              >
+                {branding.brandName} Admin
+              </Link>
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">{branding.consoleName}</p>
+            </div>
           </div>
           <button
             className="md:hidden text-slate-200 border border-white/15 rounded-full p-2"
@@ -151,7 +162,10 @@ export default function AdminLayout({ children }: PropsWithChildren) {
           </button>
         </div>
       )}
-      <main className="px-4 sm:px-6 lg:px-8 pb-16 max-w-6xl mx-auto w-full">{children}</main>
+      <main className="px-4 sm:px-6 lg:px-8 pb-10 max-w-6xl mx-auto w-full">{children}</main>
+      {branding.footerText && (
+        <footer className="px-6 pb-6 text-center text-xs text-slate-500">{branding.footerText}</footer>
+      )}
     </div>
   );
 }

@@ -34,7 +34,7 @@ def get_password_hash(password: str) -> str:
     """Hash a password"""
     return pwd_context.hash(password)
 
-def create_access_token(data: dict):
+def create_access_token(data: dict, expires_minutes: int | None = None):
     """
     Create a JWT access token.
     All values come from environment variables - no hardcoded values.
@@ -45,7 +45,8 @@ def create_access_token(data: dict):
         to_encode["sub"] = str(to_encode["sub"])
     
     # Calculate expiration using ENV value
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    minutes = expires_minutes if expires_minutes is not None else ACCESS_TOKEN_EXPIRE_MINUTES
+    expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
     to_encode.update({"exp": expire})
     
     # Encode JWT using values from ENV
@@ -85,3 +86,8 @@ async def get_current_user(
     
     return user
 
+async def get_current_owner(current_user: User = Depends(get_current_user)) -> User:
+    """Require that the authenticated user is the platform owner."""
+    if not bool(current_user.is_owner):
+        raise HTTPException(status_code=403, detail="Owner access required")
+    return current_user

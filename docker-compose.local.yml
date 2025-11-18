@@ -26,6 +26,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://gymuser:gympass@postgres:5432/gym_turnstile
       PYTHONUNBUFFERED: 1
+    volumes:
+      - ./static:/app/static
     restart: unless-stopped
     # POZNÁMKA: Pro Coolify použij Dockerfile.production přímo (bez docker-compose.yml)
     # Coolify automaticky řeší HTTPS přes reverse proxy

@@ -4,7 +4,9 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useEffect } from 'react';
 import { getQueryClient } from '@/lib/queryClient';
 import { Provider as JotaiProvider, useSetAtom } from 'jotai';
-import { setTokenAtom } from '@/lib/authStore';
+import { setTokenAtom, setOwnerTokenAtom } from '@/lib/authStore';
+import { BrandingProvider } from './branding-context';
+import type { BrandingConfig } from '@/types/branding';
 
 function TokenHydrator({ children }: { children: ReactNode }) {
   const setToken = useSetAtom(setTokenAtom);
@@ -18,13 +20,29 @@ function TokenHydrator({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-export function Providers({ children }: { children: ReactNode }) {
+function OwnerTokenHydrator({ children }: { children: ReactNode }) {
+  const setOwnerToken = useSetAtom(setOwnerTokenAtom);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = sessionStorage.getItem('owner_access_token');
+    if (stored) {
+      setOwnerToken(stored);
+    }
+  }, [setOwnerToken]);
+  return <>{children}</>;
+}
+
+export function Providers({ children, branding }: { children: ReactNode; branding: BrandingConfig }) {
   const queryClient = getQueryClient();
   return (
-    <JotaiProvider>
-      <QueryClientProvider client={queryClient}>
-        <TokenHydrator>{children}</TokenHydrator>
-      </QueryClientProvider>
-    </JotaiProvider>
+    <BrandingProvider value={branding}>
+      <JotaiProvider>
+        <QueryClientProvider client={queryClient}>
+          <TokenHydrator>
+            <OwnerTokenHydrator>{children}</OwnerTokenHydrator>
+          </TokenHydrator>
+        </QueryClientProvider>
+      </JotaiProvider>
+    </BrandingProvider>
   );
 }

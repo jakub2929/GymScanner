@@ -54,6 +54,8 @@ class LoginResponse(BaseModel):
     user_name: str
     user_email: str
     is_admin: bool = False
+    is_owner: bool = False
+    role: str = "user"
 
 @router.post("/register", response_model=RegisterResponse)
 async def register(
@@ -129,7 +131,8 @@ async def login(
             )
         
         # Create access token (sub must be a string for JWT standard)
-        access_token = create_access_token({"sub": str(user.id)})
+        role = "owner" if bool(user.is_owner) else ("admin" if bool(user.is_admin) else "user")
+        access_token = create_access_token({"sub": str(user.id), "role": role})
         
         return LoginResponse(
             access_token=access_token,
@@ -137,7 +140,9 @@ async def login(
             user_id=user.id,
             user_name=user.name,
             user_email=user.email,
-            is_admin=bool(user.is_admin)
+            is_admin=bool(user.is_admin),
+            is_owner=bool(user.is_owner),
+            role=role,
         )
     except HTTPException:
         raise

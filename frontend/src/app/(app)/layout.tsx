@@ -6,6 +6,7 @@ import { useAtomValue } from 'jotai';
 import { tokenAtom } from '@/lib/authStore';
 import { useRouter, usePathname } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
+import { useBranding } from '@/components/branding-context';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -18,6 +19,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
+  const branding = useBranding();
 
   const localToken = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
   const effectiveToken = token || localToken;
@@ -36,15 +38,24 @@ export default function AppLayout({ children }: PropsWithChildren) {
     <div className="min-h-screen bg-[#020610] text-white">
       <nav className="max-w-5xl mx-auto px-6 py-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center justify-between">
-          <div>
-            <Link
-              href="/dashboard"
-              className="text-2xl font-semibold tracking-tight"
-              onClick={() => setMenuOpen(false)}
-            >
-              Gym Access
-            </Link>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">User console</p>
+          <div className="flex items-center gap-3">
+            {branding.logoUrl && (
+              <img
+                src={branding.logoUrl}
+                alt={`${branding.brandName} logo`}
+                className="h-10 w-10 rounded-2xl border border-white/10 object-contain bg-white/5 p-2"
+              />
+            )}
+            <div>
+              <Link
+                href="/dashboard"
+                className="text-2xl font-semibold tracking-tight"
+                onClick={() => setMenuOpen(false)}
+              >
+                {branding.brandName}
+              </Link>
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">{branding.consoleName}</p>
+            </div>
           </div>
           <button
             className="md:hidden text-slate-200 border border-white/15 rounded-full p-2"
@@ -100,9 +111,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
           </button>
         </div>
       )}
-      <main className="px-4 sm:px-6 lg:px-8 pb-16">
+      <main className="px-4 sm:px-6 lg:px-8 pb-10">
         <div className="max-w-5xl mx-auto w-full space-y-8">{children}</div>
       </main>
+      {branding.footerText && (
+        <footer className="px-6 pb-6 text-center text-xs text-slate-500">{branding.footerText}</footer>
+      )}
     </div>
   );
 }

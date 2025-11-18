@@ -3,6 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand-primary: #0ea5e9;
+  --brand-primary-rgb: 14 165 233;
+  --brand-primary-contrast: #031b1f;
 }
 
 @theme inline {
@@ -87,15 +90,20 @@ body {
   padding: 0.65rem 1.6rem;
   border-radius: 9999px;
   font-weight: 600;
-  background: linear-gradient(120deg, rgba(94, 234, 212, 0.92), rgba(59, 130, 246, 0.9));
-  color: #052022;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: linear-gradient(
+      120deg,
+      rgb(var(--brand-primary-rgb) / 0.85),
+      rgb(var(--brand-primary-rgb) / 0.95)
+    ),
+    var(--brand-primary);
+  color: var(--brand-primary-contrast);
+  border: 1px solid rgb(var(--brand-primary-rgb) / 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .accent-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 12px 30px rgb(var(--brand-primary-rgb) / 0.35);
 }
 
 .accent-button:disabled {
@@ -126,8 +134,8 @@ body {
 }
 
 .auth-link {
-  color: #a5b4fc;
+  color: rgb(var(--brand-primary-rgb) / 0.8);
 }
 .auth-link:hover {
-  color: white;
+  color: var(--brand-primary);
 }
