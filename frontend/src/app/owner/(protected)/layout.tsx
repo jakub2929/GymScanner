@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ownerApiClient } from '@/lib/apiClient';
 import { useOwnerLogout } from '@/hooks/useOwnerLogout';
 import { useBranding } from '@/components/branding-context';
-import { resolveBrandingAssetUrl } from '@/lib/branding';
+import { useBrandingLogo } from '@/hooks/useBrandingLogo';
 
 const navLinks = [{ href: '/owner/branding', label: 'Branding' }];
 
@@ -18,7 +18,7 @@ export default function OwnerLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const logout = useOwnerLogout();
   const branding = useBranding();
-  const logoSrc = resolveBrandingAssetUrl(branding.logoUrl);
+  const logoSrc = useBrandingLogo();
   const [state, setState] = useState<'checking' | 'allowed'>('checking');
 
   useEffect(() => {

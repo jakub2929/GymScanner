@@ -15,5 +15,5 @@ export const defaultBranding: BrandingConfig = {
   supportEmail: 'support@example.com',
   primaryColor: '#0EA5E9',
   footerText: '© 2025 GymScanner',
-  logoUrl: null,
+  logoUrl: '/logo-default.svg',
 };

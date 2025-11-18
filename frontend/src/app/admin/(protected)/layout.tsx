@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 import { useLogout } from '@/hooks/useLogout';
 import { useBranding } from '@/components/branding-context';
-import { resolveBrandingAssetUrl } from '@/lib/branding';
+import { useBrandingLogo } from '@/hooks/useBrandingLogo';
 
 const navLinks = [
   { href: '/admin', label: 'Přehled' },
@@ -24,7 +24,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   const [state, setState] = useState<'checking' | 'allowed'>('checking');
   const [open, setOpen] = useState(false);
   const branding = useBranding();
-  const logoSrc = resolveBrandingAssetUrl(branding.logoUrl);
+  const logoSrc = useBrandingLogo();
 
   useEffect(() => {
     let cancelled = false;

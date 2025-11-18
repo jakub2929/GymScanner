@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 import { useBranding } from './branding-context';
-import { resolveBrandingAssetUrl } from '@/lib/branding';
+import { useBrandingLogo } from '@/hooks/useBrandingLogo';
 
 interface AuthCardProps {
   title: string;
@@ -13,7 +13,7 @@ interface AuthCardProps {
 
 export default function AuthCard({ title, subtitle, navLinks, children }: PropsWithChildren<AuthCardProps>) {
   const branding = useBranding();
-  const logoSrc = resolveBrandingAssetUrl(branding.logoUrl);
+  const logoSrc = useBrandingLogo();
   const links =
     navLinks ??
     [

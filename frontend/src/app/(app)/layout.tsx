@@ -7,7 +7,7 @@ import { tokenAtom } from '@/lib/authStore';
 import { useRouter, usePathname } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
 import { useBranding } from '@/components/branding-context';
-import { resolveBrandingAssetUrl } from '@/lib/branding';
+import { useBrandingLogo } from '@/hooks/useBrandingLogo';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -21,7 +21,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
   const branding = useBranding();
-  const logoSrc = resolveBrandingAssetUrl(branding.logoUrl);
+  const logoSrc = useBrandingLogo();
 
   const localToken = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
   const effectiveToken = token || localToken;

@@ -1,35 +1,33 @@
-# Owner Branding – Logo Upload Fix
+# Logo unification for login + dashboard
 
-Overall status: 🟨 60% – Backend + frontend upload flow hotový, chybí docker/test verifikace.
+Progress: 🟨 70% – Shared logo source implemented, pending tests & verification
 
-## 1. Backend – Upload endpoint a uložení souboru
-- [x] 🟩 Zkontrolovat a sjednotit FastAPI endpoint pro upload loga (form field `file`, HTTP 401/415/413 odpovědi)
-- [x] 🟩 Opravit ukládání: po uploadu hned aktualizovat `BrandingSettings.logo_url`, smazat původní logo a vrátit aktuální BrandingSettings
-- [x] 🟩 Přidat validnější chyby (velikost, typ, prázdný soubor) a rollback při selhání
+## Cíl
+Login stránka (a další veřejné auth stránky) musí používat stejné branding logo jako dashboard a ostatní části UI. Logo se má brát z backendového branding API (`logo_url`), s fallbackem na defaultní asset, aby se změny loga projevily všude a přežily redeploy.
 
-## 2. Backend – Servírování statických souborů
-- [x] 🟩 Ověřit, že `app.mount("/static", ...)` používá správný adresář i v Dockeru/Coolify (ponechány relativní cesty)
-- [x] 🟩 Rozhodnout, že backend vrací relativní `/static/...` cesty a prefix řeší frontend helper
-- [ ] 🟥 Aktualizovat dokumentaci/env vzory pro volume `static/branding`
+## Scope
+- Měníme jen frontendové zdroje loga (layouty/komponenty), aby používaly sdílený branding hook/helper.
+- Neměníme backend API, databázové schéma ani logiku nahrávání loga (už funguje).
+- Nepřidáváme multi-tenant routing; respektujeme stávající globální branding.
 
-## 3. Frontend – Formulář a API volání
-- [x] 🟩 Prověřit `handleLogoUpload` – FormData posílá pole `file`, bez ručního Content-Type
-- [x] 🟩 Po úspěchu automaticky uložit logo (response = BrandingSettings) + toast
-- [x] 🟩 Ošetřit reset inputu a validaci chyb
+## Tasks
 
-## 4. Frontend – Náhled a použití loga
-- [x] 🟩 Konvertovat `logoUrl` na absolutní URL pomocí helperu `resolveBrandingAssetUrl`
-- [x] 🟩 Aktualizovat preview/layouty (`AuthCard`, user/admin/owner nav) aby používaly helper a placeholder
-- [x] 🟩 Ujistit se, že se změna loga projeví okamžitě v náhledu (aktualizace form value + toast)
+- 🟩 [x] Najít a popsat zdroj loga na dashboardu (DB, API, komponenta)
+- 🟩 [x] Najít a popsat zdroj loga na login stránce (statický asset / komponenta)
+- 🟩 [x] Navrhnout společný interface / hook pro načítání aktivního loga
+- 🟩 [x] Upravit login layout, aby používal dynamické logo
+- 🟩 [x] Ujistit se, že funguje fallback logo (pokud není vlastní)
+- 🟨 [ ] Přidat případně testy (unit/integration) pro logiku brandingu
+- 🟨 [ ] Ruční test:  
+  - nahrát nové logo,  
+  - ověřit změnu na dashboardu i login stránce,  
+  - ověřit chování po redeployi
 
-## 5. Docker & Deployment
-- [ ] 🟥 Potvrdit volume pro `static/branding` v `docker-compose*.yml` i Coolify (perzistence uploadů)
-- [ ] 🟥 Ověřit upload v lokálním `docker-compose` (soubor se zapíše a je dostupný na `/static/...`)
-- [ ] 🟥 Popsat postup v README/DEPLOY (velikost 1 MB, povolené typy, potřeba restartu?)
+## Implementation Notes
+- Branding data se načítají v `frontend/src/app/layout.tsx` → `BrandingProvider`. Nový hook `useBrandingLogo` vrací hotové URL (prefixuje `/static/...` pomocí `NEXT_PUBLIC_API_URL`, jinak nechá lokální asset).
+- `defaultBranding.logoUrl` nyní ukazuje na `public/logo-default.svg`, aby byl jasný fallback, když není vlastní logo.
+- `AuthCard`, user/admin/owner layouty používají `useBrandingLogo`, takže login, register i chráněné sekce mají stejný zdroj.
+- Formulář owner brandingu dál používá `resolveBrandingAssetUrl` pro preview (musí podporovat manuálně psané URL).
+- Další krok je přidat testy/fyzické ověření – např. ručně nahrát logo, refresh login/dashboard, otestovat i po redeploy.
 
-## 6. Testy a kontrola
-- [ ] 🟥 Přidat Pytest pro upload endpoint (validní PNG, příliš velký soubor, chybný MIME)
-- [ ] 🟥 Vyzkoušet UX v prohlížeči (Chrome devtools → Network: request, response, náhled)
-- [ ] 🟥 FInální smoke test: změna loga + textů + primární barvy, reload UI, loga se zobrazují na všech stránkách
-
-Plán je hotový, přepni se do Implementation Phase podle tohoto plan.md.
+Plan ready for implementation.
