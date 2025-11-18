@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { PropsWithChildren } from 'react';
 import { useBranding } from './branding-context';
+import { resolveBrandingAssetUrl } from '@/lib/branding';
 
 interface AuthCardProps {
   title: string;
@@ -12,6 +13,7 @@ interface AuthCardProps {
 
 export default function AuthCard({ title, subtitle, navLinks, children }: PropsWithChildren<AuthCardProps>) {
   const branding = useBranding();
+  const logoSrc = resolveBrandingAssetUrl(branding.logoUrl);
   const links =
     navLinks ??
     [
@@ -36,8 +38,8 @@ export default function AuthCard({ title, subtitle, navLinks, children }: PropsW
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="glass-auth max-w-lg w-full p-10 rounded-3xl">
           <div className="flex items-center gap-4 mb-4">
-            {branding.logoUrl && (
-              <img src={branding.logoUrl} alt={`${branding.brandName} logo`} className="h-12 w-12 rounded-2xl object-contain border border-white/5 bg-white/5 p-2" />
+            {logoSrc && (
+              <img src={logoSrc} alt={`${branding.brandName} logo`} className="h-12 w-12 rounded-2xl object-contain border border-white/5 bg-white/5 p-2" />
             )}
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-emerald-200/70">{branding.consoleName}</p>

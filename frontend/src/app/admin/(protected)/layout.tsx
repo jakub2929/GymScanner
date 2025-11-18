@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 import { useLogout } from '@/hooks/useLogout';
 import { useBranding } from '@/components/branding-context';
+import { resolveBrandingAssetUrl } from '@/lib/branding';
 
 const navLinks = [
   { href: '/admin', label: 'Přehled' },
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   const [state, setState] = useState<'checking' | 'allowed'>('checking');
   const [open, setOpen] = useState(false);
   const branding = useBranding();
+  const logoSrc = resolveBrandingAssetUrl(branding.logoUrl);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,9 +86,9 @@ export default function AdminLayout({ children }: PropsWithChildren) {
       <nav className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-6 py-6">
         <div className="flex w-full items-center justify-between md:block">
           <div className="flex items-center gap-3">
-            {branding.logoUrl && (
+            {logoSrc && (
               <img
-                src={branding.logoUrl}
+                src={logoSrc}
                 alt={`${branding.brandName} logo`}
                 className="h-10 w-10 rounded-2xl border border-white/10 object-contain bg-white/5 p-2"
               />

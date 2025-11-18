@@ -50,7 +50,8 @@ def _delete_logo_file(logo_url: Optional[str]):
         return
     if not logo_url.startswith("/static/branding/"):
         return
-    file_path = Path("static") / Path(logo_url).relative_to("/static")
+    filename = Path(logo_url).name
+    file_path = UPLOAD_DIR / filename
     try:
         if file_path.exists():
             file_path.unlink()
@@ -64,11 +65,6 @@ class OwnerLoginResponse(BaseModel):
     owner_email: str
     owner_name: str
     role: str = "owner"
-
-class LogoUploadResponse(BaseModel):
-    logo_url: str
-    content_type: str
-    size_bytes: int
 
 @router.post("/login", response_model=OwnerLoginResponse)
 async def owner_login(
@@ -132,10 +128,11 @@ async def update_branding(
 
     return _serialize_branding(branding)
 
-@router.post("/logo-upload", response_model=LogoUploadResponse)
+@router.post("/logo-upload", response_model=BrandingResponse)
 async def upload_logo(
     file: UploadFile = File(...),
     current_owner: User = Depends(get_current_owner),
+    db: Session = Depends(get_db),
 ):
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=400, detail="Nepodporovaný formát. Povolené: PNG, JPG, SVG.")
@@ -148,9 +145,27 @@ async def upload_logo(
     extension = ALLOWED_CONTENT_TYPES[file.content_type]
     filename = f"logo_{uuid4().hex}{extension}"
     upload_path = UPLOAD_DIR / filename
+    upload_path.parent.mkdir(parents=True, exist_ok=True)
     with open(upload_path, "wb") as buffer:
         buffer.write(contents)
 
     logo_url = f"/static/branding/{filename}"
 
-    return LogoUploadResponse(logo_url=logo_url, content_type=file.content_type, size_bytes=size)
+    branding = _get_branding(db)
+    old_logo = branding.logo_url
+    branding.logo_url = logo_url
+    branding.updated_by_owner_id = current_owner.id
+
+    try:
+        db.commit()
+        db.refresh(branding)
+    except Exception:
+        db.rollback()
+        if upload_path.exists():
+            upload_path.unlink()
+        raise
+
+    if old_logo and old_logo != logo_url:
+        _delete_logo_file(old_logo)
+
+    return _serialize_branding(branding)

@@ -7,6 +7,7 @@ import { tokenAtom } from '@/lib/authStore';
 import { useRouter, usePathname } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
 import { useBranding } from '@/components/branding-context';
+import { resolveBrandingAssetUrl } from '@/lib/branding';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -20,6 +21,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
   const branding = useBranding();
+  const logoSrc = resolveBrandingAssetUrl(branding.logoUrl);
 
   const localToken = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
   const effectiveToken = token || localToken;
@@ -39,9 +41,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
       <nav className="max-w-5xl mx-auto px-6 py-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {branding.logoUrl && (
+            {logoSrc && (
               <img
-                src={branding.logoUrl}
+                src={logoSrc}
                 alt={`${branding.brandName} logo`}
                 className="h-10 w-10 rounded-2xl border border-white/10 object-contain bg-white/5 p-2"
               />

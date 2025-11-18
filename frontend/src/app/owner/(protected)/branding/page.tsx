@@ -9,6 +9,8 @@ import { ownerApiClient } from '@/lib/apiClient';
 import { Toast, useToast } from '@/components/toast';
 import { defaultBranding } from '@/types/branding';
 import { useBranding } from '@/components/branding-context';
+import { resolveBrandingAssetUrl } from '@/lib/branding';
+import { useMemo } from 'react';
 
 const apiSchema = z.object({
   brand_name: z.string(),
@@ -106,6 +108,7 @@ export default function BrandingPage() {
   }, [data, reset]);
 
   const preview = watch();
+  const previewLogoSrc = resolveBrandingAssetUrl(preview.logoUrl);
 
   async function onSubmit(values: BrandingFormValues) {
     try {
@@ -126,12 +129,13 @@ export default function BrandingPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await ownerApiClient<{ logo_url: string; content_type: string; size_bytes: number }>('/api/owner/logo-upload', {
+      const response = await ownerApiClient<BrandingApiResponse>('/api/owner/logo-upload', {
         method: 'POST',
         body: formData,
       });
-      setValue('logoUrl', response.logo_url, { shouldDirty: true, shouldValidate: true });
-      showToast('Logo nahráno');
+      const parsed = apiSchema.parse(response);
+      setValue('logoUrl', parsed.logo_url ?? undefined, { shouldDirty: false, shouldValidate: true });
+      showToast('Logo bylo aktualizováno.');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Chyba při nahrávání', 'error');
     } finally {
@@ -227,8 +231,8 @@ export default function BrandingPage() {
         </section>
         <section className="glass-panel rounded-3xl p-6 sm:p-10 text-white space-y-6">
           <div className="flex items-center gap-4">
-            {preview.logoUrl ? (
-              <img src={preview.logoUrl} alt="Logo preview" className="h-14 w-14 rounded-2xl object-contain border border-white/5 bg-white/5 p-2" />
+            {previewLogoSrc ? (
+              <img src={previewLogoSrc} alt="Logo preview" className="h-14 w-14 rounded-2xl object-contain border border-white/5 bg-white/5 p-2" />
             ) : (
               <div className="h-14 w-14 rounded-2xl border border-dashed border-white/20 flex items-center justify-center text-xs text-slate-400">
                 Logo
