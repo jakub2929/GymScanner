@@ -72,7 +72,6 @@ export default function OwnerLayout({ children }: PropsWithChildren) {
             <Link href="/owner/branding" className="text-2xl font-semibold tracking-tight">
               {branding.brandName} Owner
             </Link>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">{branding.consoleName}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">

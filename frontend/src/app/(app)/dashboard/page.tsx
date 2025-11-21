@@ -103,12 +103,10 @@ export default function DashboardPage() {
         <section className="glass-panel rounded-3xl p-6 sm:p-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-emerald-200/70">{branding.brandName}</p>
               <h1 className="text-3xl sm:text-[2.5rem] font-semibold tracking-tight text-white">
                 Tvůj přístupový QR kód
               </h1>
               {summary && <p className="text-slate-300 mt-4 text-sm">{summary}</p>}
-              {branding.tagline && <p className="text-slate-400 mt-1 text-sm">{branding.tagline}</p>}
             </div>
           </div>
 

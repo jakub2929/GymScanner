@@ -23,7 +23,6 @@ export default function ScannerPage() {
     <>
       <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] via-[#f3f6fb] to-[#ecf1f9]">
         <header className="max-w-6xl mx-auto px-6 py-10">
-          <p className="text-xs uppercase tracking-[0.35em] text-emerald-500/70">Gym Access</p>
           <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 mt-2">Turniket Scanner</h1>
           <p className="text-slate-500 text-sm mt-2">Veřejně dostupná URL pro ověřování QR tokenů.</p>
         </header>

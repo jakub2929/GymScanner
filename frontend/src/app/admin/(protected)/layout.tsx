@@ -101,7 +101,6 @@ export default function AdminLayout({ children }: PropsWithChildren) {
               >
                 {branding.brandName} Admin
               </Link>
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-500 mt-1">{branding.consoleName}</p>
             </div>
           </div>
           <button
