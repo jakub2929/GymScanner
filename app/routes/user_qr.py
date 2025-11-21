@@ -7,8 +7,8 @@ from app.models import AccessToken, User
 from app.auth import get_current_user
 import qrcode
 import io
-import uuid
 from datetime import datetime, timedelta, timezone
+from app.services.token_service import generate_unique_token
 
 router = APIRouter()
 
@@ -36,7 +36,7 @@ async def get_my_qr(
     
     # If no active token exists, create a new one
     if not active_token:
-        token_str = str(uuid.uuid4())
+        token_str = generate_unique_token(db)
         
         access_token = AccessToken(
             token=token_str,
@@ -105,7 +105,7 @@ async def regenerate_qr(
     ).update({"is_active": False})
     
     # Create new token
-    token_str = str(uuid.uuid4())
+    token_str = generate_unique_token(db)
     
     access_token = AccessToken(
         token=token_str,
@@ -141,4 +141,3 @@ async def regenerate_qr(
         user_email=current_user.email,
         credits=current_user.credits or 0
     )
-

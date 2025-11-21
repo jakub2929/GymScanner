@@ -6,8 +6,8 @@ from app.database import get_db
 from app.models import Payment, AccessToken
 import qrcode
 import io
-import uuid
 from datetime import datetime, timedelta, timezone
+from app.services.token_service import generate_unique_token
 
 router = APIRouter()
 
@@ -47,7 +47,7 @@ async def generate_qr(
     
     # Always generate a new token for each QR code generation
     # This ensures fresh token with correct expiration
-    token_str = str(uuid.uuid4())
+    token_str = generate_unique_token(db)
     
     access_token = AccessToken(
         token=token_str,
@@ -94,4 +94,3 @@ async def get_qr_image(token: str):
     img_buffer.seek(0)
     
     return Response(content=img_buffer.getvalue(), media_type="image/png")
-
