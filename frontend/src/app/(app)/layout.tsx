@@ -20,6 +20,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const branding = useBranding();
   const logoSrc = useBrandingLogo();
 
@@ -27,10 +28,18 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const effectiveToken = token || localToken;
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsAdmin(sessionStorage.getItem('is_admin') === 'true');
+    }
+  }, [effectiveToken]);
+
+  useEffect(() => {
     if (!effectiveToken && typeof window !== 'undefined') {
       router.replace('/login');
     }
   }, [effectiveToken, router]);
+
+  const userNavLinks = isAdmin ? [...navLinks, { href: '/admin', label: 'Admin console' }] : navLinks;
 
   if (!effectiveToken) {
     return null;
@@ -70,7 +79,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
           </button>
         </div>
         <div className="hidden md:flex flex-wrap items-center gap-4 text-sm text-slate-400">
-          {navLinks.map((link) => (
+          {userNavLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -92,7 +101,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
       </nav>
       {menuOpen && (
         <div className="md:hidden px-6 pb-4 space-y-3 text-sm text-slate-200">
-          {navLinks.map((link) => (
+          {userNavLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
