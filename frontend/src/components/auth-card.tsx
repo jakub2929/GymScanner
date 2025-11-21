@@ -42,12 +42,10 @@ export default function AuthCard({ title, subtitle, navLinks, children }: PropsW
               <img src={logoSrc} alt={`${branding.brandName} logo`} className="h-12 w-12 rounded-2xl object-contain border border-white/5 bg-white/5 p-2" />
             )}
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-emerald-200/70">{branding.consoleName}</p>
               <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
             </div>
           </div>
           {subtitle && <p className="text-slate-300 text-sm">{subtitle}</p>}
-          {branding.tagline && <p className="text-slate-400 text-sm">{branding.tagline}</p>}
           <div className="mt-8 space-y-6">{children}</div>
           {branding.supportEmail && (
             <p className="text-xs text-slate-400 mt-6">
