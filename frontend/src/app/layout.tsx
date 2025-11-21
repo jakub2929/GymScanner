@@ -15,7 +15,10 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL =
+  process.env.NEXT_INTERNAL_API_URL?.replace(/\/$/, '') ||
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ||
+  'http://localhost:8000';
 
 async function fetchBranding(): Promise<BrandingConfig> {
   try {

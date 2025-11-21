@@ -38,8 +38,10 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: "http://localhost:8000"
+        NEXT_INTERNAL_API_URL: "http://web:8000"
     environment:
       NEXT_PUBLIC_API_URL: "http://localhost:8000"
+      NEXT_INTERNAL_API_URL: "http://web:8000"
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
       web:

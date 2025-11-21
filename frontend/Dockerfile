@@ -9,7 +9,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_INTERNAL_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_INTERNAL_API_URL=$NEXT_INTERNAL_API_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
@@ -19,6 +21,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_INTERNAL_API_URL=$NEXT_INTERNAL_API_URL
 # `standalone` bundle already includes server.js and node_modules subset
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
