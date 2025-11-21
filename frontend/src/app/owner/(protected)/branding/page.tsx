@@ -199,29 +199,43 @@ export default function BrandingPage() {
                 <input className="input-field" placeholder="© 2025 ..." {...register('footerText')} />
                 {errors.footerText && <p className="text-sm text-rose-300 mt-1">{errors.footerText.message}</p>}
               </div>
-              <div className="space-y-2">
-                <label className="text-sm text-slate-300 block">Logo URL</label>
-                <input className="input-field" placeholder="/static/branding/logo.png" {...register('logoUrl')} />
-                {errors.logoUrl && <p className="text-sm text-rose-300 mt-1">{errors.logoUrl.message}</p>}
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Nahrát logo
-                  </button>
-                  <button type="button" className="text-sm text-slate-400 hover:text-white" onClick={handleResetLogo}>
-                    Resetovat
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/svg+xml"
-                    className="hidden"
-                    onChange={handleLogoUpload}
-                  />
+              <div className="space-y-3">
+                <p className="text-sm text-slate-300">Logo</p>
+                <div className="flex items-center gap-4">
+                  {previewLogoSrc ? (
+                    <img
+                      src={previewLogoSrc}
+                      alt="Logo preview"
+                      className="h-14 w-14 rounded-2xl object-contain border border-white/10 bg-white/5 p-2"
+                    />
+                  ) : (
+                    <div className="h-14 w-14 rounded-2xl border border-dashed border-white/20 flex items-center justify-center text-xs text-slate-400">
+                      Logo
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-3">
+                    <button type="button" className="secondary-button" onClick={() => fileInputRef.current?.click()}>
+                      Nahrát logo
+                    </button>
+                    <button
+                      type="button"
+                      className="text-sm text-slate-400 hover:text-white"
+                      onClick={handleResetLogo}
+                      disabled={!preview.logoUrl}
+                    >
+                      Odebrat logo
+                    </button>
+                  </div>
                 </div>
+                <input type="hidden" {...register('logoUrl')} />
+                {errors.logoUrl && <p className="text-sm text-rose-300 mt-1">{errors.logoUrl.message}</p>}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
               </div>
               <button type="submit" className="accent-button w-full" disabled={isSubmitting || isPending}>
                 {isSubmitting ? 'Ukládám...' : isDirty ? 'Uložit změny' : 'Uložit'}
