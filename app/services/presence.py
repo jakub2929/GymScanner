@@ -9,9 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def set_presence(db: Session, user: User, is_in_gym: bool, when: datetime):
-    """
-    Update presence flag and timestamps for a user.
-    """
+    """Update presence flag and timestamps for a user."""
     ts = when if when.tzinfo else when.replace(tzinfo=timezone.utc)
     user.is_in_gym = is_in_gym
     if is_in_gym:
@@ -22,9 +20,7 @@ def set_presence(db: Session, user: User, is_in_gym: bool, when: datetime):
 
 
 def rebuild_presence_from_logs(db: Session, user: User):
-    """
-    Rebuild presence flag from the most recent access log (entry/exit).
-    """
+    """Rebuild presence flag from the most recent access log (entry/exit)."""
     from app.models import AccessLog  # local import to avoid circular
 
     logger.info("Rebuild presence requested for user %s (id=%s)", user.email, user.id)
