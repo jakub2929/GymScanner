@@ -19,8 +19,10 @@ from app.database import (
     Base,
     ensure_access_token_columns,
     ensure_user_password_column,
+    ensure_access_log_columns,
 )
 from app.routes import payments, qr, verify, admin, auth, user_qr, credits, branding, owner
+from app.routes import scanner
 from app.database import ensure_user_owner_column
 from app.services.owner import ensure_owner_account, ensure_branding_defaults
 
@@ -91,6 +93,7 @@ async def initialize_database():
         ensure_user_owner_column()
         ensure_last_scan_at_column()
         ensure_payment_comgate_columns()
+        ensure_access_log_columns()
         logger.info("Database migrations completed")
         ensure_owner_account()
         ensure_branding_defaults()
@@ -115,6 +118,7 @@ app.include_router(credits.router, prefix="/api", tags=["credits"])
 app.include_router(payments.router, prefix="/api", tags=["payments"])
 app.include_router(qr.router, prefix="/api", tags=["qr"])
 app.include_router(verify.router, prefix="/api", tags=["verify"])
+app.include_router(scanner.router, prefix="/api", tags=["scanner"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(owner.router, prefix="/api", tags=["owner"])
 app.include_router(branding.router, prefix="/api", tags=["branding"])

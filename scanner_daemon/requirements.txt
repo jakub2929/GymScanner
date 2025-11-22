@@ -1,0 +1,4 @@
+httpx==0.27.2
+evdev==1.7.1
+pyserial==3.5
+python-dotenv==1.0.0

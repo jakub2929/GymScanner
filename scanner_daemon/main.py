@@ -1,0 +1,137 @@
+import asyncio
+import logging
+import signal
+from dataclasses import dataclass
+
+from scanner_daemon.config import ScannerConfig
+from scanner_daemon.http_client import ScannerHttpClient
+from scanner_daemon.logging_setup import setup_logging
+from scanner_daemon.readers import HIDScannerReader, ScannedCode, SerialScannerReader
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ScannerState:
+    config: ScannerConfig
+    http_client: ScannerHttpClient
+    queue: asyncio.Queue
+
+
+def mask_token(token: str) -> str:
+    if not token:
+        return ""
+    return f"{token[:4]}..." if len(token) > 4 else token
+
+
+async def process_queue(state: ScannerState):
+    while True:
+        scan: ScannedCode = await state.queue.get()
+        token = scan.raw.strip()
+        if len(token) < 10:
+            logger.debug(
+                "Ignoring short token from %s (%s)",
+                scan.scanner_id,
+                mask_token(token),
+            )
+            state.queue.task_done()
+            continue
+        try:
+            response = await state.http_client.send_scan(
+                scan.direction, token, scan.scanner_id, scan.raw
+            )
+            logger.info(
+                "[%s] token=%s response=%s",
+                scan.direction.upper(),
+                mask_token(token),
+                response,
+            )
+        except Exception as exc:
+            logger.error(
+                "Failed to send scan %s from %s: %s",
+                scan.direction,
+                scan.scanner_id,
+                exc,
+                exc_info=True,
+            )
+        finally:
+            state.queue.task_done()
+
+
+async def start_readers(state: ScannerState):
+    readers = []
+    tasks = []
+
+    if state.config.scanner_in_mode.lower() == "hid":
+        readers.append(
+            HIDScannerReader(
+                state.config.scanner_in_device, "in", "in-1", state.queue
+            )
+        )
+    else:
+        readers.append(
+            SerialScannerReader(
+                state.config.scanner_in_device, "in", "in-1", state.queue
+            )
+        )
+
+    if state.config.scanner_out_mode.lower() == "hid":
+        readers.append(
+            HIDScannerReader(
+                state.config.scanner_out_device, "out", "out-1", state.queue
+            )
+        )
+    else:
+        readers.append(
+            SerialScannerReader(
+                state.config.scanner_out_device, "out", "out-1", state.queue
+            )
+        )
+
+    for reader in readers:
+        tasks.append(asyncio.create_task(reader.run()))
+
+    processor_task = asyncio.create_task(process_queue(state))
+    tasks.append(processor_task)
+
+    return tasks
+
+
+async def shutdown(tasks):
+    for task in tasks:
+        task.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+
+async def main():
+    config = ScannerConfig.from_env()
+    setup_logging(config.log_path, config.log_level)
+
+    http_client = ScannerHttpClient(
+        base_url=config.backend_base_url,
+        api_key=config.api_key,
+        timeout=config.request_timeout,
+        retry_attempts=config.retry_attempts,
+        retry_backoff=config.retry_backoff,
+    )
+    queue: asyncio.Queue = asyncio.Queue()
+    state = ScannerState(config=config, http_client=http_client, queue=queue)
+
+    tasks = await start_readers(state)
+
+    loop = asyncio.get_running_loop()
+    stop_event = asyncio.Event()
+
+    def _signal_handler():
+        stop_event.set()
+
+    loop.add_signal_handler(signal.SIGTERM, _signal_handler)
+    loop.add_signal_handler(signal.SIGINT, _signal_handler)
+
+    await stop_event.wait()
+    await shutdown(tasks)
+    await http_client.aclose()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

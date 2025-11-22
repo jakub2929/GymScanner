@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Float
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Float, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -77,6 +77,13 @@ class AccessLog(Base):
     reason = Column(String, nullable=True)  # Reason for allow/deny
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
+    direction = Column(
+        Enum("in", "out", name="access_direction", native_enum=False),
+        nullable=False,
+        server_default="in",
+    )
+    scanner_id = Column(String, nullable=True)
+    raw_data = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     token = relationship("AccessToken", back_populates="access_logs")

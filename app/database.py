@@ -174,6 +174,35 @@ def ensure_payment_comgate_columns():
                     logger.warning(f"Error executing migration statement: {statement}, error: {e}")
                     # Continue with other migrations even if one fails
 
+def ensure_access_log_columns():
+    """Ensure access_logs has direction/scanner/raw_data columns"""
+    inspector = inspect(engine)
+    if 'access_logs' not in inspector.get_table_names():
+        return
+
+    columns = [col['name'] for col in inspector.get_columns('access_logs')]
+    alters = []
+
+    if 'direction' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN direction VARCHAR DEFAULT 'in'")
+    if 'scanner_id' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN scanner_id VARCHAR")
+    if 'raw_data' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN raw_data TEXT")
+
+    with engine.begin() as conn:
+        for statement in alters:
+            try:
+                conn.execute(text(statement))
+            except Exception as e:
+                logger.warning(f"Error executing migration statement: {statement}, error: {e}")
+
+        # Ensure direction has default value for existing rows
+        try:
+            conn.execute(text("UPDATE access_logs SET direction = 'in' WHERE direction IS NULL"))
+        except Exception:
+            pass
+
 def get_db():
     """Dependency for getting database session"""
     db = SessionLocal()

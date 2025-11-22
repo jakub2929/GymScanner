@@ -14,6 +14,41 @@ router = APIRouter()
 # Cooldown duration in seconds
 COOLDOWN_SECONDS = 60
 
+
+def log_access(
+    db: Session,
+    *,
+    token_id: int | None,
+    token_string: str,
+    status: str,
+    reason: str | None,
+    ip_address: str | None,
+    user_agent: str | None,
+    direction: str = "in",
+    scanner_id: str | None = None,
+    raw_data: str | None = None,
+    commit: bool = True,
+):
+    """Persist access log entry with optional commit control."""
+    try:
+        access_log = AccessLog(
+            token_id=token_id,
+            token_string=token_string,
+            status=status,
+            reason=reason,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            direction=direction,
+            scanner_id=scanner_id,
+            raw_data=raw_data,
+        )
+        db.add(access_log)
+        if commit:
+            db.commit()
+    except Exception as e:
+        logger.error(f"Error logging access attempt: {e}", exc_info=True)
+        db.rollback()
+
 class VerifyRequest(BaseModel):
     token: str
     
@@ -33,6 +68,234 @@ class VerifyResponse(BaseModel):
     user_name: str | None = None
     user_email: str | None = None
 
+async def process_verification(
+    token_str: str,
+    request: Request,
+    db: Session,
+    *,
+    direction: str = "in",
+    scanner_id: str | None = None,
+    raw_data: str | None = None,
+) -> VerifyResponse:
+    """
+    Shared verification logic for web scanner and turnstile scanner.
+    direction/scanner_id/raw_data are used for richer logging.
+    """
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent", None)
+
+    try:
+        token = db.query(AccessToken).filter(AccessToken.token == token_str).first()
+        if not token:
+            log_access(
+                db,
+                token_id=None,
+                token_string=token_str,
+                status="deny",
+                reason="Token not found",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                direction=direction,
+                scanner_id=scanner_id,
+                raw_data=raw_data,
+            )
+            return VerifyResponse(
+                allowed=False,
+                reason="token_not_found",
+                credits_left=0,
+                cooldown_seconds_left=None,
+            )
+
+        if not token.is_active:
+            log_access(
+                db,
+                token_id=token.id,
+                token_string=token_str,
+                status="deny",
+                reason="Token deactivated",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                direction=direction,
+                scanner_id=scanner_id,
+                raw_data=raw_data,
+            )
+            return VerifyResponse(
+                allowed=False,
+                reason="token_deactivated",
+                credits_left=0,
+                cooldown_seconds_left=None,
+            )
+
+        user = db.query(User).filter(User.id == token.user_id).first()
+        if not user:
+            log_access(
+                db,
+                token_id=None,
+                token_string=token_str,
+                status="deny",
+                reason="User not found",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                direction=direction,
+                scanner_id=scanner_id,
+                raw_data=raw_data,
+            )
+            return VerifyResponse(
+                allowed=False,
+                reason="user_not_found",
+                credits_left=0,
+                cooldown_seconds_left=None,
+            )
+
+        user_active_tokens = (
+            db.query(AccessToken)
+            .filter(
+                and_(
+                    AccessToken.user_id == user.id,
+                    AccessToken.is_active == True,
+                    AccessToken.last_scan_at.isnot(None),
+                )
+            )
+            .order_by(AccessToken.last_scan_at.desc())
+            .first()
+        )
+
+        cooldown_seconds_left = None
+        if user_active_tokens and user_active_tokens.last_scan_at:
+            last_scan_time = user_active_tokens.last_scan_at
+            if last_scan_time.tzinfo is None:
+                last_scan_time = last_scan_time.replace(tzinfo=timezone.utc)
+
+            now = datetime.now(timezone.utc)
+            time_since_last_scan = now - last_scan_time
+            if time_since_last_scan.total_seconds() < COOLDOWN_SECONDS:
+                cooldown_seconds_left = int(
+                    COOLDOWN_SECONDS - time_since_last_scan.total_seconds()
+                )
+                log_access(
+                    db,
+                    token_id=token.id,
+                    token_string=token_str,
+                    status="deny",
+                    reason=f"Cooldown active ({cooldown_seconds_left}s remaining)",
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    direction=direction,
+                    scanner_id=scanner_id,
+                    raw_data=raw_data,
+                )
+                return VerifyResponse(
+                    allowed=False,
+                    reason="cooldown",
+                    credits_left=user.credits or 0,
+                    cooldown_seconds_left=cooldown_seconds_left,
+                )
+
+        if user.credits is None or user.credits <= 0:
+            log_access(
+                db,
+                token_id=token.id,
+                token_string=token_str,
+                status="deny",
+                reason="No credits available",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                direction=direction,
+                scanner_id=scanner_id,
+                raw_data=raw_data,
+            )
+            return VerifyResponse(
+                allowed=False,
+                reason="no_credits",
+                credits_left=0,
+                cooldown_seconds_left=None,
+            )
+
+        if not token.is_valid(user_credits=user.credits):
+            log_access(
+                db,
+                token_id=token.id,
+                token_string=token_str,
+                status="deny",
+                reason="Token invalid or no credits",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                direction=direction,
+                scanner_id=scanner_id,
+                raw_data=raw_data,
+            )
+            return VerifyResponse(
+                allowed=False,
+                reason="invalid_token",
+                credits_left=user.credits or 0,
+                cooldown_seconds_left=None,
+            )
+
+        try:
+            if user.credits is None or user.credits <= 0:
+                db.rollback()
+                return VerifyResponse(
+                    allowed=False,
+                    reason="no_credits",
+                    credits_left=0,
+                    cooldown_seconds_left=None,
+                )
+
+            user.credits = max(0, user.credits - 1)
+            credits_after = user.credits
+
+            now = datetime.now(timezone.utc)
+            token.used_at = now
+            token.scan_count = (token.scan_count or 0) + 1
+            token.last_scan_at = now
+
+            db.query(AccessToken).filter(
+                and_(AccessToken.user_id == user.id, AccessToken.is_active == True)
+            ).update({"last_scan_at": now}, synchronize_session=False)
+
+            log_access(
+                db,
+                token_id=token.id,
+                token_string=token_str,
+                status="allow",
+                reason=f"Access granted (credits remaining: {credits_after})",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                direction=direction,
+                scanner_id=scanner_id,
+                raw_data=raw_data,
+                commit=False,
+            )
+
+            db.commit()
+            return VerifyResponse(
+                allowed=True,
+                reason="ok",
+                credits_left=credits_after,
+                cooldown_seconds_left=COOLDOWN_SECONDS,
+                user_name=user.name,
+                user_email=user.email,
+            )
+
+        except Exception as e:
+            logger.error(f"Error processing access grant: {e}", exc_info=True)
+            db.rollback()
+            return VerifyResponse(
+                allowed=False,
+                reason="invalid_token",
+                credits_left=user.credits or 0,
+                cooldown_seconds_left=None,
+            )
+
+    except Exception as e:
+        logger.error(f"Unexpected error in verify_token: {e}", exc_info=True)
+        db.rollback()
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}",
+        )
+
+
 @router.post("/verify", response_model=VerifyResponse)
 async def verify_token(
     verify_request: VerifyRequest,
@@ -46,255 +309,7 @@ async def verify_token(
     Logs all access attempts for audit purposes.
     """
     token_str = verify_request.token
-    
-    # Get client IP and user agent for logging
-    client_ip = request.client.host if request.client else None
-    user_agent = request.headers.get("user-agent", None)
-    
-    try:
-        # Find token in database
-        token = db.query(AccessToken).filter(AccessToken.token == token_str).first()
-        
-        if not token:
-            # Log failed attempt
-            try:
-                access_log = AccessLog(
-                    token_string=token_str,
-                    status="deny",
-                    reason="Token not found",
-                    ip_address=client_ip,
-                    user_agent=user_agent
-                )
-                db.add(access_log)
-                db.commit()
-            except Exception as e:
-                logger.error(f"Error logging access attempt: {e}")
-                db.rollback()
-            
-            return VerifyResponse(
-                allowed=False,
-                reason="token_not_found",
-                credits_left=0,
-                cooldown_seconds_left=None
-            )
-        
-        if not token.is_active:
-            try:
-                access_log = AccessLog(
-                    token_id=token.id,
-                    token_string=token_str,
-                    status="deny",
-                    reason="Token deactivated",
-                    ip_address=client_ip,
-                    user_agent=user_agent
-                )
-                db.add(access_log)
-                db.commit()
-            except Exception as e:
-                logger.error(f"Error logging access attempt: {e}")
-                db.rollback()
-            
-            return VerifyResponse(
-                allowed=False,
-                reason="token_deactivated",
-                credits_left=0,
-                cooldown_seconds_left=None
-            )
-        
-        # Get user information
-        user = db.query(User).filter(User.id == token.user_id).first()
-        if not user:
-            try:
-                access_log = AccessLog(
-                    token_string=token_str,
-                    status="deny",
-                    reason="User not found",
-                    ip_address=client_ip,
-                    user_agent=user_agent
-                )
-                db.add(access_log)
-                db.commit()
-            except Exception as e:
-                logger.error(f"Error logging access attempt: {e}")
-                db.rollback()
-            
-            return VerifyResponse(
-                allowed=False,
-                reason="user_not_found",
-                credits_left=0,
-                cooldown_seconds_left=None
-            )
-        
-        # Check cooldown on user level (all active tokens of same user)
-        # Find the most recent last_scan_at among all active tokens of this user
-        user_active_tokens = db.query(AccessToken).filter(
-            and_(
-                AccessToken.user_id == user.id,
-                AccessToken.is_active == True,
-                AccessToken.last_scan_at.isnot(None)
-            )
-        ).order_by(AccessToken.last_scan_at.desc()).first()
-        
-        cooldown_seconds_left = None
-        if user_active_tokens and user_active_tokens.last_scan_at:
-            # Ensure last_scan_at is timezone-aware (convert naive to aware if needed)
-            last_scan_time = user_active_tokens.last_scan_at
-            if last_scan_time.tzinfo is None:
-                # Naive datetime - assume UTC
-                last_scan_time = last_scan_time.replace(tzinfo=timezone.utc)
-            
-            now = datetime.now(timezone.utc)
-            time_since_last_scan = now - last_scan_time
-            if time_since_last_scan.total_seconds() < COOLDOWN_SECONDS:
-                cooldown_seconds_left = int(COOLDOWN_SECONDS - time_since_last_scan.total_seconds())
-                
-                # Log cooldown deny
-                try:
-                    access_log = AccessLog(
-                        token_id=token.id,
-                        token_string=token_str,
-                        status="deny",
-                        reason=f"Cooldown active ({cooldown_seconds_left}s remaining)",
-                        ip_address=client_ip,
-                        user_agent=user_agent
-                    )
-                    db.add(access_log)
-                    db.commit()
-                except Exception as e:
-                    logger.error(f"Error logging access attempt: {e}")
-                    db.rollback()
-                
-                return VerifyResponse(
-                    allowed=False,
-                    reason="cooldown",
-                    credits_left=user.credits or 0,
-                    cooldown_seconds_left=cooldown_seconds_left
-                )
-        
-        # Check if user has credits (credit system: 1 credit = 1 workout)
-        if user.credits is None or user.credits <= 0:
-            try:
-                access_log = AccessLog(
-                    token_id=token.id,
-                    token_string=token_str,
-                    status="deny",
-                    reason="No credits available",
-                    ip_address=client_ip,
-                    user_agent=user_agent
-                )
-                db.add(access_log)
-                db.commit()
-            except Exception as e:
-                logger.error(f"Error logging access attempt: {e}")
-                db.rollback()
-            
-            return VerifyResponse(
-                allowed=False,
-                reason="no_credits",
-                credits_left=0,
-                cooldown_seconds_left=None
-            )
-        
-        # Check if token is valid (active and user has credits)
-        if not token.is_valid(user_credits=user.credits):
-            try:
-                access_log = AccessLog(
-                    token_id=token.id,
-                    token_string=token_str,
-                    status="deny",
-                    reason="Token invalid or no credits",
-                    ip_address=client_ip,
-                    user_agent=user_agent
-                )
-                db.add(access_log)
-                db.commit()
-            except Exception as e:
-                logger.error(f"Error logging access attempt: {e}")
-                db.rollback()
-            
-            return VerifyResponse(
-                allowed=False,
-                reason="invalid_token",
-                credits_left=user.credits or 0,
-                cooldown_seconds_left=None
-            )
-        
-        # Token is valid, user has credits, and cooldown has passed
-        # Use transaction for atomic operations
-        try:
-            # Deduct credit (1 credit = 1 workout)
-            # Double-check credits before deducting (should not happen, but safety check)
-            if user.credits is None or user.credits <= 0:
-                db.rollback()
-                return VerifyResponse(
-                    allowed=False,
-                    reason="no_credits",
-                    credits_left=0,
-                    cooldown_seconds_left=None
-                )
-            
-            # Deduct credit (ensures it never goes below 0)
-            user.credits = max(0, user.credits - 1)
-            credits_after = user.credits
-            
-            # Update token tracking
-            now = datetime.now(timezone.utc)
-            token.used_at = now
-            token.scan_count = (token.scan_count or 0) + 1
-            
-            # Set last_scan_at for THIS token (will be used for cooldown check)
-            token.last_scan_at = now
-            
-            # Also update last_scan_at for ALL active tokens of this user (cooldown is user-level)
-            db.query(AccessToken).filter(
-                and_(
-                    AccessToken.user_id == user.id,
-                    AccessToken.is_active == True
-                )
-            ).update({"last_scan_at": now}, synchronize_session=False)
-            
-            # Log successful access
-            access_log = AccessLog(
-                token_id=token.id,
-                token_string=token_str,
-                status="allow",
-                reason=f"Access granted (credits remaining: {credits_after})",
-                ip_address=client_ip,
-                user_agent=user_agent
-            )
-            db.add(access_log)
-            
-            # Commit all changes atomically
-            db.commit()
-            
-            return VerifyResponse(
-                allowed=True,
-                reason="ok",
-                credits_left=credits_after,
-                cooldown_seconds_left=COOLDOWN_SECONDS,  # Cooldown just started
-                user_name=user.name,
-                user_email=user.email
-            )
-            
-        except Exception as e:
-            logger.error(f"Error processing access grant: {e}", exc_info=True)
-            db.rollback()
-            # Return error response but don't raise HTTPException (it's not a 500 case)
-            return VerifyResponse(
-                allowed=False,
-                reason="invalid_token",
-                credits_left=user.credits or 0,
-                cooldown_seconds_left=None
-            )
-            
-    except Exception as e:
-        logger.error(f"Unexpected error in verify_token: {e}", exc_info=True)
-        db.rollback()
-        # This is a real server error - return 500
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(e)}"
-        )
+    return await process_verification(token_str, request, db, direction="in")
 
 @router.get("/access_logs")
 async def get_access_logs(

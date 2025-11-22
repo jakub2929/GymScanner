@@ -153,6 +153,8 @@ npm run lint   # ESLint (musí projít před commitem)
 - `POST /api/regenerate_qr` - Vygenerování nového QR kódu (vyžaduje auth)
 - `POST /api/verify` - Ověření QR kódu (turnstile scanner)
   - Response: `{allowed: bool, reason: str, credits_left: int, cooldown_seconds_left: int | null}`
+- `POST /api/scanner/in` - Server-to-server verifikace pro turniket (API key v `X-TURNSTILE-API-KEY`, payload: token, scanner_id, raw_data)
+- `POST /api/scanner/out` - Logování odchodu (API key v `X-TURNSTILE-API-KEY`, payload: token, scanner_id, raw_data)
 - **Frontend:** Tlačítko "Stáhnout QR" pro stažení QR kódu jako PNG obrázek
 
 ### Kredity
@@ -193,6 +195,9 @@ npm run lint   # ESLint (musí projít před commitem)
 - `token_string` (String) - Token string (i když token je smazaný)
 - `status` (String) - "allow" nebo "deny"
 - `reason` (String) - Důvod povolení/zamítnutí
+- `direction` (Enum: in/out) - Směr průchodu
+- `scanner_id` (String, nullable) - ID čtečky (např. in-1/out-1)
+- `raw_data` (Text, nullable) - Původní string ze čtečky
 - `ip_address` (String, nullable) - IP adresa klienta
 - `user_agent` (String, nullable) - User agent
 - `created_at` (DateTime) - Čas pokusu o vstup
