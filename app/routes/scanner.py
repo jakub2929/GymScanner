@@ -3,6 +3,7 @@ import os
 import time
 from typing import Dict
 
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, status as http_status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -29,6 +30,12 @@ class ScannerBaseRequest(BaseModel):
 class ScannerOutResponse(BaseModel):
     ok: bool
     reason: str
+
+
+class ScanRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    timestamp: datetime
+    device_id: str = Field(..., min_length=1)
 
 
 def _get_api_key():
@@ -166,6 +173,101 @@ async def scanner_out(
             direction="out",
             scanner_id=payload.scanner_id,
             raw_data=payload.raw_data,
+        )
+        db.add(access_log)
+        db.commit()
+    except Exception as e:
+        logger.error(f"Error logging OUT access: {e}", exc_info=True)
+        db.rollback()
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to log exit",
+        )
+
+    return ScannerOutResponse(ok=True, reason="logged")
+
+
+@router.post("/scan/in", response_model=VerifyResponse)
+async def scan_in(
+    payload: ScanRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _require_api_key(request)
+    _enforce_rate_limit(payload.device_id)
+    token = (payload.token or "").strip()
+    if not token:
+        _log_422_throttled(payload.device_id, "Empty token received on /scan/in")
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="token is required",
+        )
+
+    verify_response = await process_verification(
+        token,
+        request,
+        db,
+        direction="in",
+        scanner_id=payload.device_id,
+        raw_data=None,
+    )
+
+    if verify_response.reason == "token_not_found":
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="token_not_found",
+        )
+
+    if verify_response.reason == "user_not_found":
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="user_not_found",
+        )
+
+    return verify_response
+
+
+@router.post("/scan/out", response_model=ScannerOutResponse)
+async def scan_out(
+    payload: ScanRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    _require_api_key(request)
+    _enforce_rate_limit(payload.device_id)
+    token = (payload.token or "").strip()
+    if not token:
+        _log_422_throttled(payload.device_id, "Empty token received on /scan/out")
+        raise HTTPException(
+            status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="token is required",
+        )
+
+    token_obj = db.query(AccessToken).filter(AccessToken.token == token).first()
+    if not token_obj or not token_obj.is_active:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="token_not_found",
+        )
+
+    user = db.query(User).filter(User.id == token_obj.user_id).first() if token_obj else None
+    if not user:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="user_not_found",
+        )
+
+    try:
+        access_log = AccessLog(
+            token_id=token_obj.id,
+            token_string=token,
+            status="allow",
+            reason="Logged exit",
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent", None),
+            direction="out",
+            scanner_id=payload.device_id,
+            raw_data=None,
         )
         db.add(access_log)
         db.commit()

@@ -31,26 +31,28 @@ async def process_queue(state: ScannerState):
         if len(token) < 10:
             logger.debug(
                 "Ignoring short token from %s (%s)",
-                scan.scanner_id,
+                scan.device_id,
                 mask_token(token),
             )
             state.queue.task_done()
             continue
         try:
             response = await state.http_client.send_scan(
-                scan.direction, token, scan.scanner_id, scan.raw
+                scan.direction, token, scan.device_id, scan.scanned_at
             )
             logger.info(
-                "[%s] token=%s response=%s",
+                "[%s] device=%s token=%s status=%s reason=%s",
                 scan.direction.upper(),
+                scan.device_id,
                 mask_token(token),
-                response,
+                response.get("status"),
+                response.get("body", {}).get("reason") if isinstance(response, dict) else None,
             )
         except Exception as exc:
             logger.error(
                 "Failed to send scan %s from %s: %s",
                 scan.direction,
-                scan.scanner_id,
+                scan.device_id,
                 exc,
                 exc_info=True,
             )
@@ -65,26 +67,26 @@ async def start_readers(state: ScannerState):
     if state.config.scanner_in_mode.lower() == "hid":
         readers.append(
             HIDScannerReader(
-                state.config.scanner_in_device, "in", "in-1", state.queue
+                state.config.scanner_in_device, "in", state.config.device_id_in, state.queue
             )
         )
     else:
         readers.append(
             SerialScannerReader(
-                state.config.scanner_in_device, "in", "in-1", state.queue
+                state.config.scanner_in_device, "in", state.config.device_id_in, state.queue
             )
         )
 
     if state.config.scanner_out_mode.lower() == "hid":
         readers.append(
             HIDScannerReader(
-                state.config.scanner_out_device, "out", "out-1", state.queue
+                state.config.scanner_out_device, "out", state.config.device_id_out, state.queue
             )
         )
     else:
         readers.append(
             SerialScannerReader(
-                state.config.scanner_out_device, "out", "out-1", state.queue
+                state.config.scanner_out_device, "out", state.config.device_id_out, state.queue
             )
         )
 

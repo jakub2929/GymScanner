@@ -9,13 +9,15 @@ class ScannerConfig:
     api_key: str
     scanner_in_device: str
     scanner_out_device: str
+    device_id_in: str = "in-1"
+    device_id_out: str = "out-1"
     scanner_in_mode: str = "hid"
     scanner_out_mode: str = "hid"
     log_path: str = "/var/log/gym-scanner-daemon.log"
     log_level: str = "INFO"
     request_timeout: float = 5.0
     retry_attempts: int = 3
-    retry_backoff: float = 1.0
+    retry_backoff: float = 0.5
 
     @classmethod
     def from_env(cls) -> "ScannerConfig":
@@ -38,11 +40,13 @@ class ScannerConfig:
             api_key=api_key,
             scanner_in_device=scanner_in_device,
             scanner_out_device=scanner_out_device,
+            device_id_in=os.getenv("DEVICE_ID_IN", "in-1"),
+            device_id_out=os.getenv("DEVICE_ID_OUT", "out-1"),
             scanner_in_mode=os.getenv("SCANNER_IN_MODE", "hid"),
             scanner_out_mode=os.getenv("SCANNER_OUT_MODE", "hid"),
             log_path=os.getenv("LOG_PATH", "/var/log/gym-scanner-daemon.log"),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             request_timeout=float(os.getenv("REQUEST_TIMEOUT", 5.0)),
             retry_attempts=int(os.getenv("RETRY_ATTEMPTS", 3)),
-            retry_backoff=float(os.getenv("RETRY_BACKOFF", 1.0)),
+            retry_backoff=float(os.getenv("RETRY_BACKOFF", 0.5)),
         )

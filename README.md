@@ -155,6 +155,8 @@ npm run lint   # ESLint (musí projít před commitem)
   - Response: `{allowed: bool, reason: str, credits_left: int, cooldown_seconds_left: int | null}`
 - `POST /api/scanner/in` - Server-to-server verifikace pro turniket (API key v `X-TURNSTILE-API-KEY`, payload: token, scanner_id, raw_data)
 - `POST /api/scanner/out` - Logování odchodu (API key v `X-TURNSTILE-API-KEY`, payload: token, scanner_id, raw_data)
+- `POST /api/scan/in` - Alias pro IN se strukturovaným payloadem `{token, timestamp, device_id}`
+- `POST /api/scan/out` - Alias pro OUT se strukturovaným payloadem `{token, timestamp, device_id}`
 - **Frontend:** Tlačítko "Stáhnout QR" pro stažení QR kódu jako PNG obrázek
 
 ### Kredity

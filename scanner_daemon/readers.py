@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import evdev
 from evdev import ecodes
@@ -13,15 +14,16 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ScannedCode:
     direction: str
-    scanner_id: str
+    device_id: str
     raw: str
+    scanned_at: datetime
 
 
 class HIDScannerReader:
-    def __init__(self, device_path: str, direction: str, scanner_id: str, queue: asyncio.Queue):
+    def __init__(self, device_path: str, direction: str, device_id: str, queue: asyncio.Queue):
         self.device_path = device_path
         self.direction = direction
-        self.scanner_id = scanner_id
+        self.device_id = device_id
         self.queue = queue
         self._stopped = False
 
@@ -55,7 +57,7 @@ class HIDScannerReader:
         while not self._stopped:
             try:
                 device = evdev.InputDevice(self.device_path)
-                logger.info("Listening to HID scanner %s (%s)", self.scanner_id, self.device_path)
+                logger.info("Listening to HID scanner %s (%s)", self.device_id, self.device_path)
                 buffer = ""
                 async for event in device.async_read_loop():
                     if self._stopped:
@@ -69,22 +71,29 @@ class HIDScannerReader:
                         raw = buffer.strip()
                         buffer = ""
                         if raw:
-                            await self.queue.put(ScannedCode(self.direction, self.scanner_id, raw))
+                            await self.queue.put(
+                                ScannedCode(
+                                    self.direction,
+                                    self.device_id,
+                                    raw,
+                                    datetime.now(timezone.utc),
+                                )
+                            )
                         continue
                     buffer += char
             except FileNotFoundError:
                 logger.error("HID device %s not found, retrying in 2s", self.device_path)
                 await asyncio.sleep(2)
             except Exception as exc:
-                logger.error("Error reading HID scanner %s: %s", self.scanner_id, exc, exc_info=True)
+                logger.error("Error reading HID scanner %s: %s", self.device_id, exc, exc_info=True)
                 await asyncio.sleep(1)
 
 
 class SerialScannerReader:
-    def __init__(self, device_path: str, direction: str, scanner_id: str, queue: asyncio.Queue):
+    def __init__(self, device_path: str, direction: str, device_id: str, queue: asyncio.Queue):
         self.device_path = device_path
         self.direction = direction
-        self.scanner_id = scanner_id
+        self.device_id = device_id
         self.queue = queue
         self._stopped = False
 
@@ -96,11 +105,18 @@ class SerialScannerReader:
         while not self._stopped:
             try:
                 with serial.Serial(self.device_path, baudrate=9600, timeout=1) as ser:
-                    logger.info("Listening to serial scanner %s (%s)", self.scanner_id, self.device_path)
+                    logger.info("Listening to serial scanner %s (%s)", self.device_id, self.device_path)
                     while not self._stopped:
                         raw = ser.readline().decode(errors="ignore").strip()
                         if raw:
-                            await self.queue.put(ScannedCode(self.direction, self.scanner_id, raw))
+                            await self.queue.put(
+                                ScannedCode(
+                                    self.direction,
+                                    self.device_id,
+                                    raw,
+                                    datetime.now(timezone.utc),
+                                )
+                            )
             except serial.SerialException as exc:
                 logger.error("Serial device error on %s: %s", self.device_path, exc)
                 await asyncio.sleep(2)
@@ -108,5 +124,5 @@ class SerialScannerReader:
                 logger.error("Serial device %s not found, retrying in 2s", self.device_path)
                 await asyncio.sleep(2)
             except Exception as exc:
-                logger.error("Error reading serial scanner %s: %s", self.scanner_id, exc, exc_info=True)
+                logger.error("Error reading serial scanner %s: %s", self.device_id, exc, exc_info=True)
                 await asyncio.sleep(1)

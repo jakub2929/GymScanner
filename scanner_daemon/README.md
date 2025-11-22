@@ -1,6 +1,6 @@
 # Gym Scanner Daemon (Raspberry Pi)
 
-Headless Python 3.11 daemon for two QR scanners (IN/OUT) on Raspberry Pi. Reads USB HID keyboards or serial scanners, maps them to turnstile directions, and calls backend endpoints `/api/scanner/in` and `/api/scanner/out` with `X-TURNSTILE-API-KEY`.
+Headless Python 3.11 daemon for two QR scanners (IN/OUT) on Raspberry Pi. Reads USB HID keyboards or serial scanners, maps them to turnstile directions, and calls backend endpoints `/api/scan/in` and `/api/scan/out` with `X-TURNSTILE-API-KEY`.
 
 ## Configuration (env or `.env`)
 - `BACKEND_BASE_URL` (required) – e.g. `https://gym-api.example.com`
@@ -9,10 +9,12 @@ Headless Python 3.11 daemon for two QR scanners (IN/OUT) on Raspberry Pi. Reads 
 - `SCANNER_OUT_DEVICE` (required) – e.g. `/dev/input/by-id/usb-ABC-event-kbd`
 - `SCANNER_IN_MODE` (optional, default `hid`) – `hid` or `serial`
 - `SCANNER_OUT_MODE` (optional, default `hid`) – `hid` or `serial`
+- `DEVICE_ID_IN` (optional, default `in-1`)
+- `DEVICE_ID_OUT` (optional, default `out-1`)
 - `LOG_PATH` (optional) – default `/var/log/gym-scanner-daemon.log`
 - `LOG_LEVEL` (optional) – `INFO` default
 - `REQUEST_TIMEOUT` (optional) – seconds, default `5.0`
-- `RETRY_ATTEMPTS` / `RETRY_BACKOFF` (optional) – default `3` / `1.0`
+- `RETRY_ATTEMPTS` / `RETRY_BACKOFF` (optional) – default `3` / `0.5` (backoff sequence 0.5s, 1.5s)
 
 ## Install dependencies (Raspberry Pi)
 ```bash
