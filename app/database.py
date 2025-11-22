@@ -203,6 +203,67 @@ def ensure_access_log_columns():
         except Exception:
             pass
 
+def ensure_access_log_extended_columns():
+    """Ensure access_logs has extended audit fields"""
+    inspector = inspect(engine)
+    if 'access_logs' not in inspector.get_table_names():
+        return
+
+    columns = [col['name'] for col in inspector.get_columns('access_logs')]
+    alters = []
+    if 'user_id' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN user_id INTEGER")
+    if 'scanned_at' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN scanned_at TIMESTAMP")
+    if 'processed_at' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    if 'entry' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN entry BOOLEAN")
+    if 'exit' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN exit BOOLEAN")
+    if 'allowed' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN allowed BOOLEAN")
+    if 'direction_from_device' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN direction_from_device VARCHAR")
+    if 'direction_from_state' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN direction_from_state VARCHAR")
+    if 'direction_mismatch' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN direction_mismatch BOOLEAN DEFAULT FALSE")
+    if 'raw_token_masked' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN raw_token_masked VARCHAR")
+    if 'metadata' not in columns:
+        alters.append("ALTER TABLE access_logs ADD COLUMN metadata JSON")
+
+    with engine.begin() as conn:
+        for statement in alters:
+            try:
+                conn.execute(text(statement))
+            except Exception as e:
+                logger.warning(f"Error executing migration statement: {statement}, error: {e}")
+
+def ensure_user_presence_columns():
+    """Ensure users table has presence/trainer columns"""
+    inspector = inspect(engine)
+    if 'users' not in inspector.get_table_names():
+        return
+    columns = [col['name'] for col in inspector.get_columns('users')]
+    alters = []
+    if 'is_trainer' not in columns:
+        alters.append("ALTER TABLE users ADD COLUMN is_trainer BOOLEAN DEFAULT FALSE")
+    if 'is_in_gym' not in columns:
+        alters.append("ALTER TABLE users ADD COLUMN is_in_gym BOOLEAN DEFAULT FALSE")
+    if 'last_entry_at' not in columns:
+        alters.append("ALTER TABLE users ADD COLUMN last_entry_at TIMESTAMP")
+    if 'last_exit_at' not in columns:
+        alters.append("ALTER TABLE users ADD COLUMN last_exit_at TIMESTAMP")
+
+    with engine.begin() as conn:
+        for statement in alters:
+            try:
+                conn.execute(text(statement))
+            except Exception as e:
+                logger.warning(f"Error executing migration statement: {statement}, error: {e}")
+
 def get_db():
     """Dependency for getting database session"""
     db = SessionLocal()

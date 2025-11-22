@@ -20,6 +20,8 @@ from app.database import (
     ensure_access_token_columns,
     ensure_user_password_column,
     ensure_access_log_columns,
+    ensure_access_log_extended_columns,
+    ensure_user_presence_columns,
 )
 from app.routes import payments, qr, verify, admin, auth, user_qr, credits, branding, owner
 from app.routes import scanner
@@ -93,6 +95,8 @@ async def initialize_database():
         ensure_user_owner_column()
         ensure_last_scan_at_column()
         ensure_payment_comgate_columns()
+        ensure_access_log_extended_columns()
+        ensure_user_presence_columns()
         ensure_access_log_columns()
         logger.info("Database migrations completed")
         ensure_owner_account()

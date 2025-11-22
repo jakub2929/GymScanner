@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Float, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Float, Enum, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -15,10 +15,15 @@ class User(Base):
     credits = Column(Integer, default=0)  # Number of credits (1 credit = 1 workout)
     is_admin = Column(Boolean, default=False)  # Admin privileges
     is_owner = Column(Boolean, default=False)  # Platform owner flag (max 1 account)
+    is_trainer = Column(Boolean, default=False)  # Trainer flag
+    is_in_gym = Column(Boolean, default=False)  # Presence flag
+    last_entry_at = Column(DateTime(timezone=True), nullable=True)
+    last_exit_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     payments = relationship("Payment", back_populates="user")
     access_tokens = relationship("AccessToken", back_populates="user")
+    memberships = relationship("Membership", back_populates="user")
 
 class Payment(Base):
     __tablename__ = "payments"
@@ -71,6 +76,7 @@ class AccessLog(Base):
     __tablename__ = "access_logs"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     token_id = Column(Integer, ForeignKey("access_tokens.id"), nullable=True)
     token_string = Column(String, nullable=False)  # Store token string even if token is deleted
     status = Column(String, nullable=False)  # allow, deny
@@ -84,9 +90,33 @@ class AccessLog(Base):
     )
     scanner_id = Column(String, nullable=True)
     raw_data = Column(Text, nullable=True)
+    scanned_at = Column(DateTime(timezone=True), nullable=True)
+    processed_at = Column(DateTime(timezone=True), server_default=func.now())
+    entry = Column(Boolean, nullable=True)
+    exit = Column(Boolean, nullable=True)
+    allowed = Column(Boolean, nullable=True)
+    direction_from_device = Column(String, nullable=True)
+    direction_from_state = Column(String, nullable=True)
+    direction_mismatch = Column(Boolean, nullable=True, default=False)
+    raw_token_masked = Column(String, nullable=True)
+    metadata = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
+    user = relationship("User")
     token = relationship("AccessToken", back_populates="access_logs")
+
+
+class Membership(Base):
+    __tablename__ = "memberships"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    valid_from = Column(DateTime(timezone=True), nullable=False)
+    valid_to = Column(DateTime(timezone=True), nullable=False)
+    daily_limit_enabled = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="memberships")
 
 class BrandingSettings(Base):
     __tablename__ = "branding_settings"

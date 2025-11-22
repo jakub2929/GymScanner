@@ -65,6 +65,9 @@ COMGATE_DEFAULT_PHONE=+420777111222                    # fallback telefon, pokud
 COMGATE_PREPARE_ONLY=0                                 # 1 = pouze předautorizace, 0 = rovnou platba
 COMGATE_DELIVERY=HOME_DELIVERY                         # Comgate delivery param
 COMGATE_CATEGORY=PHYSICAL_GOODS_ONLY                   # Comgate category param
+
+# Turniket / scan logika
+GYM_TIMEZONE=Europe/Prague                             # Časová zóna pro denní limit
 ```
 
 Frontend (`/dashboard`) nyní volá `/api/payments/create` a po úspěchu automaticky přesměruje na Comgate. Po návratu/notify získává uživatel nové kredity.
@@ -157,6 +160,7 @@ npm run lint   # ESLint (musí projít před commitem)
 - `POST /api/scanner/out` - Logování odchodu (API key v `X-TURNSTILE-API-KEY`, payload: token, scanner_id, raw_data)
 - `POST /api/scan/in` - Alias pro IN se strukturovaným payloadem `{token, timestamp, device_id}`
 - `POST /api/scan/out` - Alias pro OUT se strukturovaným payloadem `{token, timestamp, device_id}`
+- `POST /api/admin/users/{user_id}/rebuild-presence` - Admin akce pro přepočet `is_in_gym` z posledního logu
 - **Frontend:** Tlačítko "Stáhnout QR" pro stažení QR kódu jako PNG obrázek
 
 ### Kredity
@@ -180,6 +184,10 @@ npm run lint   # ESLint (musí projít před commitem)
 - `id`, `email`, `name`, `password_hash`
 - `credits` (Integer, default=0) - Počet kreditů
 - `is_admin` (Boolean, default=False) - Admin práva
+- `is_owner` (Boolean)
+- `is_trainer` (Boolean) - Trenér (bypass membership/daily limit)
+- `is_in_gym` (Boolean) - Stav přítomnosti
+- `last_entry_at`, `last_exit_at`
 - `created_at` (DateTime) - Datum vytvoření účtu
 
 ### AccessToken
@@ -197,12 +205,24 @@ npm run lint   # ESLint (musí projít před commitem)
 - `token_string` (String) - Token string (i když token je smazaný)
 - `status` (String) - "allow" nebo "deny"
 - `reason` (String) - Důvod povolení/zamítnutí
-- `direction` (Enum: in/out) - Směr průchodu
-- `scanner_id` (String, nullable) - ID čtečky (např. in-1/out-1)
+- `direction` (Enum: in/out) - Směr průchodu z device
+- `scanner_id` (String, nullable) - ID čtečky (např. in-1/out-1 / device_id)
 - `raw_data` (Text, nullable) - Původní string ze čtečky
 - `ip_address` (String, nullable) - IP adresa klienta
 - `user_agent` (String, nullable) - User agent
-- `created_at` (DateTime) - Čas pokusu o vstup
+- `scanned_at` (DateTime) - Čas scanu na zařízení
+- `processed_at` (DateTime) - Čas zpracování na serveru
+- `entry`/`exit` (Boolean) - Doménová interpretace
+- `allowed` (Boolean) - true/false
+- `direction_from_device`, `direction_from_state`, `direction_mismatch` (Bool)
+- `raw_token_masked` (String)
+- `metadata` (JSON, nullable)
+- `created_at` (DateTime) - Čas zápisu záznamu
+
+### Membership
+- `id`, `user_id`
+- `valid_from`, `valid_to` (30denní platnost)
+- `daily_limit_enabled` (Boolean) - aktivuje pravidlo 1 vstup denně
 
 ### Payment
 - `user_id`, `amount`, `status`, `payment_id`

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import AccessToken, AccessLog, User
 from app.routes.verify import VerifyResponse, process_verification
+from app.services.scan_processing import process_scan
 
 logger = logging.getLogger(__name__)
 
@@ -203,31 +204,21 @@ async def scan_in(
             detail="token is required",
         )
 
-    verify_response = await process_verification(
-        token,
-        request,
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent", None)
+    response = process_scan(
         db,
-        direction="in",
-        scanner_id=payload.device_id,
-        raw_data=None,
+        token_str=token,
+        scanned_at=payload.timestamp,
+        device_id=payload.device_id,
+        device_direction="in",
+        client_ip=client_ip,
+        user_agent=user_agent,
     )
-
-    if verify_response.reason == "token_not_found":
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="token_not_found",
-        )
-
-    if verify_response.reason == "user_not_found":
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="user_not_found",
-        )
-
-    return verify_response
+    return response
 
 
-@router.post("/scan/out", response_model=ScannerOutResponse)
+@router.post("/scan/out", response_model=VerifyResponse)
 async def scan_out(
     payload: ScanRequest,
     request: Request,
@@ -243,40 +234,15 @@ async def scan_out(
             detail="token is required",
         )
 
-    token_obj = db.query(AccessToken).filter(AccessToken.token == token).first()
-    if not token_obj or not token_obj.is_active:
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="token_not_found",
-        )
-
-    user = db.query(User).filter(User.id == token_obj.user_id).first() if token_obj else None
-    if not user:
-        raise HTTPException(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="user_not_found",
-        )
-
-    try:
-        access_log = AccessLog(
-            token_id=token_obj.id,
-            token_string=token,
-            status="allow",
-            reason="Logged exit",
-            ip_address=request.client.host if request.client else None,
-            user_agent=request.headers.get("user-agent", None),
-            direction="out",
-            scanner_id=payload.device_id,
-            raw_data=None,
-        )
-        db.add(access_log)
-        db.commit()
-    except Exception as e:
-        logger.error(f"Error logging OUT access: {e}", exc_info=True)
-        db.rollback()
-        raise HTTPException(
-            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to log exit",
-        )
-
-    return ScannerOutResponse(ok=True, reason="logged")
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent", None)
+    response = process_scan(
+        db,
+        token_str=token,
+        scanned_at=payload.timestamp,
+        device_id=payload.device_id,
+        device_direction="out",
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
+    return response

@@ -4,6 +4,7 @@ from sqlalchemy import or_
 from pydantic import BaseModel
 from app.database import get_db
 from app.models import User, AccessToken
+from app.services.presence import rebuild_presence_from_logs
 from app.auth import get_current_user
 import qrcode
 import io
@@ -159,3 +160,23 @@ async def deactivate_token(
     token.is_active = False
     db.commit()
     return {"status": "ok", "message": "Token deactivated"}
+
+
+@router.post("/users/{user_id}/rebuild-presence")
+async def rebuild_presence(
+    user_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Rebuild presence flag from latest AccessLog (admin fix-up)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    is_in = rebuild_presence_from_logs(db, user)
+    db.commit()
+    return {
+        "user_id": user.id,
+        "is_in_gym": is_in,
+        "last_entry_at": user.last_entry_at.isoformat() if user.last_entry_at else None,
+        "last_exit_at": user.last_exit_at.isoformat() if user.last_exit_at else None,
+    }
