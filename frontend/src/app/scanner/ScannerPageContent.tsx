@@ -1,0 +1,132 @@
+'use client';
+
+import QrScanner from '@/components/qr-scanner';
+import { Toast, useToast } from '@/components/toast';
+import { apiClient } from '@/lib/apiClient';
+import { useState } from 'react';
+
+interface VerifyResponse {
+  allowed: boolean;
+  reason: string;
+  credits_left: number;
+  cooldown_seconds_left?: number | null;
+  user_name?: string | null;
+  user_email?: string | null;
+}
+
+type ShowToast = (message: string, type?: 'success' | 'error') => void;
+
+function ScannerConsole({ showToast }: { showToast: ShowToast }) {
+  const [manualToken, setManualToken] = useState('');
+  const [status, setStatus] = useState<string>('Připraveno ke skenování');
+  const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
+  const [lastResult, setLastResult] = useState<VerifyResponse | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleVerify(token: string) {
+    const clean = (token || '').trim();
+    if (!clean) {
+      showToast('Prázdný token', 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await apiClient<VerifyResponse>('/api/verify', {
+        method: 'POST',
+        body: JSON.stringify({ token: clean }),
+      });
+      setLastResult(response);
+      if (response.allowed) {
+        setStatus('Přístup povolen');
+        setStatusType('success');
+      } else {
+        setStatus(messageFromReason(response.reason));
+        setStatusType(response.reason === 'cooldown' ? 'info' : 'error');
+      }
+      showToast(response.allowed ? 'QR ověřen' : 'Přístup zamítnut', response.allowed ? 'success' : 'error');
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Neznámá chyba';
+      setStatus(detail);
+      setStatusType('error');
+      showToast(detail, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function messageFromReason(reason: string) {
+    switch (reason) {
+      case 'no_credits':
+        return 'Nedostatek vstupů';
+      case 'cooldown':
+        return 'Zkus to znovu za chvíli';
+      case 'invalid_token':
+      case 'token_not_found':
+        return 'Token není platný';
+      default:
+        return 'Přístup zamítnut';
+    }
+  }
+
+  return (
+    <section className="glass-panel rounded-3xl p-6 sm:p-10 space-y-6">
+      <div>
+        <h2 className="text-3xl sm:text-4xl font-semibold">Scanner</h2>
+        <p className="text-slate-400 mt-2 text-sm">Skenuj QR kódy nebo vlož token ručně.</p>
+      </div>
+      <div className="glass-subcard rounded-2xl p-4 text-sm">
+        <p className={statusType === 'success' ? 'text-emerald-300' : statusType === 'error' ? 'text-rose-300' : 'text-slate-200'}>
+          {status}
+        </p>
+        {lastResult?.cooldown_seconds_left && lastResult.cooldown_seconds_left > 0 && (
+          <p className="text-slate-400 text-xs mt-2">Cooldown: {lastResult.cooldown_seconds_left}s</p>
+        )}
+      </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="glass-subcard rounded-2xl p-4">
+          <QrScanner onDecode={(text) => handleVerify(text)} />
+        </div>
+        <div className="space-y-4">
+          <textarea
+            value={manualToken}
+            className="input-field min-h-[140px]"
+            placeholder="Vlož token"
+            onChange={(e) => setManualToken(e.target.value)}
+          />
+          <button className="accent-button w-full" onClick={() => handleVerify(manualToken)} disabled={isSubmitting}>
+            {isSubmitting ? 'Ověřuji...' : 'Ověřit token'}
+          </button>
+          {lastResult && (
+            <div className="glass-subcard rounded-2xl p-4 text-sm text-slate-300 space-y-2">
+              <p>Status: {lastResult.allowed ? 'Povoleno' : 'Zamítnuto'}</p>
+              <p>Důvod: {lastResult.reason}</p>
+              <p>Zbývá vstupů: {lastResult.credits_left}</p>
+              {lastResult.user_name && <p>Uživatel: {lastResult.user_name}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function ScannerPageContent() {
+  const { toast, showToast } = useToast();
+
+  return (
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-[#f8fbff] via-[#f3f6fb] to-[#ecf1f9]">
+        <header className="max-w-6xl mx-auto px-6 py-10">
+          <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 mt-2">Turniket Scanner</h1>
+          <p className="text-slate-500 text-sm mt-2">Veřejně dostupná URL pro ověřování QR tokenů.</p>
+        </header>
+        <main className="px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="max-w-5xl mx-auto">
+            <ScannerConsole showToast={showToast} />
+          </div>
+        </main>
+      </div>
+      <Toast toast={toast} />
+    </>
+  );
+}
