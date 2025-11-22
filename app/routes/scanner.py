@@ -39,6 +39,17 @@ class ScanRequest(BaseModel):
     device_id: str = Field(..., min_length=1)
 
 
+class ScanUser(BaseModel):
+    name: str | None = None
+    email: str | None = None
+
+
+class ScanResponse(VerifyResponse):
+    open_door: bool = False
+    door_open_duration: int | None = None
+    user: ScanUser | None = None
+
+
 def _get_api_key():
     key = os.getenv("TURNSTILE_API_KEY")
     if not key:
@@ -188,7 +199,7 @@ async def scanner_out(
     return ScannerOutResponse(ok=True, reason="logged")
 
 
-@router.post("/scan/in", response_model=VerifyResponse)
+@router.post("/scan/in", response_model=ScanResponse)
 async def scan_in(
     payload: ScanRequest,
     request: Request,
@@ -218,7 +229,7 @@ async def scan_in(
     return response
 
 
-@router.post("/scan/out", response_model=VerifyResponse)
+@router.post("/scan/out", response_model=ScanResponse)
 async def scan_out(
     payload: ScanRequest,
     request: Request,

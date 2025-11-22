@@ -68,6 +68,7 @@ COMGATE_CATEGORY=PHYSICAL_GOODS_ONLY                   # Comgate category param
 
 # Turniket / scan logika
 GYM_TIMEZONE=Europe/Prague                             # Časová zóna pro denní limit
+DOOR_OPEN_DURATION_DEFAULT=5                           # Default délka otevření dveří (sekundy) pro allowed scan
 ```
 
 Frontend (`/dashboard`) nyní volá `/api/payments/create` a po úspěchu automaticky přesměruje na Comgate. Po návratu/notify získává uživatel nové kredity.
@@ -161,6 +162,7 @@ npm run lint   # ESLint (musí projít před commitem)
 - `POST /api/scan/in` - Alias pro IN se strukturovaným payloadem `{token, timestamp, device_id}`
 - `POST /api/scan/out` - Alias pro OUT se strukturovaným payloadem `{token, timestamp, device_id}`
 - `POST /api/admin/users/{user_id}/rebuild-presence` - Admin akce pro přepočet `is_in_gym` z posledního logu
+- Scan response pro turnikety obsahuje navíc: `open_door` (bool), `door_open_duration` (sekundy), `user {name,email}`; pokud `allowed=true` a `open_door=true`, daemon otevře relé na zadanou dobu.
 - **Frontend:** Tlačítko "Stáhnout QR" pro stažení QR kódu jako PNG obrázek
 
 ### Kredity
@@ -223,6 +225,16 @@ npm run lint   # ESLint (musí projít před commitem)
 - `id`, `user_id`
 - `valid_from`, `valid_to` (30denní platnost)
 - `daily_limit_enabled` (Boolean) - aktivuje pravidlo 1 vstup denně
+
+### DoorLog
+- `device_id`
+- `user_id` (nullable)
+- `access_log_id` (nullable, pro spojení se scanem)
+- `duration` (sekundy)
+- `status` ("opened", "hw_error", "timeout", "skipped")
+- `initiated_by` ("scan" zatím)
+- `started_at`, `ended_at`
+- `raw_error` (text, nullable)
 
 ### Payment
 - `user_id`, `amount`, `status`, `payment_id`

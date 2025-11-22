@@ -7,6 +7,7 @@ from scanner_daemon.config import ScannerConfig
 from scanner_daemon.http_client import ScannerHttpClient
 from scanner_daemon.logging_setup import setup_logging
 from scanner_daemon.readers import HIDScannerReader, ScannedCode, SerialScannerReader
+from scanner_daemon.relay import RelayController
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ class ScannerState:
     config: ScannerConfig
     http_client: ScannerHttpClient
     queue: asyncio.Queue
+    relay: RelayController | None = None
 
 
 def mask_token(token: str) -> str:
@@ -40,14 +42,30 @@ async def process_queue(state: ScannerState):
             response = await state.http_client.send_scan(
                 scan.direction, token, scan.device_id, scan.scanned_at
             )
+            body = response.get("body", {}) if isinstance(response, dict) else {}
+            reason = body.get("reason")
+            allowed = body.get("allowed")
             logger.info(
                 "[%s] device=%s token=%s status=%s reason=%s",
                 scan.direction.upper(),
                 scan.device_id,
                 mask_token(token),
                 response.get("status"),
-                response.get("body", {}).get("reason") if isinstance(response, dict) else None,
+                reason,
             )
+            if allowed and body.get("open_door"):
+                duration = body.get("door_open_duration") or 0
+                user = body.get("user") or {}
+                logger.info(
+                    "Opening door device=%s duration=%ss user=%s",
+                    scan.device_id,
+                    duration,
+                    user.get("email") or user.get("name") or "unknown",
+                )
+                if state.relay:
+                    asyncio.create_task(state.relay.open(int(duration)))
+                else:
+                    logger.warning("Relay not configured; skipping door open.")
         except Exception as exc:
             logger.error(
                 "Failed to send scan %s from %s: %s",
@@ -108,6 +126,7 @@ async def shutdown(tasks):
 async def main():
     config = ScannerConfig.from_env()
     setup_logging(config.log_path, config.log_level)
+    relay = RelayController(pin=config.relay_gpio_pin, active_low=config.relay_active_low)
 
     http_client = ScannerHttpClient(
         base_url=config.backend_base_url,
@@ -117,7 +136,7 @@ async def main():
         retry_backoff=config.retry_backoff,
     )
     queue: asyncio.Queue = asyncio.Queue()
-    state = ScannerState(config=config, http_client=http_client, queue=queue)
+    state = ScannerState(config=config, http_client=http_client, queue=queue, relay=relay)
 
     tasks = await start_readers(state)
 
@@ -133,6 +152,8 @@ async def main():
     await stop_event.wait()
     await shutdown(tasks)
     await http_client.aclose()
+    if relay:
+        relay.cleanup()
 
 
 if __name__ == "__main__":

@@ -67,6 +67,9 @@ class VerifyResponse(BaseModel):
     cooldown_seconds_left: int | None = None  # Seconds until cooldown expires (None if no cooldown)
     user_name: str | None = None
     user_email: str | None = None
+    open_door: bool | None = None
+    door_open_duration: int | None = None
+    user: dict | None = None
 
 async def process_verification(
     token_str: str,

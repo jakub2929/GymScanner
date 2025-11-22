@@ -15,6 +15,8 @@ Headless Python 3.11 daemon for two QR scanners (IN/OUT) on Raspberry Pi. Reads 
 - `LOG_LEVEL` (optional) – `INFO` default
 - `REQUEST_TIMEOUT` (optional) – seconds, default `5.0`
 - `RETRY_ATTEMPTS` / `RETRY_BACKOFF` (optional) – default `3` / `0.5` (backoff sequence 0.5s, 1.5s)
+- `RELAY_GPIO_PIN` (optional) – BCM pin číslo (např. 17)
+- `RELAY_ACTIVE_LOW` (optional, default `true`) – true pro active-LOW relé moduly
 
 ## Install dependencies (Raspberry Pi)
 ```bash
@@ -28,6 +30,12 @@ pip install -r scanner_daemon/requirements.txt
 source .venv/bin/activate
 python scanner_daemon/main.py
 ```
+
+## Door relay
+- Používá se synchronní response z `/api/scan/*`: pokud `allowed=true` a `open_door=true`, daemon sepne relé na `door_open_duration` sekund.
+- Hardware: RPi 4/3, BCM číslování, active-LOW relé (open = LOW, close = HIGH).
+- Konfigurace: `RELAY_GPIO_PIN`, `RELAY_ACTIVE_LOW`.
+- Při chybě GPIO se jen zapíše log; daemon nespadne. Pokud už jsou dveře otevřené, další příkaz se ignoruje (log WARN).
 
 ## Systemd service (example)
 `/etc/systemd/system/gym-scanner-daemon.service`:

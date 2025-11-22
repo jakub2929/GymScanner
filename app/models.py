@@ -105,6 +105,23 @@ class AccessLog(Base):
     user = relationship("User")
     token = relationship("AccessToken", back_populates="access_logs")
 
+class DoorLog(Base):
+    __tablename__ = "door_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    access_log_id = Column(Integer, ForeignKey("access_logs.id"), nullable=True)
+    duration = Column(Integer, nullable=False)
+    status = Column(String, nullable=False)  # opened, hw_error, timeout, skipped
+    initiated_by = Column(String, nullable=False, default="scan")
+    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    ended_at = Column(DateTime(timezone=True), nullable=True)
+    raw_error = Column(Text, nullable=True)
+
+    user = relationship("User")
+    access_log = relationship("AccessLog")
+
 
 class Membership(Base):
     __tablename__ = "memberships"

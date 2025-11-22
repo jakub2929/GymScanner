@@ -18,6 +18,8 @@ class ScannerConfig:
     request_timeout: float = 5.0
     retry_attempts: int = 3
     retry_backoff: float = 0.5
+    relay_gpio_pin: int | None = None
+    relay_active_low: bool = True
 
     @classmethod
     def from_env(cls) -> "ScannerConfig":
@@ -49,4 +51,6 @@ class ScannerConfig:
             request_timeout=float(os.getenv("REQUEST_TIMEOUT", 5.0)),
             retry_attempts=int(os.getenv("RETRY_ATTEMPTS", 3)),
             retry_backoff=float(os.getenv("RETRY_BACKOFF", 0.5)),
+            relay_gpio_pin=int(os.getenv("RELAY_GPIO_PIN")) if os.getenv("RELAY_GPIO_PIN") else None,
+            relay_active_low=os.getenv("RELAY_ACTIVE_LOW", "true").lower() == "true",
         )
