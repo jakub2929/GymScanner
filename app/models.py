@@ -197,6 +197,7 @@ class Membership(Base):
     status = Column(String(40), nullable=False, default="active")
     notes = Column(Text, nullable=True)
     metadata_json = Column("metadata", JSON, nullable=True)
+    package_snapshot_json = Column("package_snapshot", JSON, nullable=True)
     auto_renew = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     created_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)

@@ -156,6 +156,18 @@ class MembershipService:
             package_name_cache=package.name,
             membership_type=package.package_type,
             price_czk=package.price_czk,
+            package_snapshot_json={
+                "id": package.id,
+                "name": package.name,
+                "slug": package.slug,
+                "price_czk": package.price_czk,
+                "duration_days": package.duration_days,
+                "daily_entry_limit": package.daily_entry_limit,
+                "session_limit": package.session_limit,
+                "package_type": package.package_type,
+                "description": package.description,
+                "metadata": package.metadata_json,
+            },
             valid_from=start,
             valid_to=valid_to,
             daily_limit_enabled=bool(package.daily_entry_limit),
@@ -436,14 +448,15 @@ def serialize_membership_for_response(
     message = membership_reason_message(reason)
     if membership:
         package = membership.package
-        package_name = membership.package_name_cache or (package.name if package else None)
-        package_type = package.package_type if package else membership.membership_type
+        snapshot = membership.package_snapshot_json or {}
+        package_name = membership.package_name_cache or snapshot.get("name") or (package.name if package else None)
+        package_type = snapshot.get("package_type") or (package.package_type if package else membership.membership_type)
         return {
             "has_membership": True,
             "membership_id": membership.id,
             "package_id": membership.package_id,
             "package_name": package_name,
-            "package_slug": package.slug if package else None,
+            "package_slug": snapshot.get("slug") or (package.slug if package else None),
             "package_type": package_type,
             "status": membership.status,
             "membership_type": membership.membership_type,
@@ -456,7 +469,8 @@ def serialize_membership_for_response(
             "sessions_used": membership.sessions_used,
             "auto_renew": membership.auto_renew,
             "notes": membership.notes,
-            "metadata": membership.metadata_json,
+            "metadata": membership.metadata_json or snapshot.get("metadata"),
+            "package_snapshot": snapshot,
             "reason": reason,
             "message": message,
             "daily_limit_hit": daily_limit_hit,

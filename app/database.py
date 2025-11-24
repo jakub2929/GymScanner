@@ -315,6 +315,7 @@ def ensure_membership_columns():
     add('status', "ALTER TABLE memberships ADD COLUMN status VARCHAR(40) DEFAULT 'active'")
     add('notes', "ALTER TABLE memberships ADD COLUMN notes TEXT")
     add('metadata', "ALTER TABLE memberships ADD COLUMN metadata JSON")
+    add('package_snapshot', "ALTER TABLE memberships ADD COLUMN package_snapshot JSON")
     add('auto_renew', "ALTER TABLE memberships ADD COLUMN auto_renew BOOLEAN DEFAULT FALSE")
     add('created_by_admin_id', "ALTER TABLE memberships ADD COLUMN created_by_admin_id INTEGER REFERENCES users(id)")
 
