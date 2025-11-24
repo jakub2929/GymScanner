@@ -154,6 +154,22 @@ export default function AdminLayout({ children }: PropsWithChildren) {
               </Link>
             ))}
           </div>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-2 hover:border-[var(--brand-primary)] transition"
+          >
+            {miniQr ? (
+              <img src={miniQr} alt="QR náhled" className="h-10 w-10 rounded-lg border border-white/10 object-contain" />
+            ) : (
+              <div className="h-10 w-10 rounded-lg border border-dashed border-white/10 flex items-center justify-center text-[10px] text-slate-500">
+                QR
+              </div>
+            )}
+            <div className="text-left leading-tight">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Uživatel</p>
+              <p className="font-mono text-sm text-white">{miniToken ?? '---'}</p>
+            </div>
+          </Link>
           <button
             onClick={() => {
               setOpen(false);
@@ -178,22 +194,6 @@ export default function AdminLayout({ children }: PropsWithChildren) {
               </svg>
             </div>
           </button>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-2 hover:border-[var(--brand-primary)] transition"
-          >
-            {miniQr ? (
-              <img src={miniQr} alt="QR náhled" className="h-10 w-10 rounded-lg border border-white/10 object-contain" />
-            ) : (
-              <div className="h-10 w-10 rounded-lg border border-dashed border-white/10 flex items-center justify-center text-[10px] text-slate-500">
-                QR
-              </div>
-            )}
-            <div className="text-left leading-tight">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Uživatel</p>
-              <p className="font-mono text-sm text-white">{miniToken ?? '---'}</p>
-            </div>
-          </Link>
         </div>
       </nav>
       {open && (
