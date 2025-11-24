@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
-import type { AdminMembershipPackage, AdminToken, AdminUser, AdminScanLog } from '@/types/admin';
+import type { AdminMembershipPackage, AdminToken, AdminUser, AdminScanLog, AdminPresenceSession } from '@/types/admin';
 
 function formatDate(value?: string | null) {
   if (!value) return '---';
@@ -27,6 +27,10 @@ export default function AdminOverviewPage() {
   const scanLogsQuery = useQuery<AdminScanLog[]>({
     queryKey: ['admin-scan-logs'],
     queryFn: () => apiClient('/api/admin/scan-logs?limit=8'),
+  });
+  const presenceQuery = useQuery<AdminPresenceSession[]>({
+    queryKey: ['admin-presence-active'],
+    queryFn: () => apiClient('/api/admin/presence/active'),
   });
 
   const stats = useMemo(() => {
@@ -89,6 +93,38 @@ export default function AdminOverviewPage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <section className="glass-panel rounded-3xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">V gymu právě</h2>
+            <p className="text-sm text-slate-400">
+              {presenceQuery.isPending ? '...' : `${presenceQuery.data?.length ?? 0} lidí`}
+            </p>
+          </div>
+          <div className="space-y-3 text-sm">
+            {(presenceQuery.data ?? []).map((session) => (
+              <div key={session.id} className="glass-subcard rounded-2xl p-4 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">{session.user_name ?? 'Neznámý uživatel'}</p>
+                    <p className="text-xs text-slate-400">{session.user_email ?? ''}</p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-200">Uvnitř</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <p>Od: {formatDate(session.started_at)}</p>
+                  <p>Session ID: {session.id}</p>
+                </div>
+                {session.metadata?.membership_id && (
+                  <p className="text-xs text-slate-500">Permanentka ID: {session.metadata.membership_id as number}</p>
+                )}
+              </div>
+            ))}
+            {!presenceQuery.isPending && !(presenceQuery.data?.length ?? 0) && (
+              <p className="text-slate-500">Teď není uvnitř nikdo.</p>
+            )}
+          </div>
+        </section>
+
         <section className="glass-panel rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold">Poslední uživatelé</h2>

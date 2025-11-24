@@ -24,6 +24,7 @@ class User(Base):
     payments = relationship("Payment", back_populates="user")
     access_tokens = relationship("AccessToken", back_populates="user")
     memberships = relationship("Membership", back_populates="user", foreign_keys="Membership.user_id")
+    presence_sessions = relationship("PresenceSession", back_populates="user")
 
 class Payment(Base):
     __tablename__ = "payments"
@@ -84,6 +85,7 @@ class AccessLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     token_id = Column(Integer, ForeignKey("access_tokens.id"), nullable=True)
+    presence_session_id = Column(Integer, ForeignKey("presence_sessions.id"), nullable=True)
     token_string = Column(String, nullable=False)  # Store token string even if token is deleted
     status = Column(String, nullable=False)  # allow, deny
     reason = Column(String, nullable=True)  # Reason for allow/deny
@@ -110,6 +112,30 @@ class AccessLog(Base):
     
     user = relationship("User")
     token = relationship("AccessToken", back_populates="access_logs")
+    presence_session = relationship("PresenceSession", back_populates="access_logs", foreign_keys="AccessLog.presence_session_id")
+
+# Presence session model to track in/out visits
+class PresenceSession(Base):
+    __tablename__ = "presence_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token_id = Column(Integer, ForeignKey("access_tokens.id"), nullable=True)
+    membership_id = Column(Integer, ForeignKey("memberships.id"), nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    ended_at = Column(DateTime(timezone=True), nullable=True)
+    duration_seconds = Column(Integer, nullable=True)
+    last_direction = Column(Enum("in", "out", name="presence_direction", native_enum=False), nullable=False, default="in")
+    status = Column(String(40), nullable=False, default="active")  # active, closed, anomaly, timeout
+    notes = Column(Text, nullable=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="presence_sessions")
+    token = relationship("AccessToken")
+    membership = relationship("Membership")
+    access_logs = relationship("AccessLog", back_populates="presence_session")
 
 class DoorLog(Base):
     __tablename__ = "door_logs"

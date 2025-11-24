@@ -5,10 +5,11 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import AccessLog, AccessToken, DoorLog, Membership, User
+from app.models import AccessLog, AccessToken, DoorLog, Membership, User, PresenceSession
 from app.routes.verify import VerifyResponse
 from app.services.membership import MembershipService, serialize_membership_for_response
 from app.services.presence import set_presence
+from app.services.presence_sessions import PresenceSessionService
 from app.services.timezone import day_bounds_utc, get_gym_timezone
 from app.services.utils import mask_token
 
@@ -199,6 +200,7 @@ def process_scan(
         scanned_at = scanned_at.replace(tzinfo=timezone.utc)
 
     membership_service = MembershipService(db)
+    presence_sessions = PresenceSessionService(db)
     token = db.query(AccessToken).filter(AccessToken.token == token_str).first()
     if not token or not token.is_active:
         return _log_denied(
@@ -301,7 +303,15 @@ def process_scan(
     direction_mismatch = (device_direction == "in" and not is_entry) or (device_direction == "out" and is_entry)
 
     membership = membership_service.get_active_membership(user.id, scanned_at)
-    membership_metadata = {"membership_id": membership.id, "package_id": membership.package_id} if membership else None
+    membership_metadata = (
+        {
+            "membership_id": membership.id,
+            "package_id": membership.package_id,
+            "membership_status": membership.status,
+        }
+        if membership
+        else None
+    )
     membership_payload = None
 
     # Entry checks: membership & limits
@@ -361,9 +371,45 @@ def process_scan(
             daily_limit_hit=verdict.daily_limit_hit,
         )
 
-    # Allowed path: update presence and log
+    # Allowed path: update presence, sessions and log
+    presence_session = None
     try:
         set_presence(db, user, is_entry, scanned_at)
+        active_session = presence_sessions.find_active_session(user.id)
+        if is_entry:
+            presence_session = presence_sessions.start_session(
+                user=user,
+                token=token,
+                membership=membership,
+                access_log=None,  # will attach after creation of access_log
+                scanned_at=scanned_at,
+                metadata=membership_metadata,
+            )
+        else:
+            if active_session:
+                presence_session = presence_sessions.end_session(
+                    session=active_session,
+                    access_log=None,  # placeholder to set after we build log
+                    scanned_at=scanned_at,
+                    status="closed",
+                )
+            else:
+                # create anomaly session for unmatched OUT
+                presence_session = PresenceSession(
+                    user_id=user.id,
+                    token_id=token.id if token else None,
+                    membership_id=membership.id if membership else None,
+                    started_at=scanned_at,
+                    last_direction="out",
+                    status="anomaly",
+                    notes="OUT without active session",
+                    metadata_json=membership_metadata,
+                )
+                db.add(presence_session)
+                db.flush()
+        access_log_metadata = membership_metadata.copy() if membership_metadata else {}
+        if presence_session:
+            access_log_metadata["presence_session_id"] = presence_session.id
         access_log = _build_access_log(
             user=user,
             token=token,
@@ -380,8 +426,12 @@ def process_scan(
             user_agent=user_agent,
             allowed=True,
             reason="ok",
-            metadata=membership_metadata,
+            metadata=access_log_metadata or None,
         )
+        if presence_session:
+            access_log.presence_session_id = presence_session.id
+            if presence_session.access_logs is not None:
+                presence_session.access_logs.append(access_log)
         db.add(access_log)
         db.flush()
         duration = DEFAULT_DOOR_DURATION

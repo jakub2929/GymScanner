@@ -11,8 +11,9 @@ from pydantic import BaseModel, Field, root_validator
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import AccessToken, Membership, MembershipPackage, AccessLog, User
+from app.models import AccessToken, Membership, MembershipPackage, AccessLog, User, PresenceSession
 from app.services.membership import MembershipService
+from app.services.presence_sessions import PresenceSessionService, serialize_presence_session
 from app.services.presence import rebuild_presence_from_logs
 
 router = APIRouter()
@@ -67,6 +68,10 @@ class MembershipPackageUpdateRequest(BaseModel):
 
 class TogglePackageRequest(BaseModel):
     is_active: bool
+
+class EndPresenceSessionRequest(BaseModel):
+    status: str = Field(default="closed", max_length=40)
+    note: str | None = Field(default=None, max_length=500)
 
 
 class AssignMembershipRequest(BaseModel):
@@ -474,6 +479,48 @@ async def list_scan_logs(
             }
         )
     return results
+
+@router.get("/presence/active")
+async def list_active_presence(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    service = PresenceSessionService(db)
+    sessions = service.list_active_sessions()
+    user_map = {u.id: u for u in db.query(User).filter(User.id.in_([s.user_id for s in sessions])).all()}
+    return [serialize_presence_session(session, user_map.get(session.user_id)) for session in sessions]
+
+
+@router.get("/presence/sessions")
+async def list_presence_sessions(
+    user_id: int | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    service = PresenceSessionService(db)
+    sessions = service.list_sessions(user_id=user_id, limit=limit)
+    user_ids = [s.user_id for s in sessions]
+    user_map = {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()}
+    return [serialize_presence_session(session, user_map.get(session.user_id)) for session in sessions]
+
+
+@router.post("/presence/{session_id}/end")
+async def end_presence_session(
+    session_id: int,
+    payload: EndPresenceSessionRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    service = PresenceSessionService(db)
+    session = db.query(PresenceSession).filter(PresenceSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    service.force_close(session, status=payload.status, notes=payload.note)
+    db.commit()
+    db.refresh(session)
+    user = db.query(User).filter(User.id == session.user_id).first()
+    return serialize_presence_session(session, user)
 
 @router.post("/tokens/{token_id}/activate")
 async def activate_token(

@@ -32,6 +32,22 @@ export interface AdminScanLog {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface AdminPresenceSession {
+  id: number;
+  user_id: number;
+  user_name?: string | null;
+  user_email?: string | null;
+  token_id?: number | null;
+  membership_id?: number | null;
+  started_at?: string | null;
+  ended_at?: string | null;
+  duration_seconds?: number | null;
+  last_direction?: string | null;
+  status: string;
+  notes?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
 export interface AdminMembershipPackage {
   id: number;
   name: string;
