@@ -10,7 +10,6 @@ import Image from 'next/image';
 interface QrResponse {
   token: string;
   qr_code_url: string;
-  credits: number;
 }
 
 export default function DashboardPage() {

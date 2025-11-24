@@ -2,7 +2,7 @@ export interface AdminUser {
   id: number;
   name: string;
   email: string;
-  credits: number;
+  credits?: number;
   is_admin: boolean;
   created_at?: string | null;
 }

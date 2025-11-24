@@ -24,6 +24,8 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   const logout = useLogout('/admin/login');
   const [state, setState] = useState<'checking' | 'allowed'>('checking');
   const [open, setOpen] = useState(false);
+  const [miniQr, setMiniQr] = useState<string | null>(null);
+  const [miniToken, setMiniToken] = useState<string | null>(null);
   const branding = useBranding();
   const logoSrc = useBrandingLogo();
 
@@ -74,6 +76,28 @@ export default function AdminLayout({ children }: PropsWithChildren) {
     };
   }, [token, router]);
 
+  useEffect(() => {
+    if (state !== 'allowed') return;
+    let cancelled = false;
+    async function loadMiniQr() {
+      try {
+        const res = await apiClient<{ qr_code_url?: string; token?: string }>('/api/my_qr');
+        if (cancelled) return;
+        setMiniQr(res.qr_code_url ?? null);
+        setMiniToken(res.token ?? null);
+      } catch {
+        if (!cancelled) {
+          setMiniQr(null);
+          setMiniToken(null);
+        }
+      }
+    }
+    loadMiniQr();
+    return () => {
+      cancelled = true;
+    };
+  }, [state]);
+
   if (state === 'checking') {
     return (
       <div className="min-h-screen bg-[#04060f] text-white flex items-center justify-center">
@@ -84,7 +108,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
 
   return (
     <div className="min-h-screen bg-[#020610] text-white">
-      <nav className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-6 py-6">
+      <nav className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:flex-nowrap px-6 py-6">
         <div className="flex w-full items-center justify-between md:block">
           <div className="flex items-center gap-3">
             {logoSrc && (
@@ -114,28 +138,62 @@ export default function AdminLayout({ children }: PropsWithChildren) {
             <span className="block w-5 h-0.5 bg-white" />
           </button>
         </div>
-        <div className="hidden md:flex flex-wrap items-center gap-3 text-sm text-slate-400">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={pathname === link.href ? 'text-white font-medium' : 'hover:text-white transition-colors'}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link href="/dashboard" className="hover:text-white transition-colors">
-            Uživatelský pohled
-          </Link>
+        <div className="hidden md:flex items-center gap-4 text-sm text-slate-400 md:flex-nowrap overflow-x-auto justify-end flex-1">
+          <div className="flex items-center gap-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={
+                  pathname === link.href
+                    ? 'text-[var(--brand-primary)] font-semibold'
+                    : 'hover:text-[var(--brand-primary)] transition-colors'
+                }
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
           <button
             onClick={() => {
               setOpen(false);
               logout();
             }}
-            className="px-4 py-2 rounded-full border border-white/15 hover:bg-white/10 transition-colors"
+            className="flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-2 hover:border-[var(--brand-primary)] transition"
+            aria-label="Odhlásit se"
           >
-            Odhlásit
+            <div className="h-10 w-10 rounded-lg border border-white/15 flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="h-5 w-5 text-white"
+              >
+                <path d="M10 7V5a2 2 0 0 1 2-2h7" />
+                <path d="M19 21h-7a2 2 0 0 1-2-2v-2" />
+                <path d="M7 16l-4-4 4-4" />
+                <path d="M3 12h13" />
+              </svg>
+            </div>
           </button>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-2 hover:border-[var(--brand-primary)] transition"
+          >
+            {miniQr ? (
+              <img src={miniQr} alt="QR náhled" className="h-10 w-10 rounded-lg border border-white/10 object-contain" />
+            ) : (
+              <div className="h-10 w-10 rounded-lg border border-dashed border-white/10 flex items-center justify-center text-[10px] text-slate-500">
+                QR
+              </div>
+            )}
+            <div className="text-left leading-tight">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Uživatel</p>
+              <p className="font-mono text-sm text-white">{miniToken ?? '---'}</p>
+            </div>
+          </Link>
         </div>
       </nav>
       {open && (
@@ -151,16 +209,41 @@ export default function AdminLayout({ children }: PropsWithChildren) {
             </Link>
           ))}
           <Link href="/dashboard" className="block rounded-2xl glass-panel p-4" onClick={() => setOpen(false)}>
-            Uživatelský pohled
+            <div className="flex items-center gap-3">
+              {miniQr ? (
+                <img src={miniQr} alt="QR náhled" className="h-12 w-12 rounded-lg border border-white/10 object-contain" />
+              ) : (
+                <div className="h-12 w-12 rounded-lg border border-dashed border-white/10 flex items-center justify-center text-xs text-slate-500">
+                  QR
+                </div>
+              )}
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Uživatel</p>
+                <p className="font-mono text-sm text-white">{miniToken ?? '---'}</p>
+              </div>
+            </div>
           </Link>
           <button
             onClick={() => {
               setOpen(false);
               logout();
             }}
-            className="w-full rounded-2xl border border-white/20 py-3"
+            className="w-full rounded-2xl border border-white/20 py-4 flex items-center justify-center"
+            aria-label="Odhlásit se"
           >
-            Odhlásit
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="h-6 w-6 text-white"
+            >
+              <path d="M10 7V5a2 2 0 0 1 2-2h7" />
+              <path d="M19 21h-7a2 2 0 0 1-2-2v-2" />
+              <path d="M7 16l-4-4 4-4" />
+              <path d="M3 12h13" />
+            </svg>
           </button>
         </div>
       )}

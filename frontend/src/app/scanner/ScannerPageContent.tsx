@@ -19,7 +19,7 @@ interface MembershipInfo {
 interface VerifyResponse {
   allowed: boolean;
   reason: string;
-  credits_left: number;
+  credits_left?: number | null;
   cooldown_seconds_left?: number | null;
   user_name?: string | null;
   user_email?: string | null;
@@ -75,8 +75,6 @@ function ScannerConsole({ showToast }: { showToast: ShowToast }) {
         return 'Denní limit byl vyčerpán.';
       case 'sessions_limit_reached':
         return 'Vyčerpány všechny osobní tréninky.';
-      case 'no_credits':
-        return 'Nedostatek vstupů';
       case 'cooldown':
         return 'Zkus to znovu za chvíli';
       case 'invalid_token':
@@ -120,7 +118,6 @@ function ScannerConsole({ showToast }: { showToast: ShowToast }) {
               <p>Status: {lastResult.allowed ? 'Povoleno' : 'Zamítnuto'}</p>
               <p>Důvod: {lastResult.reason}</p>
               {lastResult.message && <p>Zpráva: {lastResult.message}</p>}
-              <p>Zbývá vstupů: {lastResult.credits_left}</p>
               {lastResult.membership?.package_name && (
                 <p>Permanentka: {lastResult.membership.package_name}</p>
               )}
