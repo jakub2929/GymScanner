@@ -10,6 +10,7 @@ import io
 from datetime import datetime, timedelta, timezone
 from app.services.token_service import generate_unique_token
 from app.services.membership import MembershipService, serialize_membership_for_response
+from app.services.presence_sessions import PresenceSessionService, serialize_presence_session
 
 router = APIRouter()
 
@@ -60,6 +61,7 @@ class PersonalQRResponse(BaseModel):
     membership: MembershipSummary | None = None
     memberships: list[MembershipDetail] = []
     packages: list[PublicPackage] = []
+    presence_sessions: list[dict] | None = None
 
 
 def _build_membership_context(db: Session, user_id: int):
@@ -116,6 +118,11 @@ def _build_membership_context(db: Session, user_id: int):
             )
         )
     return membership_summary, membership_list, packages
+def _list_presence_sessions(db: Session, user_id: int, limit: int = 20):
+    service = PresenceSessionService(db)
+    sessions = service.list_sessions(user_id=user_id, limit=limit)
+    user = db.query(User).filter(User.id == user_id).first()
+    return [serialize_presence_session(session, user) for session in sessions]
 
 @router.get("/my_qr", response_model=PersonalQRResponse)
 async def get_my_qr(
@@ -179,6 +186,7 @@ async def get_my_qr(
     qr_code_url = f"data:image/png;base64,{img_base64}"
     
     membership_summary, membership_list, packages = _build_membership_context(db, current_user.id)
+    presence_sessions = _list_presence_sessions(db, current_user.id, limit=50)
 
     return PersonalQRResponse(
         token=active_token.token,
@@ -189,6 +197,7 @@ async def get_my_qr(
         membership=membership_summary,
         packages=packages,
         memberships=membership_list,
+        presence_sessions=presence_sessions,
     )
 
 @router.post("/regenerate_qr", response_model=PersonalQRResponse)
@@ -238,6 +247,7 @@ async def regenerate_qr(
     qr_code_url = f"data:image/png;base64,{img_base64}"
     
     membership_summary, membership_list, packages = _build_membership_context(db, current_user.id)
+    presence_sessions = _list_presence_sessions(db, current_user.id, limit=50)
     
     return PersonalQRResponse(
         token=token_str,
@@ -248,4 +258,5 @@ async def regenerate_qr(
         membership=membership_summary,
         packages=packages,
         memberships=membership_list,
+        presence_sessions=presence_sessions,
     )

@@ -13,6 +13,7 @@ const navLinks = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/permanentky', label: 'Permanentky' },
   { href: '/treninky', label: 'Tréninky' },
+  { href: '/aktivita', label: 'Aktivita' },
   { href: '/settings', label: 'Nastavení' },
 ];
 
