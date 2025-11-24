@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
-import type { AdminUser } from '@/types/admin';
+import type { AdminMembershipPackage, AdminUser, AdminUserMembership } from '@/types/admin';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Toast, useToast } from '@/components/toast';
 
@@ -12,6 +12,11 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [creditsChange, setCreditsChange] = useState(0);
   const [note, setNote] = useState('');
+  const [membershipUser, setMembershipUser] = useState<AdminUser | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
+  const [startDate, setStartDate] = useState('');
+  const [autoRenew, setAutoRenew] = useState(false);
+  const [sessionNotes, setSessionNotes] = useState<Record<number, string>>({});
   const { toast, showToast } = useToast();
   const queryClient = useQueryClient();
 
@@ -27,6 +32,15 @@ export default function AdminUsersPage() {
         : apiClient('/api/admin/users'),
   });
   const users = usersQuery.data ?? [];
+  const packagesQuery = useQuery<AdminMembershipPackage[]>({
+    queryKey: ['admin-packages'],
+    queryFn: () => apiClient('/api/admin/membership-packages?include_inactive=false'),
+  });
+  const membershipsQuery = useQuery<AdminUserMembership[]>({
+    queryKey: ['admin-user-memberships', membershipUser?.id],
+    queryFn: () => apiClient(`/api/admin/users/${membershipUser!.id}/memberships`),
+    enabled: !!membershipUser,
+  });
 
   const mutation = useMutation({
     mutationFn: async (payload: { userId: number; change: number; reason: string }) =>
@@ -50,6 +64,65 @@ export default function AdminUsersPage() {
     setSelectedUser(user);
     setCreditsChange(0);
     setNote('');
+  }
+
+  const assignMembershipMutation = useMutation({
+    mutationFn: async (payload: { userId: number; packageId: number; startDate?: string; autoRenew: boolean }) =>
+      apiClient(`/api/admin/users/${payload.userId}/memberships`, {
+        method: 'POST',
+        body: JSON.stringify({
+          package_id: payload.packageId,
+          start_at: payload.startDate ? new Date(payload.startDate).toISOString() : undefined,
+          auto_renew: payload.autoRenew,
+        }),
+      }),
+    onSuccess: (_, variables) => {
+      showToast('Permanentka přiřazena');
+      queryClient.invalidateQueries({ queryKey: ['admin-user-memberships', variables.userId] });
+      setSelectedPackageId('');
+      setStartDate('');
+      setAutoRenew(false);
+    },
+    onError: (error) => showToast(error instanceof Error ? error.message : 'Nepodařilo se přiřadit permanentku', 'error'),
+  });
+
+  const membershipStatusMutation = useMutation({
+    mutationFn: async (payload: { userId: number; membershipId: number; status: string }) =>
+      apiClient(`/api/admin/users/${payload.userId}/memberships/${payload.membershipId}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status: payload.status }),
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-memberships', variables.userId] });
+      showToast('Stav membershipu aktualizován');
+    },
+    onError: (error) => showToast(error instanceof Error ? error.message : 'Nepodařilo se upravit stav', 'error'),
+  });
+
+  const consumeSessionMutation = useMutation({
+    mutationFn: async (payload: { userId: number; membershipId: number; note?: string }) =>
+      apiClient(`/api/admin/users/${payload.userId}/memberships/${payload.membershipId}/sessions/consume`, {
+        method: 'POST',
+        body: JSON.stringify({ count: 1, note: payload.note?.trim() || undefined }),
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-memberships', variables.userId] });
+      showToast('Trénink odečten');
+      setSessionNotes((prev) => {
+        const next = { ...prev };
+        delete next[variables.membershipId];
+        return next;
+      });
+    },
+    onError: (error) =>
+      showToast(error instanceof Error ? error.message : 'Nepodařilo se odečíst trénink', 'error'),
+  });
+
+  function openMembershipModal(user: AdminUser) {
+    setMembershipUser(user);
+    setSelectedPackageId('');
+    setStartDate('');
+    setAutoRenew(false);
   }
 
   return (
@@ -103,9 +176,12 @@ export default function AdminUsersPage() {
                     <td className="py-4 text-slate-400">
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}
                     </td>
-                    <td className="py-4 text-right">
+                    <td className="py-4 text-right space-x-2">
                       <button className="secondary-button" onClick={() => openModal(user)}>
                         Upravit kredity
+                      </button>
+                      <button className="secondary-button" onClick={() => openMembershipModal(user)}>
+                        Permanentky
                       </button>
                     </td>
                   </tr>
@@ -136,9 +212,14 @@ export default function AdminUsersPage() {
                 <p className="text-xs text-slate-500">
                   Registrován: {user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}
                 </p>
-                <button className="accent-button" onClick={() => openModal(user)}>
-                  Upravit kredity
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="accent-button" onClick={() => openModal(user)}>
+                    Upravit kredity
+                  </button>
+                  <button className="secondary-button" onClick={() => openMembershipModal(user)}>
+                    Permanentky
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -197,6 +278,185 @@ export default function AdminUsersPage() {
                 {mutation.isPending ? 'Upravuji...' : 'Uložit změnu'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {membershipUser && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#050912] text-white rounded-3xl border border-white/10 p-6 w-full max-w-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-semibold">{membershipUser.name}</h3>
+                <p className="text-slate-400 text-sm">{membershipUser.email}</p>
+              </div>
+              <button onClick={() => setMembershipUser(null)} className="text-3xl text-slate-500 hover:text-white">
+                &times;
+              </button>
+            </div>
+            <section className="space-y-3">
+              <h4 className="text-lg font-semibold">Aktivní permanentky</h4>
+              {membershipsQuery.isPending && <p className="text-slate-400 text-sm">Načítám permanentky...</p>}
+              {!membershipsQuery.isPending && (membershipsQuery.data ?? []).length === 0 && (
+                <p className="text-slate-500 text-sm">Žádné záznamy.</p>
+              )}
+              {(membershipsQuery.data ?? []).map((membership) => (
+                <div key={membership.id} className="glass-subcard rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-lg">{membership.package_name ?? 'Manuální permanentka'}</p>
+                      <p className="text-slate-400 text-sm">
+                        Platnost {membership.valid_from ? new Date(membership.valid_from).toLocaleDateString('cs-CZ') : '?'} –{' '}
+                        {membership.valid_to ? new Date(membership.valid_to).toLocaleDateString('cs-CZ') : '?'}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs ${
+                        membership.status === 'active'
+                          ? 'bg-emerald-500/20 text-emerald-200'
+                          : membership.status === 'paused'
+                          ? 'bg-amber-500/20 text-amber-200'
+                          : 'bg-rose-500/20 text-rose-200'
+                      }`}
+                    >
+                      {membership.status}
+                    </span>
+                  </div>
+                  <div className="text-sm text-slate-400 flex flex-wrap gap-4">
+                    {typeof membership.price_czk === 'number' && <span>{membership.price_czk} Kč</span>}
+                    {membership.daily_limit ? <span>Limit {membership.daily_limit} vstup/den</span> : <span>Bez denního limitu</span>}
+                    {membership.sessions_total ? (
+                      <span>
+                        {membership.sessions_used ?? 0}/{membership.sessions_total} návštěv
+                      </span>
+                    ) : null}
+                  </div>
+                  {membership.notes && (
+                    <p className="text-xs text-slate-500 whitespace-pre-line">Poznámky: {membership.notes}</p>
+                  )}
+                  <div className="flex flex-wrap gap-3">
+                    {membership.status !== 'active' && (
+                      <button
+                        className="secondary-button"
+                        onClick={() =>
+                          membershipStatusMutation.mutate({
+                            userId: membershipUser.id,
+                            membershipId: membership.id,
+                            status: 'active',
+                          })
+                        }
+                      >
+                        Aktivovat
+                      </button>
+                    )}
+                    {membership.status === 'active' && (
+                      <button
+                        className="secondary-button"
+                        onClick={() =>
+                          membershipStatusMutation.mutate({
+                            userId: membershipUser.id,
+                            membershipId: membership.id,
+                            status: 'paused',
+                          })
+                        }
+                      >
+                        Pozastavit
+                      </button>
+                    )}
+                    <button
+                      className="text-sm text-rose-300 hover:text-rose-100"
+                      onClick={() =>
+                        membershipStatusMutation.mutate({
+                          userId: membershipUser.id,
+                          membershipId: membership.id,
+                          status: 'cancelled',
+                        })
+                      }
+                    >
+                      Ukončit
+                    </button>
+                    {membership.sessions_total && (membership.sessions_used ?? 0) < membership.sessions_total && (
+                      <div className="flex flex-col gap-2 min-w-[220px] flex-1">
+                        <input
+                          className="input-field text-sm"
+                          placeholder="Poznámka k tréninku (volitelné)"
+                          value={sessionNotes[membership.id] ?? ''}
+                          onChange={(event) =>
+                            setSessionNotes((prev) => ({
+                              ...prev,
+                              [membership.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <button
+                          className="accent-button"
+                          onClick={() =>
+                            consumeSessionMutation.mutate({
+                              userId: membershipUser.id,
+                              membershipId: membership.id,
+                              note: sessionNotes[membership.id],
+                            })
+                          }
+                          disabled={consumeSessionMutation.isPending}
+                        >
+                          {consumeSessionMutation.isPending ? 'Odečítám...' : 'Odečíst trénink'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </section>
+            <section className="space-y-3">
+              <h4 className="text-lg font-semibold">Přiřadit balíček</h4>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm text-slate-400 block mb-1">Balíček</label>
+                  <select
+                    className="input-field"
+                    value={selectedPackageId}
+                    onChange={(event) => setSelectedPackageId(event.target.value)}
+                  >
+                    <option value="">Vyber balíček</option>
+                    {(packagesQuery.data ?? [])
+                      .filter((pkg) => pkg.is_active)
+                      .map((pkg) => (
+                        <option key={pkg.id} value={pkg.id}>
+                          {pkg.name} ({pkg.duration_days} dní)
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-slate-400 block mb-1">Začátek platnosti</label>
+                  <input type="date" className="input-field" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-400">
+                <input type="checkbox" checked={autoRenew} onChange={(event) => setAutoRenew(event.target.checked)} className="h-4 w-4" />
+                Automaticky obnovit po skončení
+              </label>
+              <div className="flex gap-3">
+                <button className="secondary-button w-full" onClick={() => setMembershipUser(null)}>
+                  Zavřít
+                </button>
+                <button
+                  className="accent-button w-full"
+                  onClick={() =>
+                    membershipUser &&
+                    selectedPackageId &&
+                    assignMembershipMutation.mutate({
+                      userId: membershipUser.id,
+                      packageId: Number(selectedPackageId),
+                      startDate: startDate || undefined,
+                      autoRenew,
+                    })
+                  }
+                  disabled={!selectedPackageId || assignMembershipMutation.isPending}
+                >
+                  {assignMembershipMutation.isPending ? 'Přiřazuji...' : 'Přiřadit permanentku'}
+                </button>
+              </div>
+            </section>
           </div>
         </div>
       )}

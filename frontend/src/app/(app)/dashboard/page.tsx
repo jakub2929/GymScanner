@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import { Toast, useToast } from '@/components/toast';
 import Image from 'next/image';
-import { useBranding } from '@/components/branding-context';
 
 interface QrResponse {
   token: string;
@@ -13,21 +13,10 @@ interface QrResponse {
   credits: number;
 }
 
-interface PurchaseResponse {
-  payment_id: string;
-  redirect_url: string;
-  token_amount: number;
-  price_czk: number;
-  status: string;
-}
-
 export default function DashboardPage() {
   const { toast, showToast } = useToast();
-  const [buyModal, setBuyModal] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<{ credits: number; amount: number } | null>(null);
   const [summary, setSummary] = useState('');
-  const branding = useBranding();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -70,33 +59,6 @@ export default function DashboardPage() {
     showToast('QR kód stažen');
   }
 
-  const packages = [
-    { credits: 1, amount: 100 },
-    { credits: 5, amount: 500 },
-    { credits: 10, amount: 1000 },
-  ];
-
-  async function buyEntries(credits: number, amount: number) {
-    try {
-      setSelectedPackage({ credits, amount });
-      setBuyModal(false);
-      const response = await apiClient<PurchaseResponse>('/api/payments/create', {
-        method: 'POST',
-        body: JSON.stringify({ token_amount: credits }),
-      });
-      if (response.redirect_url) {
-        showToast('Přesměrovávám na Comgate…');
-        window.location.href = response.redirect_url;
-      } else {
-        showToast('Brána nevrátila platnou redirect URL', 'error');
-      }
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Chyba při nákupu', 'error');
-    } finally {
-      setSelectedPackage(null);
-    }
-  }
-
   return (
     <>
       <div className="space-y-12">
@@ -129,75 +91,43 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="w-full glass-subcard rounded-2xl p-5 text-left">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Token</p>
-                    <p className="text-sm font-mono break-all text-slate-100">{data?.token ?? '---'}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button onClick={download} className="accent-button w-full sm:w-auto" disabled={isPending}>
+                      Stáhnout QR
+                    </button>
+                    <button
+                      onClick={regenerate}
+                      className="secondary-button w-full sm:w-auto"
+                      disabled={isPending || isRegenerating}
+                    >
+                      {isRegenerating ? 'Generuji...' : 'Vygenerovat nový PIN'}
+                    </button>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Kredity</p>
-                    <p className="text-3xl font-semibold text-white">{data?.credits ?? 0}</p>
+                  <div className="text-right sm:min-w-[200px]">
+                    <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Tvůj PIN</p>
+                    <p className="text-4xl font-semibold text-white tracking-[0.35em]">
+                      {data?.token ?? '---'}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           )}
-
-          <div className="flex flex-col sm:flex-row gap-4 mt-8">
-            <button onClick={download} className="accent-button" disabled={isPending}>
-              Stáhnout QR
-            </button>
-            <button onClick={regenerate} className="secondary-button" disabled={isPending || isRegenerating}>
-              {isRegenerating ? 'Generuji...' : 'Vygenerovat nový QR'}
-            </button>
+        </section>
+        <section className="glass-panel rounded-3xl p-6 space-y-4">
+          <h2 className="text-2xl font-semibold text-white">Další akce</h2>
+          <p className="text-slate-400 text-sm">Spravuj své permanentky a osobní tréninky na samostatných stránkách.</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link href="/permanentky" className="accent-button text-center">
+              Přehled permanentek
+            </Link>
+            <Link href="/treninky" className="secondary-button text-center">
+              Přehled tréninků
+            </Link>
           </div>
         </section>
-
-        <div className="grid lg:grid-cols-2 gap-6">
-          <section className="glass-panel rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-white">Koupit vstupy</h2>
-              <span className="text-sm text-slate-300">Dostupné: {data?.credits ?? 0}</span>
-            </div>
-            <button onClick={() => setBuyModal(true)} className="accent-button">
-              Vybrat balíček
-            </button>
-          </section>
-
-          <section className="glass-panel rounded-3xl p-6 space-y-4 text-sm text-slate-300">
-            <h2 className="text-2xl font-semibold text-white">Rychlé akce</h2>
-            <p>Vygeneruj nový QR při ztrátě nebo podezření na zneužití.</p>
-            <p>Pokud se skenování nedaří, využij podporu nebo ruční ověření u obsluhy.</p>
-            <p>Kontaktuj podporu v Nastavení.</p>
-          </section>
-        </div>
       </div>
-
-      {buyModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="glass-panel rounded-3xl text-white p-6 w-full max-w-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-semibold text-white">Vyber balíček</h3>
-              <button onClick={() => setBuyModal(false)} className="text-3xl text-slate-400 hover:text-white">
-                &times;
-              </button>
-            </div>
-            {packages.map((pkg) => (
-              <div key={pkg.credits} className="glass-subcard rounded-2xl p-5 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xl font-semibold text-white">
-                    {pkg.credits} vstup{pkg.credits > 1 ? 'ů' : ''}
-                  </h4>
-                  <p className="text-slate-300">{pkg.amount} Kč</p>
-                </div>
-                <button onClick={() => buyEntries(pkg.credits, pkg.amount)} className="accent-button w-auto">
-                  {selectedPackage?.credits === pkg.credits ? 'Otevírám bránu...' : 'Pokračovat do Comgate'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <Toast toast={toast} />
     </>

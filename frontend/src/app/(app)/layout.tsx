@@ -11,6 +11,8 @@ import { useBrandingLogo } from '@/hooks/useBrandingLogo';
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/permanentky', label: 'Permanentky' },
+  { href: '/treninky', label: 'Tréninky' },
   { href: '/settings', label: 'Nastavení' },
 ];
 
@@ -20,18 +22,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const logout = useLogout();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const branding = useBranding();
   const logoSrc = useBrandingLogo();
 
   const localToken = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
   const effectiveToken = token || localToken;
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsAdmin(sessionStorage.getItem('is_admin') === 'true');
-    }
-  }, [effectiveToken]);
+  const isAdmin = typeof window !== 'undefined' && sessionStorage.getItem('is_admin') === 'true';
 
   useEffect(() => {
     if (!effectiveToken && typeof window !== 'undefined') {
