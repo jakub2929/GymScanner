@@ -161,6 +161,18 @@ def ensure_payment_comgate_columns():
     if 'updated_at' not in columns:
         alters.append("ALTER TABLE payments ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     
+    # Payment type for distinguishing credits vs memberships
+    if 'payment_type' not in columns:
+        alters.append("ALTER TABLE payments ADD COLUMN payment_type VARCHAR DEFAULT 'credits'")
+
+    # Membership package linkage
+    if 'package_id' not in columns:
+        alters.append("ALTER TABLE payments ADD COLUMN package_id INTEGER REFERENCES membership_packages(id)")
+    if 'package_snapshot' not in columns:
+        alters.append("ALTER TABLE payments ADD COLUMN package_snapshot JSON")
+    if 'membership_id' not in columns:
+        alters.append("ALTER TABLE payments ADD COLUMN membership_id INTEGER REFERENCES memberships(id)")
+
     # Make amount nullable (for backward compatibility)
     # Note: SQLite doesn't support ALTER COLUMN to change NULL constraint easily
     # We'll leave amount as is for now, but new payments will use price_czk

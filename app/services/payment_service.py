@@ -6,19 +6,33 @@ import httpx
 import uuid
 import os
 import logging
+from app.services.membership import MembershipService
 
 logger = logging.getLogger(__name__)
 
-def create_order(db: Session, user_id: int, token_amount: int, price_czk: int, provider: str = "comgate") -> Payment:
+def create_order(
+    db: Session,
+    *,
+    user_id: int,
+    price_czk: int,
+    provider: str = "comgate",
+    payment_type: str = "credits",
+    token_amount: int | None = None,
+    package_id: int | None = None,
+    package_snapshot: dict | None = None,
+) -> Payment:
     """
     Create a new payment order with status 'pending'.
     
     Args:
         db: Database session
         user_id: ID of the user making the order
-        token_amount: Number of tokens to purchase (1, 5, or 10)
         price_czk: Price in CZK
         provider: Payment provider (default: "comgate")
+        payment_type: "credits" for legacy credit purchase or "membership"
+        token_amount: Number of credits to purchase (legacy)
+        package_id: Reference to membership package definition
+        package_snapshot: Serialized package data captured at purchase time
     
     Returns:
         Payment object with status 'pending'
@@ -31,14 +45,22 @@ def create_order(db: Session, user_id: int, token_amount: int, price_czk: int, p
         price_czk=price_czk,
         provider=provider,
         status="pending",
-        payment_id=payment_id
+        payment_id=payment_id,
+        payment_type=payment_type,
+        package_id=package_id,
+        package_snapshot=package_snapshot,
     )
     
     db.add(payment)
     db.commit()
     db.refresh(payment)
     
-    logger.info(f"Created payment order {payment_id} for user {user_id}: {token_amount} tokens for {price_czk} CZK")
+    logger.info(
+        "Created payment order %s for user %s (%s)",
+        payment_id,
+        user_id,
+        f"{token_amount} tokens" if payment_type == "credits" else f"package {package_id}",
+    )
     
     return payment
 
@@ -82,14 +104,38 @@ def mark_order_paid(db: Session, payment_id: str) -> Payment:
     payment.paid_at = now
     payment.updated_at = now
     
-    # Add tokens to user
-    user.credits = (user.credits or 0) + payment.token_amount
+    membership = None
+    if payment.payment_type == "membership":
+        service = MembershipService(db)
+        membership = _create_membership_from_payment(service, user, payment, now)
+        if membership:
+            payment.membership_id = membership.id
+    else:
+        tokens_to_add = payment.token_amount or 0
+        if tokens_to_add > 0:
+            user.credits = (user.credits or 0) + tokens_to_add
+        else:
+            logger.warning("Payment %s has no token_amount, skipping credit addition", payment_id)
     
     db.commit()
     db.refresh(payment)
     db.refresh(user)
     
-    logger.info(f"Payment {payment_id} marked as paid. Added {payment.token_amount} tokens to user {user.id}. New balance: {user.credits}")
+    if membership:
+        logger.info(
+            "Payment %s marked as paid. Created membership %s for user %s.",
+            payment_id,
+            membership.id,
+            user.id,
+        )
+    else:
+        logger.info(
+            "Payment %s marked as paid. Added %s tokens to user %s. New balance: %s",
+            payment_id,
+            payment.token_amount or 0,
+            user.id,
+            user.credits,
+        )
     
     return payment
 
@@ -114,6 +160,47 @@ def mark_order_failed(db: Session, payment_id: str, status: str = "failed") -> P
     db.refresh(payment)
     logger.info("Payment %s updated to status %s", payment_id, normalized_status)
     return payment
+
+
+def _create_membership_from_payment(
+    service: MembershipService,
+    user: User,
+    payment: Payment,
+    start_ts: datetime,
+):
+    """Instantiate a membership based on payment package metadata."""
+    notes = f"Zakoupeno online (platba {payment.payment_id})"
+    package = None
+    if payment.package_id:
+        package = payment.package or service.get_package(payment.package_id)
+    if package:
+        return service.assign_package_to_user(
+            user_id=user.id,
+            package=package,
+            start_at=start_ts,
+            created_by_admin_id=None,
+            notes=notes,
+        )
+
+    snapshot = payment.package_snapshot or {}
+    if not snapshot:
+        logger.warning("Payment %s missing package snapshot, cannot create membership", payment.payment_id)
+        return None
+
+    duration_days = snapshot.get("duration_days") or 30
+    return service.create_manual_membership(
+        user_id=user.id,
+        name=snapshot.get("name") or snapshot.get("package_name") or "Permanentka",
+        membership_type=snapshot.get("package_type") or "manual",
+        price_czk=payment.price_czk,
+        duration_days=duration_days,
+        start_at=start_ts,
+        daily_limit=snapshot.get("daily_entry_limit"),
+        session_limit=snapshot.get("session_limit"),
+        notes=notes,
+        metadata=snapshot.get("metadata"),
+        created_by_admin_id=None,
+    )
 
 def prepare_comgate_data(payment: Payment, user: User) -> dict:
     """
@@ -151,7 +238,7 @@ def prepare_comgate_data(payment: Payment, user: User) -> dict:
         # HTTP POST expects price in haléřích (cents)
         "price": (payment.price_czk or 0) * 100,
         "curr": "CZK",
-        "label": f"GymScanner - {payment.token_amount} tokens",
+        "label": _build_payment_label(payment),
         "refId": payment.payment_id,
         "method": "ALL",
         "email": user.email,
@@ -203,3 +290,15 @@ def prepare_comgate_data(payment: Payment, user: User) -> dict:
             "return_url": return_url,
             "provider_status": "error",
         }
+
+
+def _build_payment_label(payment: Payment) -> str:
+    if payment.payment_type == "membership":
+        snapshot = payment.package_snapshot or {}
+        package_name = snapshot.get("name") or snapshot.get("package_name")
+        if not package_name and payment.package:
+            package_name = payment.package.name
+        return f"GymScanner - {package_name or 'Permanentka'}"
+
+    tokens = payment.token_amount or 0
+    return f"GymScanner - {tokens} vstupů"

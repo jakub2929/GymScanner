@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, root_validator
 from app.database import get_db
 from app.models import User, Payment
 from app.auth import get_current_user
 from app.services.payment_service import create_order, mark_order_failed, mark_order_paid, prepare_comgate_data
+from app.services.membership import MembershipService
 import uuid
 from datetime import datetime, timezone
 import logging
@@ -38,6 +39,18 @@ def _apply_status_from_gateway(db: Session, payment_id: str, status: str | None)
             logger.info("mark_order_failed skipped for %s: %s", payment_id, exc)
             return None
     return normalized.lower()
+
+
+def _success_message(payment: Payment) -> str:
+    if payment.payment_type == "membership":
+        package_name = None
+        if payment.package:
+            package_name = payment.package.name
+        elif payment.package_snapshot:
+            package_name = payment.package_snapshot.get("name") or payment.package_snapshot.get("package_name")
+        return f"Platba byla úspěšně dokončena! Aktivována permanentka {package_name or ''}".strip()
+    tokens = payment.token_amount or 0
+    return f"Platba byla úspěšně dokončena! Přidáno {tokens} vstupů."
 
 class PaymentRequest(BaseModel):
     email: EmailStr
@@ -106,6 +119,10 @@ async def get_payment_status(
         "amount": payment.amount,
         "token_amount": payment.token_amount,
         "price_czk": payment.price_czk,
+        "payment_type": payment.payment_type,
+        "package_id": payment.package_id,
+        "package_name": (payment.package.name if payment.package else None),
+        "membership_id": payment.membership_id,
         "user_id": payment.user_id,
         "created_at": payment.created_at,
         "completed_at": payment.completed_at,
@@ -115,11 +132,24 @@ async def get_payment_status(
 # New endpoints for token purchase
 
 class CreatePaymentRequest(BaseModel):
-    token_amount: int = Field(..., description="Number of tokens to purchase (1, 5, or 10)")
+    token_amount: int | None = Field(default=None, description="Number of token entries to purchase (1, 5, or 10)")
+    package_id: int | None = Field(default=None, description="ID balíčku/permanentky k zakoupení")
+
+    @root_validator(skip_on_failure=True)
+    def validate_payload(cls, values):
+        token_amount = values.get("token_amount")
+        package_id = values.get("package_id")
+        if not token_amount and not package_id:
+            raise ValueError("token_amount nebo package_id je povinné")
+        if token_amount and package_id:
+            raise ValueError("Tokeny ani balíček nelze objednat zároveň")
+        return values
 
 class CreatePaymentResponse(BaseModel):
     payment_id: str
-    token_amount: int
+    token_amount: int | None = None
+    package_id: int | None = None
+    package_name: str | None = None
     price_czk: int
     provider: str
     redirect_url: str
@@ -132,38 +162,61 @@ async def create_payment_order(
     db: Session = Depends(get_db)
 ):
     """
-    Create a payment order for purchasing tokens.
-    Validates token_amount (must be 1, 5, or 10) and creates a pending payment.
+    Create a payment order for purchasing credits or membership packages.
     """
-    # Validate token_amount
-    if request.token_amount not in [1, 5, 10]:
-        raise HTTPException(
-            status_code=400,
-            detail="token_amount must be 1, 5, or 10"
-        )
-    
-    # Calculate price (100 CZK per token)
-    price_czk = request.token_amount * 100
-    
-    # Create payment order
+    membership_service = MembershipService(db)
+    package = None
+    package_snapshot = None
+    token_amount = None
+    price_czk = 0
+    payment_type = "credits"
+
+    if request.package_id:
+        package = membership_service.get_package(request.package_id)
+        if not package or not package.is_active:
+            raise HTTPException(status_code=404, detail="Balíček nebyl nalezen nebo je neaktivní")
+        payment_type = "membership"
+        price_czk = package.price_czk
+        token_amount = None
+        package_snapshot = {
+            "id": package.id,
+            "name": package.name,
+            "slug": package.slug,
+            "package_name": package.name,
+            "package_type": package.package_type,
+            "duration_days": package.duration_days,
+            "daily_entry_limit": package.daily_entry_limit,
+            "session_limit": package.session_limit,
+            "metadata": package.metadata_json,
+        }
+    else:
+        if request.token_amount not in [1, 5, 10]:
+            raise HTTPException(status_code=400, detail="token_amount must be 1, 5, or 10")
+        token_amount = request.token_amount
+        price_czk = token_amount * 100
+
     payment = create_order(
         db=db,
         user_id=current_user.id,
-        token_amount=request.token_amount,
         price_czk=price_czk,
-        provider="comgate"
+        provider="comgate",
+        payment_type=payment_type,
+        token_amount=token_amount,
+        package_id=package.id if package else None,
+        package_snapshot=package_snapshot,
     )
-    
-    # Prepare Comgate redirect data
+
     comgate_data = prepare_comgate_data(payment, current_user)
-    
+
     return CreatePaymentResponse(
         payment_id=payment.payment_id,
         token_amount=payment.token_amount,
+        package_id=payment.package_id,
+        package_name=package.name if package else None,
         price_czk=payment.price_czk,
         provider=payment.provider,
         redirect_url=comgate_data["redirect_url"],
-        status=payment.status
+        status=payment.status,
     )
 
 @router.post("/payments/comgate/notify")
@@ -221,7 +274,7 @@ async def comgate_return(
         payment = db.query(Payment).filter(Payment.payment_id == payment_id).first() or payment
     
     if payment.status == "paid":
-        message = f"Platba byla úspěšně dokončena! Přidáno {payment.token_amount} tokenů."
+        message = _success_message(payment)
         return HTMLResponse(content=f"""
         <!DOCTYPE html>
         <html>

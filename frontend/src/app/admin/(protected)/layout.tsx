@@ -13,6 +13,7 @@ import { useBrandingLogo } from '@/hooks/useBrandingLogo';
 const navLinks = [
   { href: '/admin', label: 'Přehled' },
   { href: '/admin/users', label: 'Uživatelé' },
+  { href: '/admin/packages', label: 'Balíčky' },
   { href: '/admin/tokens', label: 'Tokeny' },
 ];
 

@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from pydantic import BaseModel
 from app.database import get_db
-from app.models import AccessToken, AccessLog, Payment, User
+from app.models import AccessToken, AccessLog, User
+from app.services.membership import MembershipService, serialize_membership_for_response
 from datetime import datetime, timezone, timedelta
 import logging
 
@@ -28,6 +29,7 @@ def log_access(
     scanner_id: str | None = None,
     raw_data: str | None = None,
     commit: bool = True,
+    metadata: dict | None = None,
 ):
     """Persist access log entry with optional commit control."""
     try:
@@ -41,6 +43,7 @@ def log_access(
             direction=direction,
             scanner_id=scanner_id,
             raw_data=raw_data,
+            metadata_json=metadata,
         )
         db.add(access_log)
         if commit:
@@ -60,6 +63,30 @@ class VerifyRequest(BaseModel):
             }
         }
 
+class MembershipInfo(BaseModel):
+    has_membership: bool
+    membership_id: int | None = None
+    package_id: int | None = None
+    package_name: str | None = None
+    package_slug: str | None = None
+    package_type: str | None = None
+    status: str | None = None
+    membership_type: str | None = None
+    valid_from: str | None = None
+    valid_to: str | None = None
+    daily_limit_enabled: bool | None = None
+    daily_limit: int | None = None
+    daily_usage_count: int | None = None
+    sessions_total: int | None = None
+    sessions_used: int | None = None
+    auto_renew: bool | None = None
+    notes: str | None = None
+    metadata: dict | None = None
+    reason: str | None = None
+    message: str | None = None
+    daily_limit_hit: bool | None = None
+
+
 class VerifyResponse(BaseModel):
     allowed: bool  # True = access granted, False = access denied
     reason: str  # "ok" | "no_credits" | "cooldown" | "invalid_token" | "token_not_found" | "token_deactivated" | "user_not_found"
@@ -70,6 +97,8 @@ class VerifyResponse(BaseModel):
     open_door: bool | None = None
     door_open_duration: int | None = None
     user: dict | None = None
+    message: str | None = None
+    membership: MembershipInfo | None = None
 
 async def process_verification(
     token_str: str,
@@ -194,58 +223,110 @@ async def process_verification(
                     cooldown_seconds_left=cooldown_seconds_left,
                 )
 
-        if user.credits is None or user.credits <= 0:
-            log_access(
-                db,
-                token_id=token.id,
-                token_string=token_str,
-                status="deny",
-                reason="No credits available",
-                ip_address=client_ip,
-                user_agent=user_agent,
-                direction=direction,
-                scanner_id=scanner_id,
-                raw_data=raw_data,
-            )
-            return VerifyResponse(
-                allowed=False,
-                reason="no_credits",
-                credits_left=0,
-                cooldown_seconds_left=None,
-            )
+        membership_service = MembershipService(db)
+        now_ts = datetime.now(timezone.utc)
+        membership = membership_service.get_active_membership(user.id, now_ts)
+        membership_metadata = {"membership_id": membership.id, "package_id": membership.package_id} if membership else None
+        membership_payload = None
+        access_via_membership = False
 
-        if not token.is_valid(user_credits=user.credits):
-            log_access(
-                db,
-                token_id=token.id,
-                token_string=token_str,
-                status="deny",
-                reason="Token invalid or no credits",
-                ip_address=client_ip,
-                user_agent=user_agent,
-                direction=direction,
-                scanner_id=scanner_id,
-                raw_data=raw_data,
+        if membership:
+            verdict = membership_service.can_consume_entry(membership, at_ts=now_ts)
+            membership_payload = serialize_membership_for_response(
+                membership,
+                reason=verdict.reason,
+                daily_limit_hit=verdict.daily_limit_hit,
             )
-            return VerifyResponse(
-                allowed=False,
-                reason="invalid_token",
-                credits_left=user.credits or 0,
-                cooldown_seconds_left=None,
-            )
+            if not verdict.allowed:
+                log_access(
+                    db,
+                    token_id=token.id,
+                    token_string=token_str,
+                    status="deny",
+                    reason=f"Membership denied ({verdict.reason})",
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    direction=direction,
+                    scanner_id=scanner_id,
+                    raw_data=raw_data,
+                    metadata=membership_metadata,
+                )
+                return VerifyResponse(
+                    allowed=False,
+                    reason=verdict.reason or "membership_denied",
+                    credits_left=user.credits or 0,
+                    cooldown_seconds_left=None,
+                    user_name=user.name,
+                    user_email=user.email,
+                    message=membership_payload.get("message") if membership_payload else None,
+                    membership=membership_payload,
+                )
+            access_via_membership = True
+        else:
+            membership_payload = serialize_membership_for_response(None, reason="membership_missing")
 
-        try:
+        if not access_via_membership:
             if user.credits is None or user.credits <= 0:
-                db.rollback()
+                log_access(
+                    db,
+                    token_id=token.id,
+                    token_string=token_str,
+                    status="deny",
+                    reason="No credits available",
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    direction=direction,
+                    scanner_id=scanner_id,
+                    raw_data=raw_data,
+                    metadata=membership_metadata,
+                )
                 return VerifyResponse(
                     allowed=False,
                     reason="no_credits",
                     credits_left=0,
                     cooldown_seconds_left=None,
+                    message=membership_payload.get("message") if membership_payload else None,
+                    membership=membership_payload,
                 )
 
-            user.credits = max(0, user.credits - 1)
-            credits_after = user.credits
+            if not token.is_valid(user_credits=user.credits):
+                log_access(
+                    db,
+                    token_id=token.id,
+                    token_string=token_str,
+                    status="deny",
+                    reason="Token invalid or no credits",
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    direction=direction,
+                    scanner_id=scanner_id,
+                    raw_data=raw_data,
+                    metadata=membership_metadata,
+                )
+                return VerifyResponse(
+                    allowed=False,
+                    reason="invalid_token",
+                    credits_left=user.credits or 0,
+                    cooldown_seconds_left=None,
+                    membership=membership_payload,
+                )
+
+        try:
+            credits_after = user.credits or 0
+
+            if not access_via_membership:
+                if user.credits is None or user.credits <= 0:
+                    db.rollback()
+                    return VerifyResponse(
+                        allowed=False,
+                        reason="no_credits",
+                        credits_left=0,
+                        cooldown_seconds_left=None,
+                        membership=membership_payload,
+                        message=membership_payload.get("message") if membership_payload else None,
+                    )
+                user.credits = max(0, user.credits - 1)
+                credits_after = user.credits
 
             now = datetime.now(timezone.utc)
             token.used_at = now
@@ -261,14 +342,18 @@ async def process_verification(
                 token_id=token.id,
                 token_string=token_str,
                 status="allow",
-                reason=f"Access granted (credits remaining: {credits_after})",
+                reason="membership_ok" if access_via_membership else f"Access granted (credits remaining: {credits_after})",
                 ip_address=client_ip,
                 user_agent=user_agent,
                 direction=direction,
                 scanner_id=scanner_id,
                 raw_data=raw_data,
                 commit=False,
+                metadata=membership_metadata,
             )
+
+            if access_via_membership and membership:
+                membership_service.record_entry_usage(membership, at_ts=now)
 
             db.commit()
             return VerifyResponse(
@@ -278,6 +363,8 @@ async def process_verification(
                 cooldown_seconds_left=COOLDOWN_SECONDS,
                 user_name=user.name,
                 user_email=user.email,
+                message=membership_payload.get("message") if membership_payload else None,
+                membership=membership_payload,
             )
 
         except Exception as e:

@@ -27,3 +27,10 @@ If the accounts disappear (e.g., after recreating the database), run:
 docker compose -f docker-compose.local.yml exec web python scripts/ensure_accounts.py
 ```
 or re-run the snippet in this repo’s history that re-seeds the accounts. Then restart the stack.
+
+## Jak fungují QR / PINy a permanentky
+
+- Každý uživatel má **jeden 6místný kód**, který se zobrazuje na dashboardu. Kód je použitý v QR i jako ručně zadávaný PIN na čtečce.
+- Při koupi permanentky se nic na QR/PINu nemění – při skenování (nebo zadání PINu) se nejprve dohledá uživatel a následně se vyhodnotí jeho aktivní permanentky / osobní tréninky.
+- Přes sekci „Balíčky“ si uživatel koupí novou permanentku, která se k účtu automaticky připojí a je okamžitě platná ve scanneru.
+- PIN/QR lze kdykoliv regenerovat z dashboardu („Vygenerovat nový QR“); tím se deaktivují staré tokeny.

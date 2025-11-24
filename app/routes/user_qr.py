@@ -9,8 +9,47 @@ import qrcode
 import io
 from datetime import datetime, timedelta, timezone
 from app.services.token_service import generate_unique_token
+from app.services.membership import MembershipService, serialize_membership_for_response
 
 router = APIRouter()
+
+class MembershipSummary(BaseModel):
+    has_membership: bool
+    package_name: str | None = None
+    package_type: str | None = None
+    valid_from: str | None = None
+    valid_to: str | None = None
+    status: str | None = None
+    reason: str | None = None
+    message: str | None = None
+
+
+class MembershipDetail(BaseModel):
+    membership_id: int
+    package_name: str | None = None
+    package_type: str | None = None
+    membership_type: str | None = None
+    status: str | None = None
+    valid_from: str | None = None
+    valid_to: str | None = None
+    daily_limit: int | None = None
+    daily_usage_count: int | None = None
+    sessions_total: int | None = None
+    sessions_used: int | None = None
+    message: str | None = None
+
+
+class PublicPackage(BaseModel):
+    id: int
+    name: str
+    slug: str
+    description: str | None = None
+    price_czk: int
+    duration_days: int
+    daily_entry_limit: int | None = None
+    session_limit: int | None = None
+    package_type: str
+
 
 class PersonalQRResponse(BaseModel):
     token: str
@@ -18,6 +57,65 @@ class PersonalQRResponse(BaseModel):
     user_name: str
     user_email: str
     credits: int
+    membership: MembershipSummary | None = None
+    memberships: list[MembershipDetail] = []
+    packages: list[PublicPackage] = []
+
+
+def _build_membership_context(db: Session, user_id: int):
+    membership_service = MembershipService(db)
+    now_ts = datetime.now(timezone.utc)
+    active_membership = membership_service.get_active_membership(user_id, now_ts)
+    membership_payload = serialize_membership_for_response(active_membership)
+    membership_summary = None
+    if membership_payload:
+        membership_summary = MembershipSummary(
+            has_membership=membership_payload.get("has_membership", False),
+            package_name=membership_payload.get("package_name"),
+            package_type=membership_payload.get("package_type"),
+            valid_from=membership_payload.get("valid_from"),
+            valid_to=membership_payload.get("valid_to"),
+            status=membership_payload.get("status"),
+            reason=membership_payload.get("reason"),
+            message=membership_payload.get("message"),
+        )
+
+    membership_list: list[MembershipDetail] = []
+    for membership in membership_service.list_user_memberships(user_id):
+        payload = serialize_membership_for_response(membership)
+        membership_list.append(
+            MembershipDetail(
+                membership_id=membership.id,
+                package_name=payload.get("package_name") or membership.package_name_cache,
+                package_type=payload.get("package_type") or membership.package.package_type if membership.package else None,
+                membership_type=membership.membership_type,
+                status=payload.get("status") or membership.status,
+                valid_from=payload.get("valid_from"),
+                valid_to=payload.get("valid_to"),
+                daily_limit=payload.get("daily_limit"),
+                daily_usage_count=payload.get("daily_usage_count"),
+                sessions_total=payload.get("sessions_total"),
+                sessions_used=payload.get("sessions_used"),
+                message=payload.get("message"),
+            )
+        )
+
+    packages = []
+    for pkg in membership_service.list_packages(include_inactive=False):
+        packages.append(
+            PublicPackage(
+                id=pkg.id,
+                name=pkg.name,
+                slug=pkg.slug,
+                description=pkg.description,
+                price_czk=pkg.price_czk,
+                duration_days=pkg.duration_days,
+                daily_entry_limit=pkg.daily_entry_limit,
+                session_limit=pkg.session_limit,
+                package_type=pkg.package_type,
+            )
+        )
+    return membership_summary, membership_list, packages
 
 @router.get("/my_qr", response_model=PersonalQRResponse)
 async def get_my_qr(
@@ -80,12 +178,17 @@ async def get_my_qr(
     img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
     qr_code_url = f"data:image/png;base64,{img_base64}"
     
+    membership_summary, membership_list, packages = _build_membership_context(db, current_user.id)
+
     return PersonalQRResponse(
         token=active_token.token,
         qr_code_url=qr_code_url,
         user_name=current_user.name,
         user_email=current_user.email,
-        credits=current_user.credits or 0
+        credits=current_user.credits or 0,
+        membership=membership_summary,
+        packages=packages,
+        memberships=membership_list,
     )
 
 @router.post("/regenerate_qr", response_model=PersonalQRResponse)
@@ -134,10 +237,15 @@ async def regenerate_qr(
     img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
     qr_code_url = f"data:image/png;base64,{img_base64}"
     
+    membership_summary, membership_list, packages = _build_membership_context(db, current_user.id)
+    
     return PersonalQRResponse(
         token=token_str,
         qr_code_url=qr_code_url,
         user_name=current_user.name,
         user_email=current_user.email,
-        credits=current_user.credits or 0
+        credits=current_user.credits or 0,
+        membership=membership_summary,
+        packages=packages,
+        memberships=membership_list,
     )

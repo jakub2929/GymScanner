@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import AccessLog, AccessToken, DoorLog, Membership, User
 from app.routes.verify import VerifyResponse
-from app.services.membership import get_active_membership
+from app.services.membership import MembershipService, serialize_membership_for_response
 from app.services.presence import set_presence
 from app.services.timezone import day_bounds_utc, get_gym_timezone
 from app.services.utils import mask_token
@@ -42,6 +42,7 @@ def _build_access_log(
     user_agent: Optional[str],
     allowed: bool,
     reason: str,
+    metadata: Optional[dict] = None,
 ) -> AccessLog:
     status = "allow" if allowed else "deny"
     return AccessLog(
@@ -63,12 +64,23 @@ def _build_access_log(
         direction_from_state=direction_from_state,
         direction_mismatch=direction_mismatch,
         raw_token_masked=mask_token(token_str),
-        metadata_json=None,
+        metadata_json=metadata,
     )
 
 
-def _response_payload(user: Optional[User], allowed: bool, reason: str, open_door: bool = False, duration: Optional[int] = None) -> VerifyResponse:
+def _response_payload(
+    user: Optional[User],
+    allowed: bool,
+    reason: str,
+    open_door: bool = False,
+    duration: Optional[int] = None,
+    *,
+    message: Optional[str] = None,
+    membership_payload: Optional[dict] = None,
+) -> VerifyResponse:
     credits_left = user.credits if user and user.credits is not None else 0
+    if not message and membership_payload:
+        message = membership_payload.get("message")
     return VerifyResponse(
         allowed=allowed,
         reason=reason,
@@ -79,6 +91,8 @@ def _response_payload(user: Optional[User], allowed: bool, reason: str, open_doo
         open_door=open_door,
         door_open_duration=duration if open_door else None,
         user={"name": user.name, "email": user.email} if user else None,
+        message=message,
+        membership=membership_payload,
     )
 
 
@@ -119,6 +133,9 @@ def _log_denied(
     client_ip: Optional[str],
     user_agent: Optional[str],
     reason: str,
+    metadata: Optional[dict] = None,
+    message: Optional[str] = None,
+    membership_payload: Optional[dict] = None,
 ) -> VerifyResponse:
     access_log = _build_access_log(
         user=user,
@@ -136,10 +153,18 @@ def _log_denied(
         user_agent=user_agent,
         allowed=False,
         reason=reason,
+        metadata=metadata,
     )
     db.add(access_log)
     db.commit()
-    return _response_payload(user, allowed=False, reason=reason, open_door=False)
+    return _response_payload(
+        user,
+        allowed=False,
+        reason=reason,
+        open_door=False,
+        message=message,
+        membership_payload=membership_payload,
+    )
 
 
 def _create_door_log(db: Session, access_log: AccessLog, duration: int, device_id: str):
@@ -173,6 +198,7 @@ def process_scan(
     if scanned_at.tzinfo is None:
         scanned_at = scanned_at.replace(tzinfo=timezone.utc)
 
+    membership_service = MembershipService(db)
     token = db.query(AccessToken).filter(AccessToken.token == token_str).first()
     if not token or not token.is_active:
         return _log_denied(
@@ -274,10 +300,14 @@ def process_scan(
     direction_from_state = _direction_from_state(is_entry)
     direction_mismatch = (device_direction == "in" and not is_entry) or (device_direction == "out" and is_entry)
 
-    # Entry checks: membership & daily limit
+    membership = membership_service.get_active_membership(user.id, scanned_at)
+    membership_metadata = {"membership_id": membership.id, "package_id": membership.package_id} if membership else None
+    membership_payload = None
+
+    # Entry checks: membership & limits
     if is_entry:
-        membership = get_active_membership(db, user.id, scanned_at)
         if not membership:
+            membership_payload = serialize_membership_for_response(None, reason="membership_required")
             return _log_denied(
                 db,
                 user=user,
@@ -293,9 +323,18 @@ def process_scan(
                 direction_mismatch=direction_mismatch,
                 client_ip=client_ip,
                 user_agent=user_agent,
-                reason="membership_expired",
+                reason="membership_required",
+                metadata=membership_metadata,
+                message=membership_payload.get("message") if membership_payload else None,
+                membership_payload=membership_payload,
             )
-        if _daily_limit_hit(db, user, scanned_at, membership):
+        verdict = membership_service.can_consume_entry(membership, at_ts=scanned_at)
+        if not verdict.allowed:
+            membership_payload = serialize_membership_for_response(
+                membership,
+                reason=verdict.reason or "membership_denied",
+                daily_limit_hit=verdict.daily_limit_hit,
+            )
             return _log_denied(
                 db,
                 user=user,
@@ -311,8 +350,16 @@ def process_scan(
                 direction_mismatch=direction_mismatch,
                 client_ip=client_ip,
                 user_agent=user_agent,
-                reason="daily_entry_limit_reached",
+                reason=verdict.reason or "membership_denied",
+                metadata=membership_metadata,
+                message=membership_payload.get("message") if membership_payload else None,
+                membership_payload=membership_payload,
             )
+        membership_payload = serialize_membership_for_response(
+            membership,
+            reason=None,
+            daily_limit_hit=verdict.daily_limit_hit,
+        )
 
     # Allowed path: update presence and log
     try:
@@ -333,12 +380,22 @@ def process_scan(
             user_agent=user_agent,
             allowed=True,
             reason="ok",
+            metadata=membership_metadata,
         )
         db.add(access_log)
         db.flush()
         duration = DEFAULT_DOOR_DURATION
         _create_door_log(db, access_log, duration, device_id)
-        resp = _response_payload(user, allowed=True, reason="ok", open_door=True, duration=duration)
+        if membership and is_entry:
+            membership_service.record_entry_usage(membership, at_ts=scanned_at)
+        resp = _response_payload(
+            user,
+            allowed=True,
+            reason="ok",
+            open_door=True,
+            duration=duration,
+            membership_payload=membership_payload,
+        )
         db.commit()
         return resp
     except Exception as exc:

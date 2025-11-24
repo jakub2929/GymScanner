@@ -3,7 +3,9 @@ import string
 from sqlalchemy.orm import Session
 from app.models import AccessToken
 
-TOKEN_ALPHABET = string.ascii_uppercase + string.digits
+# Tokens serve as both QR payload and manual PIN entry.
+# Keep them numeric-only for keypad friendlier entry.
+TOKEN_ALPHABET = string.digits
 
 
 def generate_unique_token(db: Session, length: int = 6, max_attempts: int = 30) -> str:

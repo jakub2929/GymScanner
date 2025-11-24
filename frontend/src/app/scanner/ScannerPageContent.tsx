@@ -5,6 +5,17 @@ import { Toast, useToast } from '@/components/toast';
 import { apiClient } from '@/lib/apiClient';
 import { useState } from 'react';
 
+interface MembershipInfo {
+  has_membership: boolean;
+  package_name?: string | null;
+  package_type?: string | null;
+  status?: string | null;
+  valid_from?: string | null;
+  valid_to?: string | null;
+  reason?: string | null;
+  message?: string | null;
+}
+
 interface VerifyResponse {
   allowed: boolean;
   reason: string;
@@ -12,6 +23,8 @@ interface VerifyResponse {
   cooldown_seconds_left?: number | null;
   user_name?: string | null;
   user_email?: string | null;
+  message?: string | null;
+  membership?: MembershipInfo | null;
 }
 
 type ShowToast = (message: string, type?: 'success' | 'error') => void;
@@ -36,13 +49,9 @@ function ScannerConsole({ showToast }: { showToast: ShowToast }) {
         body: JSON.stringify({ token: clean }),
       });
       setLastResult(response);
-      if (response.allowed) {
-        setStatus('Přístup povolen');
-        setStatusType('success');
-      } else {
-        setStatus(messageFromReason(response.reason));
-        setStatusType(response.reason === 'cooldown' ? 'info' : 'error');
-      }
+      const fallback = response.allowed ? 'Přístup povolen' : messageFromReason(response.reason);
+      setStatus(response.message || response.membership?.message || fallback);
+      setStatusType(response.allowed ? 'success' : response.reason === 'cooldown' ? 'info' : 'error');
       showToast(response.allowed ? 'QR ověřen' : 'Přístup zamítnut', response.allowed ? 'success' : 'error');
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Neznámá chyba';
@@ -56,6 +65,16 @@ function ScannerConsole({ showToast }: { showToast: ShowToast }) {
 
   function messageFromReason(reason: string) {
     switch (reason) {
+      case 'membership_required':
+        return 'Je potřeba aktivní permanentka.';
+      case 'membership_expired':
+        return 'Permanentka vypršela.';
+      case 'membership_inactive':
+        return 'Permanentka je neaktivní.';
+      case 'daily_limit':
+        return 'Denní limit byl vyčerpán.';
+      case 'sessions_limit_reached':
+        return 'Vyčerpány všechny osobní tréninky.';
       case 'no_credits':
         return 'Nedostatek vstupů';
       case 'cooldown':
@@ -90,7 +109,7 @@ function ScannerConsole({ showToast }: { showToast: ShowToast }) {
           <textarea
             value={manualToken}
             className="input-field min-h-[140px]"
-            placeholder="Vlož token"
+            placeholder="Vlož PIN nebo token"
             onChange={(e) => setManualToken(e.target.value)}
           />
           <button className="accent-button w-full" onClick={() => handleVerify(manualToken)} disabled={isSubmitting}>
@@ -100,7 +119,12 @@ function ScannerConsole({ showToast }: { showToast: ShowToast }) {
             <div className="glass-subcard rounded-2xl p-4 text-sm text-slate-300 space-y-2">
               <p>Status: {lastResult.allowed ? 'Povoleno' : 'Zamítnuto'}</p>
               <p>Důvod: {lastResult.reason}</p>
+              {lastResult.message && <p>Zpráva: {lastResult.message}</p>}
               <p>Zbývá vstupů: {lastResult.credits_left}</p>
+              {lastResult.membership?.package_name && (
+                <p>Permanentka: {lastResult.membership.package_name}</p>
+              )}
+              {lastResult.membership?.status && <p>Stav permanentky: {lastResult.membership.status}</p>}
               {lastResult.user_name && <p>Uživatel: {lastResult.user_name}</p>}
             </div>
           )}

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
-import type { AdminToken, AdminUser } from '@/types/admin';
+import type { AdminMembershipPackage, AdminToken, AdminUser, AdminScanLog } from '@/types/admin';
 
 function formatDate(value?: string | null) {
   if (!value) return '---';
@@ -20,16 +20,25 @@ export default function AdminOverviewPage() {
     queryKey: ['admin-tokens'],
     queryFn: () => apiClient('/api/admin/tokens'),
   });
+  const packagesQuery = useQuery<AdminMembershipPackage[]>({
+    queryKey: ['admin-packages'],
+    queryFn: () => apiClient('/api/admin/membership-packages?include_inactive=true'),
+  });
+  const scanLogsQuery = useQuery<AdminScanLog[]>({
+    queryKey: ['admin-scan-logs'],
+    queryFn: () => apiClient('/api/admin/scan-logs?limit=8'),
+  });
 
   const stats = useMemo(() => {
     const users = usersQuery.data ?? [];
     const tokens = tokensQuery.data ?? [];
+    const packages = packagesQuery.data ?? [];
     const totalUsers = users.length;
     const admins = users.filter((u) => u.is_admin).length;
-    const totalCredits = users.reduce((sum, user) => sum + (user.credits ?? 0), 0);
     const activeTokens = tokens.filter((token) => token.is_active).length;
-    return { totalUsers, admins, totalCredits, activeTokens };
-  }, [usersQuery.data, tokensQuery.data]);
+    const activePackages = packages.filter((pkg) => pkg.is_active).length;
+    return { totalUsers, admins, activeTokens, activePackages };
+  }, [usersQuery.data, tokensQuery.data, packagesQuery.data]);
 
   const recentUsers = useMemo(() => {
     const users = usersQuery.data ?? [];
@@ -45,11 +54,11 @@ export default function AdminOverviewPage() {
       .slice(0, 6);
   }, [tokensQuery.data]);
 
-  const isLoading = usersQuery.isPending || tokensQuery.isPending;
+  const isLoading = usersQuery.isPending || tokensQuery.isPending || packagesQuery.isPending || scanLogsQuery.isPending;
 
   return (
     <div className="space-y-10">
-      {(usersQuery.isError || tokensQuery.isError) && (
+      {(usersQuery.isError || tokensQuery.isError || scanLogsQuery.isError) && (
         <div className="glass-panel rounded-3xl p-4 text-sm text-rose-200 border border-rose-500/30">
           Nepodařilo se načíst všechna data. Zkus obnovit stránku nebo zkontroluj API.
         </div>
@@ -67,9 +76,9 @@ export default function AdminOverviewPage() {
           <p className="text-slate-400 text-sm mt-2">Mají přístup do admin portálu</p>
         </div>
         <div className="glass-panel rounded-3xl p-6">
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Kredity v oběhu</p>
-          <p className="text-4xl font-semibold mt-3">{stats.totalCredits}</p>
-          <p className="text-slate-400 text-sm mt-2">Součet aktuálních zůstatků</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Aktivní balíčky</p>
+          <p className="text-4xl font-semibold mt-3">{stats.activePackages}</p>
+          <p className="text-slate-400 text-sm mt-2">Permanentky dostupné pro prodej</p>
         </div>
         <div className="glass-panel rounded-3xl p-6">
           <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Aktivní tokeny</p>
@@ -129,6 +138,48 @@ export default function AdminOverviewPage() {
           </div>
         </section>
       </div>
+
+      <section className="glass-panel rounded-3xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold">Logy skenů</h2>
+          <p className="text-sm text-slate-400">
+            {scanLogsQuery.isPending ? '...' : `${scanLogsQuery.data?.length ?? 0} položek`}
+          </p>
+        </div>
+        <div className="space-y-4 text-sm">
+          {(scanLogsQuery.data ?? []).map((log) => {
+            const membershipInfo = (log.metadata as { membership_id?: number; package_id?: number } | undefined) || {};
+            return (
+              <div key={log.id} className="glass-subcard rounded-2xl p-4 space-y-1">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold">{log.user_name ?? 'Neznámý uživatel'}</p>
+                    <p className="text-xs text-slate-400">{formatDate(log.created_at)}</p>
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs ${
+                      log.allowed ? 'bg-emerald-500/20 text-emerald-200' : 'bg-rose-500/20 text-rose-200'
+                    }`}
+                  >
+                    {log.allowed ? 'Povoleno' : 'Zamítnuto'}
+                  </span>
+                </div>
+                <p className="text-slate-300 text-sm">
+                  Důvod: <span className="font-mono text-xs">{log.reason ?? '---'}</span>
+                </p>
+                {(membershipInfo.membership_id || membershipInfo.package_id) && (
+                  <p className="text-slate-400 text-xs">
+                    Permanentka ID: {membershipInfo.membership_id ?? '---'} / Balíček: {membershipInfo.package_id ?? '---'}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+          {!scanLogsQuery.isPending && !(scanLogsQuery.data?.length ?? 0) && (
+            <p className="text-slate-500 text-sm">Žádné záznamy k zobrazení.</p>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

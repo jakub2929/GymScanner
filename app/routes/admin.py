@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from pydantic import BaseModel
-from app.database import get_db
-from app.models import User, AccessToken
-from app.services.presence import rebuild_presence_from_logs
-from app.auth import get_current_user
-import qrcode
-import io
+from datetime import datetime
 import base64
+import io
+import qrcode
+import re
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
+from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field, root_validator
+
+from app.auth import get_current_user
+from app.database import get_db
+from app.models import AccessToken, Membership, MembershipPackage, AccessLog, User
+from app.services.membership import MembershipService
+from app.services.presence import rebuild_presence_from_logs
 
 router = APIRouter()
 
@@ -33,6 +38,120 @@ def build_qr_image(token_str: str) -> str:
 class UpdateCreditsRequest(BaseModel):
     credits: int
     note: str = ""
+
+
+class MembershipPackagePayload(BaseModel):
+    name: str = Field(..., min_length=3, max_length=120)
+    slug: str = Field(..., min_length=3, max_length=120, pattern=r"^[a-z0-9\-_]+$")
+    price_czk: int = Field(..., ge=0)
+    duration_days: int = Field(..., ge=1)
+    package_type: str = Field(default="membership", min_length=3, max_length=50)
+    daily_entry_limit: int | None = Field(default=None, ge=1)
+    session_limit: int | None = Field(default=None, ge=1)
+    description: str | None = Field(default=None, max_length=500)
+    metadata: dict | None = None
+
+
+class MembershipPackageUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=3, max_length=120)
+    slug: str | None = Field(default=None, min_length=3, max_length=120, pattern=r"^[a-z0-9\-_]+$")
+    price_czk: int | None = Field(default=None, ge=0)
+    duration_days: int | None = Field(default=None, ge=1)
+    package_type: str | None = Field(default=None, min_length=3, max_length=50)
+    daily_entry_limit: int | None = Field(default=None, ge=1)
+    session_limit: int | None = Field(default=None, ge=1)
+    description: str | None = Field(default=None, max_length=500)
+    metadata: dict | None = None
+    is_active: bool | None = None
+
+
+class TogglePackageRequest(BaseModel):
+    is_active: bool
+
+
+class AssignMembershipRequest(BaseModel):
+    package_id: int | None = None
+    package_slug: str | None = None
+    custom_name: str | None = Field(default=None, min_length=3, max_length=120)
+    membership_type: str | None = Field(default="membership", min_length=3, max_length=50)
+    price_czk: int | None = Field(default=None, ge=0)
+    duration_days: int | None = Field(default=None, ge=1)
+    start_at: datetime | None = None
+    daily_limit: int | None = Field(default=None, ge=1)
+    session_limit: int | None = Field(default=None, ge=1)
+    notes: str | None = Field(default=None, max_length=500)
+    metadata: dict | None = None
+    auto_renew: bool = False
+
+    @root_validator(skip_on_failure=True)
+    def validate_payload(cls, values):
+        package_id = values.get("package_id")
+        package_slug = values.get("package_slug")
+        if not package_id and not package_slug:
+            # manual assignment requires core details
+            if not values.get("custom_name"):
+                raise ValueError("custom_name is required when package_id is not provided")
+            if not values.get("duration_days"):
+                raise ValueError("duration_days is required when package_id is not provided")
+        return values
+
+
+class UpdateMembershipStatusRequest(BaseModel):
+    status: str = Field(..., pattern=r"^(active|paused|cancelled|expired|grace)$")
+    note: str | None = Field(default=None, max_length=500)
+
+
+class ConsumeSessionsRequest(BaseModel):
+    count: int = Field(1, ge=1, le=10)
+    note: str | None = Field(default=None, max_length=500)
+
+
+def _slugify(value: str) -> str:
+    slug = value.lower().strip()
+    slug = re.sub(r"[^a-z0-9]+", "-", slug).strip("-")
+    return slug or "package"
+
+
+def serialize_package(package: MembershipPackage) -> dict:
+    return {
+        "id": package.id,
+        "name": package.name,
+        "slug": package.slug,
+        "description": package.description,
+        "price_czk": package.price_czk,
+        "duration_days": package.duration_days,
+        "daily_entry_limit": package.daily_entry_limit,
+        "session_limit": package.session_limit,
+        "package_type": package.package_type,
+        "is_active": package.is_active,
+        "metadata": package.metadata_json,
+        "created_at": package.created_at.isoformat() if package.created_at else None,
+        "updated_at": package.updated_at.isoformat() if package.updated_at else None,
+    }
+
+
+def serialize_membership(membership: Membership) -> dict:
+    return {
+        "id": membership.id,
+        "user_id": membership.user_id,
+        "package_id": membership.package_id,
+        "package_name": membership.package_name_cache,
+        "membership_type": membership.membership_type,
+        "status": membership.status,
+        "price_czk": membership.price_czk,
+        "valid_from": membership.valid_from.isoformat() if membership.valid_from else None,
+        "valid_to": membership.valid_to.isoformat() if membership.valid_to else None,
+        "daily_limit_enabled": membership.daily_limit_enabled,
+        "daily_limit": membership.daily_limit,
+        "daily_usage_count": membership.daily_usage_count,
+        "sessions_total": membership.sessions_total,
+        "sessions_used": membership.sessions_used,
+        "auto_renew": membership.auto_renew,
+        "notes": membership.notes,
+        "metadata": membership.metadata_json,
+        "last_usage_at": membership.last_usage_at.isoformat() if membership.last_usage_at else None,
+        "created_at": membership.created_at.isoformat() if membership.created_at else None,
+    }
 
 @router.get("/users/search")
 async def search_users(
@@ -108,6 +227,200 @@ async def update_user_credits(
         "note": request.note
     }
 
+
+@router.get("/membership-packages")
+async def list_membership_packages(
+    include_inactive: bool = Query(False, description="Include inactive packages"),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    service = MembershipService(db)
+    packages = service.list_packages(include_inactive=include_inactive)
+    return [serialize_package(pkg) for pkg in packages]
+
+
+@router.post("/membership-packages")
+async def create_membership_package(
+    payload: MembershipPackagePayload,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    service = MembershipService(db)
+    existing = service.get_package_by_slug(payload.slug)
+    if existing:
+        raise HTTPException(status_code=400, detail="Slug already exists.")
+    package = service.create_package(
+        name=payload.name,
+        slug=payload.slug or _slugify(payload.name),
+        price_czk=payload.price_czk,
+        duration_days=payload.duration_days,
+        package_type=payload.package_type,
+        daily_entry_limit=payload.daily_entry_limit,
+        session_limit=payload.session_limit,
+        description=payload.description,
+        metadata=payload.metadata,
+        created_by_admin_id=current_user.id,
+    )
+    db.commit()
+    db.refresh(package)
+    return serialize_package(package)
+
+
+@router.put("/membership-packages/{package_id}")
+async def update_membership_package(
+    package_id: int,
+    payload: MembershipPackageUpdateRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    service = MembershipService(db)
+    package = service.get_package(package_id)
+    if not package:
+        raise HTTPException(status_code=404, detail="Package not found")
+    if payload.slug and payload.slug != package.slug:
+        conflict = service.get_package_by_slug(payload.slug)
+        if conflict and conflict.id != package.id:
+            raise HTTPException(status_code=400, detail="Slug already in use")
+    service.update_package(
+        package,
+        name=payload.name,
+        slug=payload.slug,
+        price_czk=payload.price_czk,
+        duration_days=payload.duration_days,
+        package_type=payload.package_type,
+        daily_entry_limit=payload.daily_entry_limit,
+        session_limit=payload.session_limit,
+        description=payload.description,
+        metadata=payload.metadata,
+        is_active=payload.is_active,
+    )
+    db.commit()
+    db.refresh(package)
+    return serialize_package(package)
+
+
+@router.post("/membership-packages/{package_id}/toggle")
+async def toggle_membership_package(
+    package_id: int,
+    payload: TogglePackageRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    service = MembershipService(db)
+    package = service.get_package(package_id)
+    if not package:
+        raise HTTPException(status_code=404, detail="Package not found")
+    service.set_package_active(package, payload.is_active)
+    db.commit()
+    db.refresh(package)
+    return serialize_package(package)
+
+
+@router.get("/users/{user_id}/memberships")
+async def list_user_memberships(
+    user_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    service = MembershipService(db)
+    memberships = service.list_user_memberships(user_id)
+    return [serialize_membership(m) for m in memberships]
+
+
+@router.post("/users/{user_id}/memberships")
+async def assign_membership_to_user(
+    user_id: int,
+    payload: AssignMembershipRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    service = MembershipService(db)
+    membership: Membership
+    if payload.package_id or payload.package_slug:
+        package = None
+        if payload.package_id:
+            package = service.get_package(payload.package_id)
+        elif payload.package_slug:
+            package = service.get_package_by_slug(payload.package_slug)
+        if not package:
+            raise HTTPException(status_code=404, detail="Package not found")
+        membership = service.assign_package_to_user(
+            user_id=user_id,
+            package=package,
+            start_at=payload.start_at,
+            created_by_admin_id=current_user.id,
+            notes=payload.notes,
+            auto_renew=payload.auto_renew,
+        )
+    else:
+        membership = service.create_manual_membership(
+            user_id=user_id,
+            name=payload.custom_name or "Manuální permanentka",
+            membership_type=payload.membership_type or "manual",
+            price_czk=payload.price_czk,
+            duration_days=payload.duration_days or 30,
+            start_at=payload.start_at,
+            daily_limit=payload.daily_limit,
+            session_limit=payload.session_limit,
+            notes=payload.notes,
+            metadata=payload.metadata,
+            created_by_admin_id=current_user.id,
+            auto_renew=payload.auto_renew,
+        )
+    db.commit()
+    db.refresh(membership)
+    return serialize_membership(membership)
+
+
+@router.post("/users/{user_id}/memberships/{membership_id}/status")
+async def update_membership_status(
+    user_id: int,
+    membership_id: int,
+    payload: UpdateMembershipStatusRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    membership = (
+        db.query(Membership).filter(Membership.id == membership_id, Membership.user_id == user_id).first()
+    )
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membership not found")
+    membership.status = payload.status
+    if payload.note:
+        membership.notes = (membership.notes or "") + f"\n[{datetime.now().isoformat()}] {payload.note}"
+    db.commit()
+    db.refresh(membership)
+    return serialize_membership(membership)
+
+
+@router.post("/users/{user_id}/memberships/{membership_id}/sessions/consume")
+async def consume_membership_sessions(
+    user_id: int,
+    membership_id: int,
+    payload: ConsumeSessionsRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    membership = (
+        db.query(Membership).filter(Membership.id == membership_id, Membership.user_id == user_id).first()
+    )
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membership not found")
+    service = MembershipService(db)
+    try:
+        service.consume_sessions(membership, count=payload.count, note=payload.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    db.commit()
+    db.refresh(membership)
+    return serialize_membership(membership)
+
 @router.get("/tokens")
 async def list_tokens(
     current_user: User = Depends(require_admin),
@@ -132,6 +445,35 @@ async def list_tokens(
             "qr_code_url": build_qr_image(token.token)
         })
     return response
+
+
+@router.get("/scan-logs")
+async def list_scan_logs(
+    limit: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    logs = (
+        db.query(AccessLog)
+        .order_by(AccessLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    results = []
+    for log in logs:
+        results.append(
+            {
+                "id": log.id,
+                "user_id": log.user_id,
+                "user_name": log.user.name if log.user else None,
+                "reason": log.reason,
+                "status": log.status,
+                "allowed": log.allowed,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+                "metadata": log.metadata_json,
+            }
+        )
+    return results
 
 @router.post("/tokens/{token_id}/activate")
 async def activate_token(

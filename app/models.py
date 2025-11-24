@@ -40,9 +40,15 @@ class Payment(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     paid_at = Column(DateTime(timezone=True), nullable=True)  # When payment was completed
     completed_at = Column(DateTime(timezone=True), nullable=True)  # Legacy field, kept for backward compatibility
+    payment_type = Column(String(40), nullable=False, default="credits")  # credits | membership | custom
+    package_id = Column(Integer, ForeignKey("membership_packages.id"), nullable=True)
+    package_snapshot = Column(JSON, nullable=True)
+    membership_id = Column(Integer, ForeignKey("memberships.id"), nullable=True)
     
     user = relationship("User", back_populates="payments")
     access_tokens = relationship("AccessToken", back_populates="payment")
+    package = relationship("MembershipPackage")
+    membership = relationship("Membership", back_populates="payments", foreign_keys=[membership_id])
 
 class AccessToken(Base):
     __tablename__ = "access_tokens"
@@ -172,6 +178,7 @@ class Membership(Base):
     user = relationship("User", back_populates="memberships", foreign_keys=[user_id])
     package = relationship("MembershipPackage", back_populates="memberships")
     created_by_admin = relationship("User", foreign_keys=[created_by_admin_id])
+    payments = relationship("Payment", back_populates="membership", foreign_keys=[Payment.membership_id])
 
 class BrandingSettings(Base):
     __tablename__ = "branding_settings"
