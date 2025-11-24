@@ -52,15 +52,19 @@ class ScanResponse(VerifyResponse):
 
 def _get_api_key():
     key = os.getenv("TURNSTILE_API_KEY")
-    if not key:
-        logger.error("TURNSTILE_API_KEY is not configured in the environment.")
     return key
 
 
 def _require_api_key(request: Request):
+    # Temporary dev bypass: if TURNSTILE_API_KEY is not set or TURNSTILE_DISABLE_AUTH=1, skip check
+    if os.getenv("TURNSTILE_DISABLE_AUTH") == "1":
+        return
     expected = _get_api_key()
     provided = request.headers.get("X-TURNSTILE-API-KEY")
-    if not expected or provided != expected:
+    if not expected:
+        logger.warning("TURNSTILE_API_KEY missing, scanner auth bypassed for development.")
+        return
+    if provided != expected:
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized turnstile request",
