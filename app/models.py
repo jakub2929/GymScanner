@@ -99,7 +99,7 @@ class AccessLog(Base):
     direction_from_state = Column(String, nullable=True)
     direction_mismatch = Column(Boolean, nullable=True, default=False)
     raw_token_masked = Column(String, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     user = relationship("User")
