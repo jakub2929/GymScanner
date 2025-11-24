@@ -154,22 +154,31 @@ function editPackage(pkg: AdminMembershipPackage) {
     <>
       <div className="space-y-6">
         <section className="glass-panel rounded-3xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="space-y-2">
               <h1 className="text-3xl font-semibold">Balíčky & permanentky</h1>
-              <p className="text-slate-400 text-sm mt-2">Definuj měsíční permanentky, osobní tréninky nebo custom balíčky.</p>
+              <p className="text-slate-400 text-sm">
+                Definuj měsíční permanentky, osobní tréninky nebo custom balíčky.
+              </p>
             </div>
-            <div className="text-right">
-              <p className="text-4xl font-semibold">{activePackages.length}</p>
+            <div className="text-right shrink-0">
+              <p className="text-4xl font-semibold leading-tight">{activePackages.length}</p>
               <p className="text-slate-400 text-sm">Aktivních balíčků</p>
             </div>
           </div>
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <section className="glass-panel rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">{formMode === 'create' ? 'Nový balíček' : 'Upravit balíček'}</h2>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-500">
+                  {formMode === 'create' ? 'Nový balíček' : 'Upravit balíček'}
+                </p>
+                <h2 className="text-2xl font-semibold mt-1">
+                  {formMode === 'create' ? 'Přidej balíček' : 'Úprava balíčku'}
+                </h2>
+              </div>
               {formMode === 'edit' && (
                 <button className="text-sm text-slate-400 hover:text-white" onClick={resetForm}>
                   Zrušit úpravy
@@ -177,7 +186,7 @@ function editPackage(pkg: AdminMembershipPackage) {
               )}
             </div>
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-sm text-slate-400 block mb-1">Název</label>
                   <input
@@ -201,7 +210,7 @@ function editPackage(pkg: AdminMembershipPackage) {
                   <input className="input-field" value={formState.slug} readOnly />
                 </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-sm text-slate-400 block mb-1">Cena (Kč)</label>
                   <input
@@ -223,7 +232,7 @@ function editPackage(pkg: AdminMembershipPackage) {
                   />
                 </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-sm text-slate-400 block mb-1">Denní limit vstupů</label>
                   <input
@@ -247,30 +256,32 @@ function editPackage(pkg: AdminMembershipPackage) {
                   />
                 </div>
               </div>
-              <div>
-                <label className="text-sm text-slate-400 block mb-1">Typ balíčku</label>
-                <select
-                  className="input-field"
-                  value={formState.package_type}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, package_type: event.target.value }))}
-                >
-                  <option value="membership">Permanentka</option>
-                  <option value="personal_training">Osobní trénink</option>
-                  <option value="custom">Vlastní</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm text-slate-400 block mb-1">Popis</label>
-                <textarea
-                  className="input-field min-h-[80px]"
-                  value={formState.description}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-                  placeholder="Krátký text pro adminy / prodej"
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm text-slate-400 block mb-1">Typ balíčku</label>
+                  <select
+                    className="input-field"
+                    value={formState.package_type}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, package_type: event.target.value }))}
+                  >
+                    <option value="membership">Permanentka</option>
+                    <option value="personal_training">Osobní trénink</option>
+                    <option value="custom">Vlastní</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-slate-400 block mb-1">Popis</label>
+                  <textarea
+                    className="input-field min-h-[80px]"
+                    value={formState.description}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
+                    placeholder="Krátký text pro adminy / prodej"
+                  />
+                </div>
               </div>
               <button
                 type="submit"
-                className="accent-button w-full"
+                className="accent-button w-full sm:w-auto"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
                 {formMode === 'create' ? (createMutation.isPending ? 'Vytvářím...' : 'Přidat balíček') : updateMutation.isPending ? 'Ukládám...' : 'Uložit změny'}
