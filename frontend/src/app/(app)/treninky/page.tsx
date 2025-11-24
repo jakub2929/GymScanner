@@ -94,19 +94,16 @@ export default function TreninkyPage() {
   return (
     <>
       <div className="space-y-10">
-        <section className="glass-panel rounded-3xl p-6 space-y-3 sm:p-8">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Služby</p>
-              <h1 className="text-3xl font-semibold text-white mt-1">Osobní tréninky</h1>
-              <p className="text-slate-400 text-sm mt-2">Zbývající tréninky a možnost dokoupit další balíčky.</p>
-            </div>
-            <Link href="/permanentky" className="secondary-button">
-              Přepnout na permanentky
-            </Link>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Služby</p>
+            <h1 className="text-3xl font-semibold text-white mt-1">Osobní tréninky</h1>
+            <p className="text-slate-400 text-sm mt-2">Zůstatky tréninků a nabídka dalších balíčků.</p>
           </div>
-        </section>
-
+          <Link href="/permanentky" className="secondary-button">
+            Přepnout na permanentky
+          </Link>
+        </div>
         <section className="glass-panel rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-white">Moje tréninky</h2>

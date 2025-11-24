@@ -36,8 +36,9 @@ export default function AdminOverviewPage() {
     const totalUsers = users.length;
     const admins = users.filter((u) => u.is_admin).length;
     const activeTokens = tokens.filter((token) => token.is_active).length;
-    const activePackages = packages.filter((pkg) => pkg.is_active).length;
-    return { totalUsers, admins, activeTokens, activePackages };
+    const activeMembershipPackages = packages.filter((pkg) => pkg.is_active && pkg.package_type === 'membership').length;
+    const activeTrainingPackages = packages.filter((pkg) => pkg.is_active && pkg.session_limit).length;
+    return { totalUsers, admins, activeTokens, activeMembershipPackages, activeTrainingPackages };
   }, [usersQuery.data, tokensQuery.data, packagesQuery.data]);
 
   const recentUsers = useMemo(() => {
@@ -68,17 +69,17 @@ export default function AdminOverviewPage() {
         <div className="glass-panel rounded-3xl p-6">
           <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Uživatelé</p>
           <p className="text-4xl font-semibold mt-3">{stats.totalUsers}</p>
-          <p className="text-slate-400 text-sm mt-2">Za posledních 100 registrací</p>
+          <p className="text-slate-400 text-sm mt-2">Aktivní účty ({stats.admins} adminů)</p>
         </div>
         <div className="glass-panel rounded-3xl p-6">
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Administrátoři</p>
-          <p className="text-4xl font-semibold mt-3">{stats.admins}</p>
-          <p className="text-slate-400 text-sm mt-2">Mají přístup do admin portálu</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Permanentky</p>
+          <p className="text-4xl font-semibold mt-3">{stats.activeMembershipPackages}</p>
+          <p className="text-slate-400 text-sm mt-2">Aktivních balíčků v prodeji</p>
         </div>
         <div className="glass-panel rounded-3xl p-6">
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Aktivní balíčky</p>
-          <p className="text-4xl font-semibold mt-3">{stats.activePackages}</p>
-          <p className="text-slate-400 text-sm mt-2">Permanentky dostupné pro prodej</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Osobní tréninky</p>
+          <p className="text-4xl font-semibold mt-3">{stats.activeTrainingPackages}</p>
+          <p className="text-slate-400 text-sm mt-2">Balíčků se sledováním sezení</p>
         </div>
         <div className="glass-panel rounded-3xl p-6">
           <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Aktivní tokeny</p>
@@ -101,8 +102,9 @@ export default function AdminOverviewPage() {
                   <p className="text-slate-400">{user.email}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-slate-400">Kredity</p>
-                  <p className="text-lg font-semibold text-emerald-300">{user.credits}</p>
+                  <p className="text-xs text-slate-400">Role</p>
+                  <p className="text-lg font-semibold text-emerald-300">{user.is_admin ? 'Admin' : 'Uživatel'}</p>
+                  <p className="text-xs text-slate-500 mt-1">{user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}</p>
                 </div>
               </div>
             ))}
@@ -120,7 +122,7 @@ export default function AdminOverviewPage() {
               <div key={token.id} className="glass-subcard rounded-2xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-mono text-xs text-slate-400">{token.token.slice(0, 16)}...</p>
+                    <p className="font-mono text-xs text-slate-400">{token.token.slice(0, 10)}…</p>
                     <p className="font-semibold mt-1">{token.user_name ?? 'Neznámý uživatel'}</p>
                   </div>
                   <span
@@ -131,7 +133,10 @@ export default function AdminOverviewPage() {
                     {token.is_active ? 'Aktivní' : 'Vypnuto'}
                   </span>
                 </div>
-                <p className="text-slate-500 text-xs mt-2">Vytvořeno: {formatDate(token.created_at)}</p>
+                <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+                  <p>Vytvořeno: {formatDate(token.created_at)}</p>
+                  <p>Skenů: {token.scan_count}</p>
+                </div>
               </div>
             ))}
             {!recentTokens.length && !isLoading && <p className="text-slate-500">Žádná data k zobrazení.</p>}
@@ -148,7 +153,14 @@ export default function AdminOverviewPage() {
         </div>
         <div className="space-y-4 text-sm">
           {(scanLogsQuery.data ?? []).map((log) => {
-            const membershipInfo = (log.metadata as { membership_id?: number; package_id?: number } | undefined) || {};
+            const membershipInfo =
+              (log.metadata as {
+                membership_id?: number;
+                package_id?: number;
+                package_name?: string;
+                membership_status?: string;
+                daily_limit_hit?: boolean;
+              } | undefined) || {};
             return (
               <div key={log.id} className="glass-subcard rounded-2xl p-4 space-y-1">
                 <div className="flex items-center justify-between gap-4">
@@ -167,11 +179,16 @@ export default function AdminOverviewPage() {
                 <p className="text-slate-300 text-sm">
                   Důvod: <span className="font-mono text-xs">{log.reason ?? '---'}</span>
                 </p>
-                {(membershipInfo.membership_id || membershipInfo.package_id) && (
-                  <p className="text-slate-400 text-xs">
-                    Permanentka ID: {membershipInfo.membership_id ?? '---'} / Balíček: {membershipInfo.package_id ?? '---'}
-                  </p>
-                )}
+                <p className="text-slate-500 text-xs">Status: {log.status}</p>
+                <div className="text-slate-400 text-xs space-y-1">
+                  {(membershipInfo.membership_id || membershipInfo.package_id) && (
+                    <p>
+                      Permanentka ID: {membershipInfo.membership_id ?? '---'} / Balíček: {membershipInfo.package_id ?? '---'}
+                    </p>
+                  )}
+                  {membershipInfo.membership_status && <p>Stav: {membershipInfo.membership_status}</p>}
+                  {membershipInfo.daily_limit_hit && <p>Denní limit vyčerpán</p>}
+                </div>
               </div>
             );
           })}

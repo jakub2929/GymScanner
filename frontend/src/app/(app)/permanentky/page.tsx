@@ -97,19 +97,16 @@ export default function PermanentkyPage() {
   return (
     <>
       <div className="space-y-10">
-        <section className="glass-panel rounded-3xl p-6 space-y-3 sm:p-8">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Členství</p>
-              <h1 className="text-3xl font-semibold text-white mt-1">Permanentky</h1>
-              <p className="text-slate-400 text-sm mt-2">Přehled zakoupených permanentek a nabídka nových balíčků.</p>
-            </div>
-            <Link href="/treninky" className="secondary-button">
-              Přepnout na tréninky
-            </Link>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Členství</p>
+            <h1 className="text-3xl font-semibold text-white mt-1">Permanentky</h1>
+            <p className="text-slate-400 text-sm mt-2">Aktivní předplatné a nabídka nových balíčků.</p>
           </div>
-        </section>
-
+          <Link href="/treninky" className="secondary-button">
+            Přepnout na tréninky
+          </Link>
+        </div>
         <section className="glass-panel rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-white">Moje permanentky</h2>
