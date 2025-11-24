@@ -109,7 +109,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
   return (
     <div className="min-h-screen bg-[#020610] text-white">
       <nav className="max-w-6xl mx-auto flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:flex-nowrap px-6 py-6">
-        <div className="flex w-full items-center justify-between md:block">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {logoSrc && (
               <img
