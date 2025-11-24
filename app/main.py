@@ -21,6 +21,7 @@ from app.database import (
     ensure_user_password_column,
     ensure_access_log_columns,
     ensure_access_log_extended_columns,
+    ensure_access_log_presence_session_column,
     ensure_user_presence_columns,
     ensure_membership_columns,
 )
@@ -98,6 +99,7 @@ async def initialize_database():
         ensure_last_scan_at_column()
         ensure_payment_comgate_columns()
         ensure_access_log_extended_columns()
+        ensure_access_log_presence_session_column()
         ensure_user_presence_columns()
         ensure_access_log_columns()
         ensure_membership_columns()

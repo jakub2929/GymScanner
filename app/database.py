@@ -253,6 +253,20 @@ def ensure_access_log_extended_columns():
             except Exception as e:
                 logger.warning(f"Error executing migration statement: {statement}, error: {e}")
 
+def ensure_access_log_presence_session_column():
+    """Ensure access_logs has presence_session_id column (for presence sessions linkage)."""
+    inspector = inspect(engine)
+    if 'access_logs' not in inspector.get_table_names():
+        return
+    columns = [col['name'] for col in inspector.get_columns('access_logs')]
+    if 'presence_session_id' in columns:
+        return
+    with engine.begin() as conn:
+        try:
+            conn.execute(text("ALTER TABLE access_logs ADD COLUMN presence_session_id INTEGER"))
+        except Exception as e:
+            logger.warning(f"Error adding presence_session_id to access_logs: {e}")
+
 def ensure_user_presence_columns():
     """Ensure users table has presence/trainer columns"""
     inspector = inspect(engine)
