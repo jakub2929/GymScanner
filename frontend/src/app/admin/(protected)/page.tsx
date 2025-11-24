@@ -114,9 +114,12 @@ export default function AdminOverviewPage() {
                   <p>Od: {formatDate(session.started_at)}</p>
                   <p>Session ID: {session.id}</p>
                 </div>
-                {session.metadata?.membership_id && (
-                  <p className="text-xs text-slate-500">Permanentka ID: {session.metadata.membership_id as number}</p>
-                )}
+                {(() => {
+                  const meta = session.metadata as { membership_id?: number } | undefined;
+                  return meta?.membership_id ? (
+                    <p className="text-xs text-slate-500">Permanentka ID: {meta.membership_id}</p>
+                  ) : null;
+                })()}
               </div>
             ))}
             {!presenceQuery.isPending && !(presenceQuery.data?.length ?? 0) && (
