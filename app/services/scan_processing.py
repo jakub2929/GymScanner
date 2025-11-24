@@ -63,7 +63,7 @@ def _build_access_log(
         direction_from_state=direction_from_state,
         direction_mismatch=direction_mismatch,
         raw_token_masked=mask_token(token_str),
-        metadata=None,
+        metadata_json=None,
     )
 
 

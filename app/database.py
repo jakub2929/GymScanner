@@ -264,6 +264,42 @@ def ensure_user_presence_columns():
             except Exception as e:
                 logger.warning(f"Error executing migration statement: {statement}, error: {e}")
 
+def ensure_membership_columns():
+    """Ensure memberships table has columns required for package-based memberships."""
+    inspector = inspect(engine)
+    if 'memberships' not in inspector.get_table_names():
+        return
+
+    columns = {col['name'] for col in inspector.get_columns('memberships')}
+    statements = []
+
+    def add(column: str, ddl: str):
+        if column not in columns:
+            statements.append(ddl)
+
+    add('package_id', "ALTER TABLE memberships ADD COLUMN package_id INTEGER REFERENCES membership_packages(id)")
+    add('package_name_cache', "ALTER TABLE memberships ADD COLUMN package_name_cache VARCHAR(120)")
+    add('membership_type', "ALTER TABLE memberships ADD COLUMN membership_type VARCHAR(50) DEFAULT 'manual'")
+    add('price_czk', "ALTER TABLE memberships ADD COLUMN price_czk INTEGER")
+    add('daily_limit', "ALTER TABLE memberships ADD COLUMN daily_limit INTEGER")
+    add('daily_usage_count', "ALTER TABLE memberships ADD COLUMN daily_usage_count INTEGER DEFAULT 0")
+    add('last_usage_at', "ALTER TABLE memberships ADD COLUMN last_usage_at TIMESTAMP")
+    add('sessions_total', "ALTER TABLE memberships ADD COLUMN sessions_total INTEGER")
+    add('sessions_used', "ALTER TABLE memberships ADD COLUMN sessions_used INTEGER")
+    add('status', "ALTER TABLE memberships ADD COLUMN status VARCHAR(40) DEFAULT 'active'")
+    add('notes', "ALTER TABLE memberships ADD COLUMN notes TEXT")
+    add('metadata', "ALTER TABLE memberships ADD COLUMN metadata JSON")
+    add('auto_renew', "ALTER TABLE memberships ADD COLUMN auto_renew BOOLEAN DEFAULT FALSE")
+    add('created_by_admin_id', "ALTER TABLE memberships ADD COLUMN created_by_admin_id INTEGER REFERENCES users(id)")
+
+    if statements:
+        with engine.begin() as conn:
+            for statement in statements:
+                try:
+                    conn.execute(text(statement))
+                except Exception as e:
+                    logger.warning(f"Error executing migration statement: {statement}, error: {e}")
+
 def get_db():
     """Dependency for getting database session"""
     db = SessionLocal()

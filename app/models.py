@@ -23,7 +23,7 @@ class User(Base):
     
     payments = relationship("Payment", back_populates="user")
     access_tokens = relationship("AccessToken", back_populates="user")
-    memberships = relationship("Membership", back_populates="user")
+    memberships = relationship("Membership", back_populates="user", foreign_keys="Membership.user_id")
 
 class Payment(Base):
     __tablename__ = "payments"
@@ -123,17 +123,55 @@ class DoorLog(Base):
     access_log = relationship("AccessLog")
 
 
+class MembershipPackage(Base):
+    __tablename__ = "membership_packages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(120), nullable=False, unique=True)
+    slug = Column(String(120), nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+    price_czk = Column(Integer, nullable=False)
+    duration_days = Column(Integer, nullable=False)
+    daily_entry_limit = Column(Integer, nullable=True)
+    session_limit = Column(Integer, nullable=True)
+    package_type = Column(String(50), nullable=False, default="membership")  # membership | personal_training | custom
+    is_active = Column(Boolean, default=True)
+    metadata_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    created_by_admin = relationship("User", foreign_keys=[created_by_admin_id])
+    memberships = relationship("Membership", back_populates="package")
+
+
 class Membership(Base):
     __tablename__ = "memberships"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    package_id = Column(Integer, ForeignKey("membership_packages.id"), nullable=True)
+    package_name_cache = Column(String(120), nullable=True)
+    membership_type = Column(String(50), nullable=False, default="manual")
+    price_czk = Column(Integer, nullable=True)
     valid_from = Column(DateTime(timezone=True), nullable=False)
     valid_to = Column(DateTime(timezone=True), nullable=False)
     daily_limit_enabled = Column(Boolean, default=False)
+    daily_limit = Column(Integer, nullable=True)
+    daily_usage_count = Column(Integer, nullable=True, default=0)
+    last_usage_at = Column(DateTime(timezone=True), nullable=True)
+    sessions_total = Column(Integer, nullable=True)
+    sessions_used = Column(Integer, nullable=True)
+    status = Column(String(40), nullable=False, default="active")
+    notes = Column(Text, nullable=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    auto_renew = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    user = relationship("User", back_populates="memberships")
+    user = relationship("User", back_populates="memberships", foreign_keys=[user_id])
+    package = relationship("MembershipPackage", back_populates="memberships")
+    created_by_admin = relationship("User", foreign_keys=[created_by_admin_id])
 
 class BrandingSettings(Base):
     __tablename__ = "branding_settings"

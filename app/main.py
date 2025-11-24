@@ -22,11 +22,13 @@ from app.database import (
     ensure_access_log_columns,
     ensure_access_log_extended_columns,
     ensure_user_presence_columns,
+    ensure_membership_columns,
 )
 from app.routes import payments, qr, verify, admin, auth, user_qr, credits, branding, owner
 from app.routes import scanner
 from app.database import ensure_user_owner_column
 from app.services.owner import ensure_owner_account, ensure_branding_defaults
+from app.services.membership import ensure_default_membership_packages
 
 logger.info("Starting application initialization...")
 
@@ -98,9 +100,11 @@ async def initialize_database():
         ensure_access_log_extended_columns()
         ensure_user_presence_columns()
         ensure_access_log_columns()
+        ensure_membership_columns()
         logger.info("Database migrations completed")
         ensure_owner_account()
         ensure_branding_defaults()
+        ensure_default_membership_packages()
         
     except Exception as db_error:
         logger.error(f"Database initialization failed: {db_error}")
