@@ -115,18 +115,6 @@ export default function DashboardPage() {
             </div>
           )}
         </section>
-        <section className="glass-panel rounded-3xl p-6 space-y-4">
-          <h2 className="text-2xl font-semibold text-white">Další akce</h2>
-          <p className="text-slate-400 text-sm">Spravuj své permanentky a osobní tréninky na samostatných stránkách.</p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link href="/permanentky" className="accent-button text-center">
-              Přehled permanentek
-            </Link>
-            <Link href="/treninky" className="secondary-button text-center">
-              Přehled tréninků
-            </Link>
-          </div>
-        </section>
       </div>
 
       <Toast toast={toast} />
