@@ -48,14 +48,26 @@ Vygeneruje nový QR token (deaktivuje staré).
 ```
 Response: `{ allowed, reason, credits_left, cooldown_seconds_left, membership {...} }`
 
-### `POST /api/verify/membership` (vyžaduje `X-API-KEY`)
-Lehký dotaz pro ověření permice bez uživatelských detailů a bez odečtu kreditů.
+### `POST /api/verify/entry` (vyžaduje `X-API-KEY`)
+Ověří token/PIN a při úspěchu zapíše využití vstupu (daily limit / sessions).
 ```
 {
   "token": "<qr_or_pin>"
 }
 ```
 Response: `{ allowed, reason, membership {...}, message }`
+
+### `POST /api/verify/exit` (vyžaduje `X-API-KEY`)
+Pouze ověří token/PIN pro odchod, nic nezapisuje.
+```
+{
+  "token": "<qr_or_pin>"
+}
+```
+Response: `{ allowed, reason, membership {...}, message }`
+
+### `POST /api/verify/membership`
+Zpětně kompatibilní alias k `/api/verify/entry`.
 
 ## Membership & kredity
 ### `POST /api/buy_credits` (JWT)

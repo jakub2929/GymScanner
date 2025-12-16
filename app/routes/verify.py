@@ -318,6 +318,7 @@ async def process_verification(
             membership_payload = serialize_membership_for_response(None, reason="membership_missing")
 
         if not access_via_membership:
+            # Kreditová logika: pouze kontrola, bez odečtu
             if user.credits is None or user.credits <= 0:
                 log_access(
                     db,
@@ -335,50 +336,14 @@ async def process_verification(
                 return VerifyResponse(
                     allowed=False,
                     reason="no_credits",
-                    credits_left=0,
+                    credits_left=user.credits or 0,
                     cooldown_seconds_left=None,
                     message=membership_payload.get("message") if membership_payload else None,
                     membership=membership_payload,
                 )
 
-            if not token.is_valid(user_credits=user.credits):
-                log_access(
-                    db,
-                    token_id=token.id,
-                    token_string=token_str,
-                    status="deny",
-                    reason="Token invalid or no credits",
-                    ip_address=client_ip,
-                    user_agent=user_agent,
-                    direction=direction,
-                    scanner_id=scanner_id,
-                    raw_data=raw_data,
-                    metadata=membership_metadata,
-                )
-                return VerifyResponse(
-                    allowed=False,
-                    reason="invalid_token",
-                    credits_left=user.credits or 0,
-                    cooldown_seconds_left=None,
-                    membership=membership_payload,
-                )
-
         try:
             credits_after = user.credits or 0
-
-            if not access_via_membership:
-                if user.credits is None or user.credits <= 0:
-                    db.rollback()
-                    return VerifyResponse(
-                        allowed=False,
-                        reason="no_credits",
-                        credits_left=0,
-                        cooldown_seconds_left=None,
-                        membership=membership_payload,
-                        message=membership_payload.get("message") if membership_payload else None,
-                    )
-                user.credits = max(0, user.credits - 1)
-                credits_after = user.credits
 
             now = datetime.now(timezone.utc)
             token.used_at = now
@@ -455,19 +420,18 @@ async def verify_token(
     return await process_verification(token_str, request, db, direction="in")
 
 
-@router.post("/verify/membership", response_model=MembershipCheckResponse)
-async def verify_membership_only(
-    verify_request: VerifyRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-):
+def _membership_check(
+    token_str: str,
+    db: Session,
+    *,
+    record_usage: bool,
+) -> MembershipCheckResponse:
     """
-    Lightweight membership check for a token/PIN (no credit deduction, no user details).
-    Requires X-API-KEY.
+    Shared membership verification.
+    record_usage=True => zaznamená spotřebu vstupu (daily/session).
+    record_usage=False => pouze ověří, nic nezapisuje.
     """
-    _require_api_key(request)
-    token_str = verify_request.token.strip()
-    token = db.query(AccessToken).filter(AccessToken.token == token_str).first()
+    token = db.query(AccessToken).filter(AccessToken.token == token_str.strip()).first()
     if not token:
         return MembershipCheckResponse(
             allowed=False,
@@ -495,35 +459,81 @@ async def verify_membership_only(
     now_ts = datetime.now(timezone.utc)
     membership_service = MembershipService(db)
     membership = membership_service.get_active_membership(user.id, now_ts)
-    membership_payload = None
-    if membership:
-        verdict = membership_service.can_consume_entry(membership, at_ts=now_ts)
-        membership_payload = serialize_membership_for_response(
-            membership,
-            reason=verdict.reason,
-            daily_limit_hit=verdict.daily_limit_hit,
-        )
-        if not verdict.allowed:
-            return MembershipCheckResponse(
-                allowed=False,
-                reason=verdict.reason or "membership_denied",
-                membership=membership_payload,
-                message=membership_payload.get("message") if membership_payload else None,
-            )
+    if not membership:
+        membership_payload = serialize_membership_for_response(None, reason="membership_missing")
         return MembershipCheckResponse(
-            allowed=True,
-            reason="ok",
+            allowed=False,
+            reason="membership_missing",
             membership=membership_payload,
             message=membership_payload.get("message") if membership_payload else None,
         )
 
-    membership_payload = serialize_membership_for_response(None, reason="membership_missing")
+    verdict = membership_service.can_consume_entry(membership, at_ts=now_ts)
+    membership_payload = serialize_membership_for_response(
+        membership,
+        reason=verdict.reason,
+        daily_limit_hit=verdict.daily_limit_hit,
+    )
+    if not verdict.allowed:
+        return MembershipCheckResponse(
+            allowed=False,
+            reason=verdict.reason or "membership_denied",
+            membership=membership_payload,
+            message=membership_payload.get("message") if membership_payload else None,
+        )
+
+    if record_usage:
+        membership_service.record_entry_usage(membership, at_ts=now_ts)
+        db.commit()
+
     return MembershipCheckResponse(
-        allowed=False,
-        reason="membership_missing",
+        allowed=True,
+        reason="ok",
         membership=membership_payload,
         message=membership_payload.get("message") if membership_payload else None,
     )
+
+
+@router.post("/verify/entry", response_model=MembershipCheckResponse)
+async def verify_entry(
+    verify_request: VerifyRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Ověření pro vstup (odečítá denní limit/sessions při úspěchu).
+    Requires X-API-KEY.
+    """
+    _require_api_key(request)
+    return _membership_check(verify_request.token, db, record_usage=True)
+
+
+@router.post("/verify/exit", response_model=MembershipCheckResponse)
+async def verify_exit(
+    verify_request: VerifyRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Ověření pro odchod (neodečítá vstup, jen validuje).
+    Requires X-API-KEY.
+    """
+    _require_api_key(request)
+    return _membership_check(verify_request.token, db, record_usage=False)
+
+
+@router.post("/verify/membership", response_model=MembershipCheckResponse)
+async def verify_membership_only(
+    verify_request: VerifyRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Backward-compatible alias k /verify/entry.
+    Requires X-API-KEY.
+    """
+    _require_api_key(request)
+    return _membership_check(verify_request.token, db, record_usage=True)
 @router.get("/access_logs")
 async def get_access_logs(
     limit: int = 100,
