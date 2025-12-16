@@ -15,7 +15,7 @@ from app.models import AccessToken, Membership, MembershipPackage, AccessLog, Us
 from app.services.api_keys import create_api_key, serialize_api_key, verify_api_key
 from app.services.membership import MembershipService
 from app.services.presence_sessions import PresenceSessionService, serialize_presence_session
-from app.services.presence import rebuild_presence_from_logs
+from app.services.presence import rebuild_presence_from_logs, set_presence
 
 router = APIRouter()
 
@@ -616,9 +616,12 @@ async def end_presence_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     service.force_close(session, status=payload.status, notes=payload.note)
+    user = db.query(User).filter(User.id == session.user_id).first()
+    # Update user presence flag and last_exit timestamp
+    if user:
+        set_presence(db, user, False, session.ended_at or datetime.utcnow())
     db.commit()
     db.refresh(session)
-    user = db.query(User).filter(User.id == session.user_id).first()
     return serialize_presence_session(session, user)
 
 @router.post("/tokens/{token_id}/activate")
