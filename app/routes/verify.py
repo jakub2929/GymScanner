@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.models import AccessToken, AccessLog, User
 from app.services.membership import MembershipService, serialize_membership_for_response
+from app.services.presence_sessions import PresenceSessionService
+from app.services.presence import set_presence
 from datetime import datetime, timezone, timedelta
 import logging
 import os
@@ -425,11 +427,13 @@ def _membership_check(
     db: Session,
     *,
     record_usage: bool,
+    direction: str,
 ) -> MembershipCheckResponse:
     """
     Shared membership verification.
     record_usage=True => zaznamená spotřebu vstupu (daily/session).
-    record_usage=False => pouze ověří, nic nezapisuje.
+    record_usage=False => pouze ověří.
+    direction: "entry" nebo "exit" pro správu presence.
     """
     token = db.query(AccessToken).filter(AccessToken.token == token_str.strip()).first()
     if not token:
@@ -482,8 +486,40 @@ def _membership_check(
             message=membership_payload.get("message") if membership_payload else None,
         )
 
-    if record_usage:
-        membership_service.record_entry_usage(membership, at_ts=now_ts)
+    presence_service = PresenceSessionService(db)
+    active_session = presence_service.find_active_session(user.id)
+    has_changes = False
+
+    if direction == "entry":
+        if record_usage:
+            membership_service.record_entry_usage(membership, at_ts=now_ts)
+            has_changes = True
+        if not active_session:
+            presence_service.start_session(
+                user=user,
+                token=token,
+                membership=membership,
+                access_log=None,
+                scanned_at=now_ts,
+                metadata={"source": "api_entry"},
+            )
+            has_changes = True
+        set_presence(db, user, True, now_ts)
+        has_changes = True
+    elif direction == "exit":
+        if active_session:
+            presence_service.end_session(
+                session=active_session,
+                access_log=None,
+                scanned_at=now_ts,
+                status="closed",
+                notes=None,
+            )
+            has_changes = True
+        set_presence(db, user, False, now_ts)
+        has_changes = True
+
+    if has_changes:
         db.commit()
 
     return MembershipCheckResponse(
@@ -505,7 +541,7 @@ async def verify_entry(
     Requires X-API-KEY.
     """
     _require_api_key(request)
-    return _membership_check(verify_request.token, db, record_usage=True)
+    return _membership_check(verify_request.token, db, record_usage=True, direction="entry")
 
 
 @router.post("/verify/exit", response_model=MembershipCheckResponse)
@@ -519,21 +555,7 @@ async def verify_exit(
     Requires X-API-KEY.
     """
     _require_api_key(request)
-    return _membership_check(verify_request.token, db, record_usage=False)
-
-
-@router.post("/verify/membership", response_model=MembershipCheckResponse)
-async def verify_membership_only(
-    verify_request: VerifyRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    """
-    Backward-compatible alias k /verify/entry.
-    Requires X-API-KEY.
-    """
-    _require_api_key(request)
-    return _membership_check(verify_request.token, db, record_usage=True)
+    return _membership_check(verify_request.token, db, record_usage=False, direction="exit")
 @router.get("/access_logs")
 async def get_access_logs(
     limit: int = 100,

@@ -49,7 +49,7 @@ Vygeneruje nový QR token (deaktivuje staré).
 Response: `{ allowed, reason, credits_left, cooldown_seconds_left, membership {...} }`
 
 ### `POST /api/verify/entry` (vyžaduje `X-API-KEY`)
-Ověří token/PIN a při úspěchu zapíše využití vstupu (daily limit / sessions).
+Ověří token/PIN, při úspěchu zapíše využití vstupu (daily limit / sessions) a označí uživatele jako „v gymu“.
 ```
 {
   "token": "<qr_or_pin>"
@@ -58,16 +58,13 @@ Ověří token/PIN a při úspěchu zapíše využití vstupu (daily limit / ses
 Response: `{ allowed, reason, membership {...}, message }`
 
 ### `POST /api/verify/exit` (vyžaduje `X-API-KEY`)
-Pouze ověří token/PIN pro odchod, nic nezapisuje.
+Ověří token/PIN pro odchod a uzavře aktivní presence session (uživatel už není „v gymu“).
 ```
 {
   "token": "<qr_or_pin>"
 }
 ```
 Response: `{ allowed, reason, membership {...}, message }`
-
-### `POST /api/verify/membership`
-Zpětně kompatibilní alias k `/api/verify/entry`.
 
 ## Membership & kredity
 ### `POST /api/buy_credits` (JWT)
