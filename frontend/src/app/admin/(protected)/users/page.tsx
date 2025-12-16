@@ -121,6 +121,9 @@ export default function AdminUsersPage() {
     []
   );
 
+  const formatTime = (value?: string | null) =>
+    value ? new Date(value).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false }) : '---';
+
   return (
     <>
       <div className="space-y-6">
@@ -169,12 +172,8 @@ export default function AdminUsersPage() {
                         {user.is_admin ? 'Admin' : 'Uživatel'}
                       </span>
                     </td>
-                    <td className="py-4 text-slate-400">
-                      {user.last_entry_at ? new Date(user.last_entry_at).toLocaleString('cs-CZ') : '---'}
-                    </td>
-                    <td className="py-4 text-slate-400">
-                      {user.last_exit_at ? new Date(user.last_exit_at).toLocaleString('cs-CZ') : '---'}
-                    </td>
+                    <td className="py-4 text-slate-400">{formatTime(user.last_entry_at)}</td>
+                    <td className="py-4 text-slate-400">{formatTime(user.last_exit_at)}</td>
                     <td className="py-4 text-slate-400">
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}
                     </td>
@@ -195,12 +194,8 @@ export default function AdminUsersPage() {
                   <div>
                     <p className="font-semibold">{user.name}</p>
                     <p className="text-slate-400 text-xs">{user.email}</p>
-                    <p className="text-slate-500 text-[11px] mt-1">
-                      Poslední vstup: {user.last_entry_at ? new Date(user.last_entry_at).toLocaleString('cs-CZ') : '---'}
-                    </p>
-                    <p className="text-slate-500 text-[11px]">
-                      Poslední odchod: {user.last_exit_at ? new Date(user.last_exit_at).toLocaleString('cs-CZ') : '---'}
-                    </p>
+                    <p className="text-slate-500 text-[11px] mt-1">Poslední vstup: {formatTime(user.last_entry_at)}</p>
+                    <p className="text-slate-500 text-[11px]">Poslední odchod: {formatTime(user.last_exit_at)}</p>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-xs ${

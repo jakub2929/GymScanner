@@ -5,9 +5,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import type { AdminMembershipPackage, AdminUser, AdminPresenceSession } from '@/types/admin';
 
-function formatDate(value?: string | null) {
+function formatTimeHM(value?: string | null) {
   if (!value) return '---';
-  return new Date(value).toLocaleString('cs-CZ', { hour12: false });
+  return new Date(value).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 export default function AdminOverviewPage() {
@@ -118,7 +118,7 @@ export default function AdminOverviewPage() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <p>Od: {formatDate(session.started_at)}</p>
+                  <p>Od: {formatTimeHM(session.started_at)}</p>
                   <p>Session ID: {session.id}</p>
                 </div>
                 {(() => {
