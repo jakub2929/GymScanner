@@ -473,9 +473,14 @@ def _membership_check(
         )
 
     verdict = membership_service.can_consume_entry(membership, at_ts=now_ts)
+    reason_for_payload = verdict.reason
+    if direction == "exit" and not verdict.allowed and verdict.reason == "daily_limit":
+        # U výstupu neblokujeme denní limit – dovolíme odejít, ale flag daily_limit_hit necháme.
+        verdict.allowed = True
+        reason_for_payload = None
     membership_payload = serialize_membership_for_response(
         membership,
-        reason=verdict.reason,
+        reason=reason_for_payload,
         daily_limit_hit=verdict.daily_limit_hit,
     )
     if not verdict.allowed:
