@@ -176,6 +176,22 @@ class MembershipPackage(Base):
     created_by_admin = relationship("User", foreign_keys=[created_by_admin_id])
     memberships = relationship("Membership", back_populates="package")
 
+class APIKey(Base):
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(120), nullable=False)
+    prefix = Column(String(16), nullable=False, index=True)
+    key_hash = Column(String(128), nullable=False, unique=True)
+    is_active = Column(Boolean, default=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+
+    created_by_user = relationship("User", foreign_keys=[created_by_user_id])
+
 
 class Membership(Base):
     __tablename__ = "memberships"

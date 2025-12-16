@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -26,7 +26,6 @@ from app.database import (
     ensure_membership_columns,
 )
 from app.routes import payments, qr, verify, admin, auth, user_qr, credits, branding, owner
-from app.routes import scanner
 from app.database import ensure_user_owner_column
 from app.services.owner import ensure_owner_account, ensure_branding_defaults
 from app.services.membership import ensure_default_membership_packages
@@ -62,12 +61,18 @@ app.add_middleware(
 # Add logging middleware to debug requests
 @app.middleware("http")
 async def log_requests(request, call_next):
-    # Log request details - using print to ensure it shows up
-    auth_header = request.headers.get("Authorization", "None")
+    def _sanitize_headers(headers: dict[str, str]) -> dict[str, str]:
+        redacted = {}
+        for key, value in headers.items():
+            if key.lower() in {"authorization", "x-api-key"}:
+                redacted[key] = "[redacted]"
+            else:
+                redacted[key] = value
+        return redacted
+
     print(f"[MIDDLEWARE] Request: {request.method} {request.url.path}")
-    print(f"[MIDDLEWARE] Authorization header: {auth_header[:80] if auth_header != 'None' else 'None'}")
-    print(f"[MIDDLEWARE] All headers: {dict(request.headers)}")
-    
+    print(f"[MIDDLEWARE] Headers: {_sanitize_headers(dict(request.headers))}")
+
     response = await call_next(request)
     print(f"[MIDDLEWARE] Response status: {response.status_code}")
     return response
@@ -128,7 +133,6 @@ app.include_router(credits.router, prefix="/api", tags=["credits"])
 app.include_router(payments.router, prefix="/api", tags=["payments"])
 app.include_router(qr.router, prefix="/api", tags=["qr"])
 app.include_router(verify.router, prefix="/api", tags=["verify"])
-app.include_router(scanner.router, prefix="/api", tags=["scanner"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(owner.router, prefix="/api", tags=["owner"])
 app.include_router(branding.router, prefix="/api", tags=["branding"])
@@ -189,3 +193,12 @@ async def list_routes():
         "api_prefix": "/api",
         "total": len(routes)
     }
+
+@app.get("/api/public-docs")
+async def public_docs():
+    """Serve public API documentation (Markdown)."""
+    docs_path = Path(__file__).resolve().parent.parent / "docs" / "api_public.md"
+    if not docs_path.exists():
+        return {"detail": "api_public.md not found"}
+    content = docs_path.read_text(encoding="utf-8")
+    return Response(content=content, media_type="text/markdown")

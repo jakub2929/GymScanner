@@ -155,14 +155,9 @@ npm run lint   # ESLint (musí projít před commitem)
 ### QR kódy a vstup
 - `GET /api/my_qr` - Získání osobního QR kódu (vyžaduje auth)
 - `POST /api/regenerate_qr` - Vygenerování nového QR kódu (vyžaduje auth)
-- `POST /api/verify` - Ověření QR kódu (turnstile scanner)
+- `POST /api/verify` - Ověření QR kódu/PINu (vyžaduje `X-API-KEY`)
   - Response: `{allowed: bool, reason: str, credits_left: int, cooldown_seconds_left: int | null}`
-- `POST /api/scanner/in` - Server-to-server verifikace pro turniket (API key v `X-TURNSTILE-API-KEY`, payload: token, scanner_id, raw_data)
-- `POST /api/scanner/out` - Logování odchodu (API key v `X-TURNSTILE-API-KEY`, payload: token, scanner_id, raw_data)
-- `POST /api/scan/in` - Alias pro IN se strukturovaným payloadem `{token, timestamp, device_id}`
-- `POST /api/scan/out` - Alias pro OUT se strukturovaným payloadem `{token, timestamp, device_id}`
-- `POST /api/admin/users/{user_id}/rebuild-presence` - Admin akce pro přepočet `is_in_gym` z posledního logu
-- Scan response pro turnikety obsahuje navíc: `open_door` (bool), `door_open_duration` (sekundy), `user {name,email}`; pokud `allowed=true` a `open_door=true`, daemon otevře relé na zadanou dobu.
+- `POST /api/verify/membership` - Lehký membership check (vyžaduje `X-API-KEY`, neodečítá kredity, nevrací uživatelská data)
 - **Frontend:** Tlačítko "Stáhnout QR" pro stažení QR kódu jako PNG obrázek
 
 ### Kredity
@@ -176,9 +171,13 @@ npm run lint   # ESLint (musí projít před commitem)
 - `GET /api/admin/tokens` - Přehled tokenů včetně QR preview (vyžaduje admin)
 - `POST /api/admin/tokens/{token_id}/activate` - Aktivuj token (vyžaduje admin)
 - `POST /api/admin/tokens/{token_id}/deactivate` - Deaktivuj token (vyžaduje admin)
+- `GET|POST /api/admin/api-keys`, `POST /api/admin/api-keys/{id}/revoke`, `DELETE /api/admin/api-keys/{id}` - Správa API klíčů pro serverové integrace (vyžaduje admin nebo X-API-KEY)
 
 ### Logs
 - `GET /api/access_logs` - Access log (pro debugging/admin)
+
+### Veřejná API dokumentace
+- `GET /api/public-docs` - Markdown přehled endpointů a autorizace (JWT / X-API-KEY)
 
 ## Databázové modely
 

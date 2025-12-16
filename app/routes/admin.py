@@ -4,27 +4,52 @@ import io
 import qrcode
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, root_validator
 
-from app.auth import get_current_user
+from app.auth import get_current_user, get_optional_user
 from app.database import get_db
-from app.models import AccessToken, Membership, MembershipPackage, AccessLog, User, PresenceSession
+from app.models import AccessToken, Membership, MembershipPackage, AccessLog, User, PresenceSession, APIKey
+from app.services.api_keys import create_api_key, serialize_api_key, verify_api_key
 from app.services.membership import MembershipService
 from app.services.presence_sessions import PresenceSessionService, serialize_presence_session
 from app.services.presence import rebuild_presence_from_logs
 
 router = APIRouter()
 
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """Require admin privileges"""
-    # Handle SQLite boolean (0/1) vs Python bool
-    is_admin = bool(current_user.is_admin) if current_user.is_admin is not None else False
-    if not is_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
+def require_admin(
+    request: Request,
+    db: Session = Depends(get_db),
+    optional_user: User | None = Depends(get_optional_user),
+) -> User:
+    """
+    Allow admin access via JWT or active API key (X-API-KEY).
+    Returns the resolved user (creator of the key if available) or a proxy admin user.
+    """
+    api_key_raw = request.headers.get("X-API-KEY") or request.headers.get("x-api-key")
+    if api_key_raw:
+        api_key_obj = verify_api_key(db, api_key_raw.strip())
+        if api_key_obj:
+            if api_key_obj.created_by_user_id:
+                creator = db.query(User).filter(User.id == api_key_obj.created_by_user_id).first()
+                if creator:
+                    return creator
+            proxy = User()
+            proxy.id = api_key_obj.created_by_user_id
+            proxy.is_admin = True
+            proxy.email = "api-key"
+            proxy.name = api_key_obj.name
+            return proxy
+
+    if optional_user:
+        is_admin = bool(optional_user.is_admin) if optional_user.is_admin is not None else False
+        if not is_admin:
+            raise HTTPException(status_code=403, detail="Admin access required")
+        return optional_user
+
+    raise HTTPException(status_code=401, detail="Unauthorized")
 
 def build_qr_image(token_str: str) -> str:
     qr = qrcode.QRCode(version=1, box_size=6, border=2)
@@ -109,6 +134,20 @@ class UpdateMembershipStatusRequest(BaseModel):
 class ConsumeSessionsRequest(BaseModel):
     count: int = Field(1, ge=1, le=10)
     note: str | None = Field(default=None, max_length=500)
+
+class APIKeyCreateRequest(BaseModel):
+    name: str = Field(..., min_length=3, max_length=120)
+
+
+class APIKeyResponse(BaseModel):
+    id: int
+    name: str
+    prefix: str
+    is_active: bool
+    created_at: str | None = None
+    last_used_at: str | None = None
+    created_by_user_id: int | None = None
+    token: str | None = None  # only populated on create
 
 
 def _slugify(value: str) -> str:
@@ -425,6 +464,60 @@ async def consume_membership_sessions(
     db.commit()
     db.refresh(membership)
     return serialize_membership(membership)
+
+@router.get("/api-keys", response_model=list[APIKeyResponse])
+async def list_api_keys(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """List API keys without exposing secrets."""
+    keys = db.query(APIKey).order_by(APIKey.created_at.desc()).all()
+    return [APIKeyResponse(**serialize_api_key(key)) for key in keys]
+
+
+@router.post("/api-keys", response_model=APIKeyResponse)
+async def create_api_key_endpoint(
+    payload: APIKeyCreateRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Create a new API key and return the secret once."""
+    api_key, raw_key = create_api_key(
+        db,
+        name=payload.name,
+        created_by_user_id=current_user.id if current_user else None,
+    )
+    data = serialize_api_key(api_key)
+    data["token"] = raw_key
+    return APIKeyResponse(**data)
+
+
+@router.post("/api-keys/{key_id}/revoke")
+async def revoke_api_key(
+    key_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    key = db.query(APIKey).filter(APIKey.id == key_id).first()
+    if not key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    key.is_active = False
+    db.commit()
+    return {"status": "ok", "message": "API key revoked"}
+
+
+@router.delete("/api-keys/{key_id}")
+async def delete_api_key(
+    key_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    key = db.query(APIKey).filter(APIKey.id == key_id).first()
+    if not key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    db.delete(key)
+    db.commit()
+    return {"status": "ok", "message": "API key deleted"}
 
 @router.get("/tokens")
 async def list_tokens(

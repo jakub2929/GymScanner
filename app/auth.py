@@ -25,6 +25,7 @@ pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # HTTP Bearer scheme for JWT tokens
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
@@ -84,6 +85,34 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    return user
+
+
+async def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(optional_security),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Return current user if JWT provided, otherwise None."""
+    if credentials is None:
+        return None
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+
+    sub = payload.get("sub")
+    if not sub:
+        raise HTTPException(status_code=401, detail="Token missing subject")
+
+    try:
+        user_id = int(sub)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=401, detail="Token subject must be an integer")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     return user
 
 async def get_current_owner(current_user: User = Depends(get_current_user)) -> User:

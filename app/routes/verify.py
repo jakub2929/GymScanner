@@ -7,6 +7,9 @@ from app.models import AccessToken, AccessLog, User
 from app.services.membership import MembershipService, serialize_membership_for_response
 from datetime import datetime, timezone, timedelta
 import logging
+import os
+import time
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +17,48 @@ router = APIRouter()
 
 # Cooldown duration in seconds
 COOLDOWN_SECONDS = 60
+RATE_LIMIT_PER_MINUTE = int(os.getenv("VERIFY_RATE_LIMIT_PER_MINUTE", "120"))
+_rate_limit_window_seconds = 60
+_rate_limit_buckets: dict[str, deque[float]] = {}
+
+
+def _get_api_verify_key() -> str | None:
+    """Return API key from env (API_VERIFY_KEY preferred, TURNSTILE_API_KEY as fallback)."""
+    return os.getenv("API_VERIFY_KEY") or os.getenv("TURNSTILE_API_KEY")
+
+
+def _enforce_rate_limit(key: str):
+    """Simple sliding window rate limit per API key."""
+    if RATE_LIMIT_PER_MINUTE <= 0:
+        return
+    now = time.time()
+    bucket = _rate_limit_buckets.setdefault(key, deque())
+    window_start = now - _rate_limit_window_seconds
+    while bucket and bucket[0] < window_start:
+        bucket.popleft()
+    if len(bucket) >= RATE_LIMIT_PER_MINUTE:
+        raise HTTPException(
+            status_code=http_status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded",
+        )
+    bucket.append(now)
+
+
+def _require_api_key(request: Request):
+    """Require global API key for /api/verify (protects PIN/QR endpoint)."""
+    expected = _get_api_verify_key()
+    provided = request.headers.get("X-API-KEY")
+    if not expected:
+        raise HTTPException(
+            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="API key not configured",
+        )
+    if provided != expected:
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+        )
+    _enforce_rate_limit(provided)
 
 
 def log_access(
@@ -99,6 +144,13 @@ class VerifyResponse(BaseModel):
     user: dict | None = None
     message: str | None = None
     membership: MembershipInfo | None = None
+
+
+class MembershipCheckResponse(BaseModel):
+    allowed: bool
+    reason: str
+    membership: MembershipInfo | None = None
+    message: str | None = None
 
 async def process_verification(
     token_str: str,
@@ -398,9 +450,80 @@ async def verify_token(
     Implements 60-second cooldown on user level (all tokens of same user share cooldown).
     Logs all access attempts for audit purposes.
     """
+    _require_api_key(request)
     token_str = verify_request.token
     return await process_verification(token_str, request, db, direction="in")
 
+
+@router.post("/verify/membership", response_model=MembershipCheckResponse)
+async def verify_membership_only(
+    verify_request: VerifyRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Lightweight membership check for a token/PIN (no credit deduction, no user details).
+    Requires X-API-KEY.
+    """
+    _require_api_key(request)
+    token_str = verify_request.token.strip()
+    token = db.query(AccessToken).filter(AccessToken.token == token_str).first()
+    if not token:
+        return MembershipCheckResponse(
+            allowed=False,
+            reason="token_not_found",
+            membership=None,
+            message=None,
+        )
+    if not token.is_active:
+        return MembershipCheckResponse(
+            allowed=False,
+            reason="token_deactivated",
+            membership=None,
+            message=None,
+        )
+
+    user = db.query(User).filter(User.id == token.user_id).first()
+    if not user:
+        return MembershipCheckResponse(
+            allowed=False,
+            reason="user_not_found",
+            membership=None,
+            message=None,
+        )
+
+    now_ts = datetime.now(timezone.utc)
+    membership_service = MembershipService(db)
+    membership = membership_service.get_active_membership(user.id, now_ts)
+    membership_payload = None
+    if membership:
+        verdict = membership_service.can_consume_entry(membership, at_ts=now_ts)
+        membership_payload = serialize_membership_for_response(
+            membership,
+            reason=verdict.reason,
+            daily_limit_hit=verdict.daily_limit_hit,
+        )
+        if not verdict.allowed:
+            return MembershipCheckResponse(
+                allowed=False,
+                reason=verdict.reason or "membership_denied",
+                membership=membership_payload,
+                message=membership_payload.get("message") if membership_payload else None,
+            )
+        return MembershipCheckResponse(
+            allowed=True,
+            reason="ok",
+            membership=membership_payload,
+            message=membership_payload.get("message") if membership_payload else None,
+        )
+
+    membership_payload = serialize_membership_for_response(None, reason="membership_missing")
+    return MembershipCheckResponse(
+        allowed=False,
+        reason="membership_missing",
+        membership=membership_payload,
+        message=membership_payload.get("message") if membership_payload else None,
+    )
 @router.get("/access_logs")
 async def get_access_logs(
     limit: int = 100,

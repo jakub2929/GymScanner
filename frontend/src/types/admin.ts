@@ -85,3 +85,14 @@ export interface AdminUserMembership {
   last_usage_at?: string | null;
   created_at?: string | null;
 }
+
+export interface AdminApiKey {
+  id: number;
+  name: string;
+  prefix: string;
+  is_active: boolean;
+  created_at?: string | null;
+  last_used_at?: string | null;
+  created_by_user_id?: number | null;
+  token?: string | null;
+}
