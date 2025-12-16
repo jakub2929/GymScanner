@@ -5,6 +5,9 @@ export interface AdminUser {
   credits?: number;
   is_admin: boolean;
   created_at?: string | null;
+  last_entry_at?: string | null;
+  last_exit_at?: string | null;
+  is_in_gym?: boolean;
 }
 
 export interface AdminToken {

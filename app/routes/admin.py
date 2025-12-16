@@ -219,7 +219,10 @@ async def search_users(
             "email": user.email,
             "credits": user.credits or 0,
             "is_admin": user.is_admin or False,
-            "created_at": user.created_at.isoformat() if user.created_at else None
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_entry_at": user.last_entry_at.isoformat() if user.last_entry_at else None,
+            "last_exit_at": user.last_exit_at.isoformat() if user.last_exit_at else None,
+            "is_in_gym": bool(user.is_in_gym),
         }
         for user in users
     ]
@@ -239,7 +242,10 @@ async def list_users(
             "email": user.email,
             "credits": user.credits or 0,
             "is_admin": user.is_admin or False,
-            "created_at": user.created_at.isoformat() if user.created_at else None
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_entry_at": user.last_entry_at.isoformat() if user.last_entry_at else None,
+            "last_exit_at": user.last_exit_at.isoformat() if user.last_exit_at else None,
+            "is_in_gym": bool(user.is_in_gym),
         }
         for user in users
     ]

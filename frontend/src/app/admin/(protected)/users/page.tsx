@@ -149,6 +149,8 @@ export default function AdminUsersPage() {
                   <th className="py-3">Jméno</th>
                   <th className="py-3">E-mail</th>
                   <th className="py-3">Role</th>
+                  <th className="py-3">Poslední vstup</th>
+                  <th className="py-3">Poslední odchod</th>
                   <th className="py-3">Registrován</th>
                   <th className="py-3 text-right">Akce</th>
                 </tr>
@@ -166,6 +168,12 @@ export default function AdminUsersPage() {
                       >
                         {user.is_admin ? 'Admin' : 'Uživatel'}
                       </span>
+                    </td>
+                    <td className="py-4 text-slate-400">
+                      {user.last_entry_at ? new Date(user.last_entry_at).toLocaleString('cs-CZ') : '---'}
+                    </td>
+                    <td className="py-4 text-slate-400">
+                      {user.last_exit_at ? new Date(user.last_exit_at).toLocaleString('cs-CZ') : '---'}
                     </td>
                     <td className="py-4 text-slate-400">
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}
@@ -187,6 +195,12 @@ export default function AdminUsersPage() {
                   <div>
                     <p className="font-semibold">{user.name}</p>
                     <p className="text-slate-400 text-xs">{user.email}</p>
+                    <p className="text-slate-500 text-[11px] mt-1">
+                      Poslední vstup: {user.last_entry_at ? new Date(user.last_entry_at).toLocaleString('cs-CZ') : '---'}
+                    </p>
+                    <p className="text-slate-500 text-[11px]">
+                      Poslední odchod: {user.last_exit_at ? new Date(user.last_exit_at).toLocaleString('cs-CZ') : '---'}
+                    </p>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-xs ${

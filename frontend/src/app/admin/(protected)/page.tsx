@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import type { AdminMembershipPackage, AdminUser, AdminPresenceSession } from '@/types/admin';
 
@@ -15,6 +15,7 @@ export default function AdminOverviewPage() {
     queryKey: ['admin-users', ''],
     queryFn: () => apiClient('/api/admin/users'),
   });
+  const queryClient = useQueryClient();
 
   const packagesQuery = useQuery<AdminMembershipPackage[]>({
     queryKey: ['admin-packages'],
@@ -23,6 +24,17 @@ export default function AdminOverviewPage() {
   const presenceQuery = useQuery<AdminPresenceSession[]>({
     queryKey: ['admin-presence-active'],
     queryFn: () => apiClient('/api/admin/presence/active'),
+  });
+
+  const endPresenceMutation = useMutation({
+    mutationFn: async (sessionId: number) =>
+      apiClient(`/api/admin/presence/${sessionId}/end`, {
+        method: 'POST',
+        body: JSON.stringify({ status: 'force_exit', note: 'Admin force exit' }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-presence-active'] });
+    },
   });
 
   const stats = useMemo(() => {
@@ -94,7 +106,16 @@ export default function AdminOverviewPage() {
                     <p className="font-semibold">{session.user_name ?? 'Neznámý uživatel'}</p>
                     <p className="text-xs text-slate-400">{session.user_email ?? ''}</p>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-200">Uvnitř</span>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-200">Uvnitř</span>
+                    <button
+                      className="secondary-button text-xs px-3 py-1"
+                      disabled={endPresenceMutation.isPending}
+                      onClick={() => endPresenceMutation.mutate(session.id)}
+                    >
+                      {endPresenceMutation.isPending ? 'Označuji...' : 'Označit jako odešel'}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <p>Od: {formatDate(session.started_at)}</p>
