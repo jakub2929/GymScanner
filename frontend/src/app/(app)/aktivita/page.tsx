@@ -73,10 +73,10 @@ export default function AktivitaPage() {
                 <div key={session.id} className="glass-subcard rounded-2xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-lg text-white">Session #{session.id}</p>
-                      <p className="text-xs uppercase tracking-[0.35em] text-slate-500">
-                        {session.status}{session.last_direction ? ` • ${session.last_direction}` : ''}
+                      <p className="font-semibold text-lg text-white">
+                        {session.last_direction === 'out' ? 'Odchod' : 'Příchod'}
                       </p>
+                      <p className="text-xs uppercase tracking-[0.35em] text-slate-500">{session.status}</p>
                     </div>
                     <span
                       className={`px-3 py-1 rounded-full text-xs ${
@@ -87,10 +87,8 @@ export default function AktivitaPage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-4 text-sm text-slate-300">
-                    <p>Od: {formatDate(session.started_at)}</p>
-                    <p>Do: {session.ended_at ? formatDate(session.ended_at) : '---'}</p>
-                    <p>Délka: {formatDuration(session.duration_seconds)}</p>
-                    {session.membership_id && <p>Permanentka ID: {session.membership_id}</p>}
+                    <p>Čas: {formatDate(session.started_at)}</p>
+                    <p>Doba: {formatDuration(session.duration_seconds)}</p>
                   </div>
                   {session.notes && <p className="text-xs text-slate-400 whitespace-pre-line">{session.notes}</p>}
                 </div>
