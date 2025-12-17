@@ -30,7 +30,28 @@ function shouldSetJsonHeader(body: BodyInit | null | undefined) {
   return true;
 }
 
-async function request<TResponse>(path: string, options: ApiClientOptions, tokenKey: string): Promise<TResponse> {
+function handleUnauthorized(tokenKey: string) {
+  if (typeof window === 'undefined') return;
+  if (tokenKey === 'access_token') {
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('user_name');
+    sessionStorage.removeItem('user_email');
+    sessionStorage.removeItem('is_admin');
+    window.location.href = '/login';
+  } else if (tokenKey === 'owner_access_token') {
+    sessionStorage.removeItem('owner_access_token');
+    sessionStorage.removeItem('owner_name');
+    sessionStorage.removeItem('owner_email');
+    sessionStorage.removeItem('owner_role');
+    window.location.href = '/owner/login';
+  }
+}
+
+async function request<TResponse>(
+  path: string,
+  options: ApiClientOptions,
+  tokenKey: 'access_token' | 'owner_access_token',
+): Promise<TResponse> {
   const headers = new Headers(options.headers);
   if (!headers.has('Content-Type') && shouldSetJsonHeader(options.body)) {
     headers.set('Content-Type', 'application/json');
@@ -56,8 +77,13 @@ async function request<TResponse>(path: string, options: ApiClientOptions, token
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized(tokenKey);
+    }
     const detail = await safeParseError(response);
-    throw new Error(detail ?? `HTTP ${response.status}`);
+    const error = new Error(detail ?? `HTTP ${response.status}`);
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
   }
 
   if (response.status === 204) {
