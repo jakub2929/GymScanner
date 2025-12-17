@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import { Toast, useToast } from '@/components/toast';
@@ -42,17 +41,35 @@ interface QrResponse {
   packages: MembershipPackageSummary[];
 }
 
-function formatDate(date?: string | null) {
-  if (!date) return null;
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+function formatShortDate(value?: string | null) {
+  if (!value) return '---';
   try {
-    return new Date(date).toLocaleDateString('cs-CZ', {
+    return new Date(value).toLocaleDateString('cs-CZ', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
     });
   } catch {
-    return null;
+    return value ?? '---';
   }
+}
+
+function buildTimelineInfo(validFrom?: string | null, validTo?: string | null) {
+  if (!validFrom || !validTo) return null;
+  const start = new Date(validFrom).getTime();
+  const end = new Date(validTo).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
+  const now = Date.now();
+  const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+  const remainingDays = Math.max(0, Math.ceil((end - now) / MS_PER_DAY));
+  return {
+    progress,
+    remainingDays,
+    startLabel: formatShortDate(validFrom),
+    endLabel: formatShortDate(validTo),
+  };
 }
 
 export default function TreninkyPage() {
@@ -94,20 +111,34 @@ export default function TreninkyPage() {
   return (
     <>
       <div className="space-y-10">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="space-y-6">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Služby</p>
             <h1 className="text-3xl font-semibold text-white mt-1">Osobní tréninky</h1>
-            <p className="text-slate-400 text-sm mt-2">Zůstatky tréninků a nabídka dalších balíčků.</p>
+            <p className="text-slate-400 text-sm mt-2">
+              Přehled zakoupených tréninkových balíčků včetně čerpání a rychlý nákup dalších vstupů.
+            </p>
           </div>
-          <Link href="/permanentky" className="secondary-button">
-            Přepnout na permanentky
-          </Link>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="glass-subcard rounded-2xl p-4">
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Aktivní balíčky</p>
+              <p className="text-3xl font-semibold text-white mt-2">{isPending ? '…' : trainingCards.length}</p>
+              <p className="text-slate-400 text-sm mt-1">Kolik tréninkových balíčků právě čerpáš.</p>
+            </div>
+            <div className="glass-subcard rounded-2xl p-4">
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Dostupná nabídka</p>
+              <p className="text-3xl font-semibold text-white mt-2">{availablePackages.length}</p>
+              <p className="text-slate-400 text-sm mt-1">Počet balíčků připravených k nákupu.</p>
+            </div>
+          </div>
         </div>
         <section className="glass-panel rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Moje tréninky</h2>
-            <p className="text-sm text-slate-400">{isPending ? '...' : `${trainingCards.length} položek`}</p>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Moje tréninky</h2>
+              <p className="text-slate-400 text-sm">Vizualizace čerpání i platnosti každého balíčku.</p>
+            </div>
+            <p className="text-sm text-slate-400">{isPending ? '...' : `${trainingCards.length} aktivních`}</p>
           </div>
           {isPending ? (
             <p className="text-slate-400 text-sm">Načítám...</p>
@@ -119,35 +150,74 @@ export default function TreninkyPage() {
               </a>
             </div>
           ) : (
-            <div className="space-y-3">
-              {trainingCards.map((card) => (
-                <div key={card.membership_id} className="glass-subcard rounded-2xl p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-lg text-white">{card.package_name ?? 'Balíček tréninků'}</p>
-                      <p className="text-xs uppercase tracking-[0.35em] text-slate-500">
-                        {card.package_type ?? card.membership_type}
-                      </p>
+            <div className="space-y-4">
+              {trainingCards.map((card) => {
+                const totalSessions = card.sessions_total ?? 0;
+                const usedSessions = card.sessions_used ?? 0;
+                const remaining = totalSessions ? Math.max(0, totalSessions - usedSessions) : null;
+                const sessionsProgress =
+                  totalSessions > 0 ? Math.min(100, Math.max(0, (usedSessions / totalSessions) * 100)) : usedSessions ? 100 : 0;
+                const timeline = buildTimelineInfo(card.valid_from, card.valid_to);
+
+                return (
+                  <div key={card.membership_id} className="glass-subcard rounded-2xl p-5 space-y-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <p className="font-semibold text-lg text-white">{card.package_name ?? 'Balíček tréninků'}</p>
+                        <p className="text-xs uppercase tracking-[0.35em] text-slate-500">
+                          {card.package_type ?? card.membership_type}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs ${
+                            card.status === 'active' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-slate-200'
+                          }`}
+                        >
+                          {card.status}
+                        </span>
+                        {remaining !== null && (
+                          <p className="text-xs text-slate-400 mt-1">Zbývá {remaining} / {totalSessions} tréninků</p>
+                        )}
+                      </div>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs ${
-                        card.status === 'active' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-slate-200'
-                      }`}
-                    >
-                      {card.status}
-                    </span>
+
+                    {timeline && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>{timeline.startLabel}</span>
+                          <span>{timeline.remainingDays} dnů zbývá</span>
+                        </div>
+                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-400 to-cyan-500"
+                            style={{ width: `${timeline.progress}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>Začátek</span>
+                          <span>{timeline.endLabel}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>
+                          Čerpáno {usedSessions}
+                          {totalSessions ? ` / ${totalSessions}` : ''} tréninků
+                        </span>
+                        <span>{remaining !== null ? `Zbývá ${remaining}` : 'Bez limitu'}</span>
+                      </div>
+                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-400" style={{ width: `${sessionsProgress}%` }} />
+                      </div>
+                    </div>
+
+                    {card.message && <p className="text-xs text-slate-400">{card.message}</p>}
                   </div>
-                  <div className="text-sm text-slate-300 flex flex-wrap gap-4">
-                    {card.valid_from && <p>Od {formatDate(card.valid_from) ?? card.valid_from}</p>}
-                    {card.valid_to && <p>Do {formatDate(card.valid_to) ?? card.valid_to}</p>}
-                    <p>
-                      Zbývá {Math.max(0, (card.sessions_total ?? 0) - (card.sessions_used ?? 0))}/{card.sessions_total ?? 0}{' '}
-                      tréninků
-                    </p>
-                  </div>
-                  {card.message && <p className="text-xs text-slate-400">{card.message}</p>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -169,11 +239,22 @@ export default function TreninkyPage() {
             <div className="grid gap-4 md:grid-cols-2">
               {availablePackages.map((pkg) => (
                 <div key={pkg.id} className="glass-subcard rounded-2xl p-5 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-semibold text-white">{pkg.name}</h3>
-                    <p className="text-slate-400 text-sm">{pkg.description ?? 'Bez popisu'}</p>
-                    <p className="text-white text-2xl font-semibold">{pkg.price_czk.toLocaleString('cs-CZ')} Kč</p>
-                    <p className="text-slate-400 text-sm">{pkg.session_limit ?? 0} tréninků</p>
+                  <div className="space-y-3">
+                    <div className="flex flex-col gap-2">
+                      <h3 className="text-xl font-semibold text-white">{pkg.name}</h3>
+                      <p className="text-slate-400 text-sm">{pkg.description ?? 'Bez popisu'}</p>
+                    </div>
+                    <div className="text-white text-2xl font-semibold">
+                      {pkg.price_czk.toLocaleString('cs-CZ')} Kč
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                      <span className="px-3 py-1 rounded-full bg-white/5">
+                        Platnost {pkg.duration_days} dnů
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-white/5">
+                        {pkg.session_limit ?? 0} tréninků
+                      </span>
+                    </div>
                   </div>
                   <button
                     onClick={() => buyTrainingPackage(pkg)}
