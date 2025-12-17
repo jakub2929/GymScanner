@@ -140,26 +140,12 @@ export default function PermanentkyPage() {
   return (
     <>
       <div className="space-y-10">
-        <div className="space-y-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Členství</p>
-            <h1 className="text-3xl font-semibold text-white mt-1">Permanentky</h1>
-            <p className="text-slate-400 text-sm mt-2">
-              Přehled předplatného, čerpání denních limitů a nabídka nových balíčků.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="glass-subcard rounded-2xl p-4">
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Aktivní permanentky</p>
-              <p className="text-3xl font-semibold text-white mt-2">{isPending ? '…' : membershipCards.length}</p>
-              <p className="text-slate-400 text-sm mt-1">Kolik předplatných aktuálně běží.</p>
-            </div>
-            <div className="glass-subcard rounded-2xl p-4">
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Dostupná nabídka</p>
-              <p className="text-3xl font-semibold text-white mt-2">{availablePackages.length}</p>
-              <p className="text-slate-400 text-sm mt-1">Počet balíčků připravených k nákupu.</p>
-            </div>
-          </div>
+        <div>
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Členství</p>
+          <h1 className="text-3xl font-semibold text-white mt-1">Permanentky</h1>
+          <p className="text-slate-400 text-sm mt-2">
+            Jasný přehled platnosti a denních limitů s nabídkou nových balíčků.
+          </p>
         </div>
         <section className="glass-panel rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
