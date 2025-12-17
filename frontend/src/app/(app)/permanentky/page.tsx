@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import { Toast, useToast } from '@/components/toast';
@@ -58,6 +57,50 @@ function formatDate(date?: string | null) {
   }
 }
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+function formatShortDate(value?: string | null) {
+  if (!value) return '---';
+  try {
+    return new Date(value).toLocaleDateString('cs-CZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch {
+    return value ?? '---';
+  }
+}
+
+function buildTimelineInfo(validFrom?: string | null, validTo?: string | null) {
+  if (!validFrom || !validTo) return null;
+  const start = new Date(validFrom).getTime();
+  const end = new Date(validTo).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
+  const now = Date.now();
+  const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+  const remainingDays = Math.max(0, Math.ceil((end - now) / MS_PER_DAY));
+  return {
+    progress,
+    remainingDays,
+    startLabel: formatShortDate(validFrom),
+    endLabel: formatShortDate(validTo),
+  };
+}
+
+function buildDailyUsage(dailyLimit?: number | null, used?: number | null) {
+  if (!dailyLimit) return null;
+  const safeLimit = Math.max(dailyLimit, 0);
+  const safeUsed = Math.max(0, Math.min(used ?? 0, safeLimit));
+  const percent = safeLimit > 0 ? Math.min(100, (safeUsed / safeLimit) * 100) : 0;
+  return {
+    limit: safeLimit,
+    used: safeUsed,
+    remaining: Math.max(0, safeLimit - safeUsed),
+    percent,
+  };
+}
+
 export default function PermanentkyPage() {
   const { toast, showToast } = useToast();
   const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
@@ -97,20 +140,34 @@ export default function PermanentkyPage() {
   return (
     <>
       <div className="space-y-10">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="space-y-6">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Členství</p>
             <h1 className="text-3xl font-semibold text-white mt-1">Permanentky</h1>
-            <p className="text-slate-400 text-sm mt-2">Aktivní předplatné a nabídka nových balíčků.</p>
+            <p className="text-slate-400 text-sm mt-2">
+              Přehled předplatného, čerpání denních limitů a nabídka nových balíčků.
+            </p>
           </div>
-          <Link href="/treninky" className="secondary-button">
-            Přepnout na tréninky
-          </Link>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="glass-subcard rounded-2xl p-4">
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Aktivní permanentky</p>
+              <p className="text-3xl font-semibold text-white mt-2">{isPending ? '…' : membershipCards.length}</p>
+              <p className="text-slate-400 text-sm mt-1">Kolik předplatných aktuálně běží.</p>
+            </div>
+            <div className="glass-subcard rounded-2xl p-4">
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Dostupná nabídka</p>
+              <p className="text-3xl font-semibold text-white mt-2">{availablePackages.length}</p>
+              <p className="text-slate-400 text-sm mt-1">Počet balíčků připravených k nákupu.</p>
+            </div>
+          </div>
         </div>
         <section className="glass-panel rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Moje permanentky</h2>
-            <p className="text-sm text-slate-400">{isPending ? '...' : `${membershipCards.length} položek`}</p>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Moje permanentky</h2>
+              <p className="text-slate-400 text-sm">Zde vidíš platnost, denní limity i stav každé permice.</p>
+            </div>
+            <p className="text-sm text-slate-400">{isPending ? '...' : `${membershipCards.length} aktivních`}</p>
           </div>
           {isPending ? (
             <p className="text-slate-400 text-sm">Načítám...</p>
@@ -122,32 +179,74 @@ export default function PermanentkyPage() {
               </a>
             </div>
           ) : (
-            <div className="space-y-3">
-              {membershipCards.map((card) => (
-                <div key={card.membership_id} className="glass-subcard rounded-2xl p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-lg text-white">{card.package_name ?? 'Permanentka'}</p>
-                      <p className="text-xs uppercase tracking-[0.35em] text-slate-500">
-                        {card.package_type ?? card.membership_type}
-                      </p>
+            <div className="space-y-4">
+              {membershipCards.map((card) => {
+                const timeline = buildTimelineInfo(card.valid_from, card.valid_to);
+                const daily = buildDailyUsage(card.daily_limit, card.daily_usage_count);
+                return (
+                  <div key={card.membership_id} className="glass-subcard rounded-2xl p-5 space-y-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <p className="font-semibold text-lg text-white">{card.package_name ?? 'Permanentka'}</p>
+                        <p className="text-xs uppercase tracking-[0.35em] text-slate-500">
+                          {card.package_type ?? card.membership_type}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs ${
+                            card.status === 'active' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-slate-200'
+                          }`}
+                        >
+                          {card.status}
+                        </span>
+                        {card.valid_to && (
+                          <p className="text-xs text-slate-400 mt-1">Platnost do {formatDate(card.valid_to) ?? card.valid_to}</p>
+                        )}
+                      </div>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs ${
-                        card.status === 'active' ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-slate-200'
-                      }`}
-                    >
-                      {card.status}
-                    </span>
+
+                    {timeline && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>{timeline.startLabel}</span>
+                          <span>{timeline.remainingDays} dnů zbývá</span>
+                        </div>
+                        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-400 via-rose-400 to-pink-500"
+                            style={{ width: `${timeline.progress}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>Začátek</span>
+                          <span>{timeline.endLabel}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {daily && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs text-slate-500">
+                          <span>Dnes {daily.used}/{daily.limit} vstupů</span>
+                          <span>Zbývá {daily.remaining}</span>
+                        </div>
+                        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-rose-400" style={{ width: `${daily.percent}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="text-sm text-slate-300 flex flex-wrap gap-4">
+                      {card.valid_from && <p>Od {formatDate(card.valid_from) ?? card.valid_from}</p>}
+                      {card.valid_to && <p>Do {formatDate(card.valid_to) ?? card.valid_to}</p>}
+                      {card.daily_limit && <p>Denní limit {card.daily_limit} vstupů</p>}
+                    </div>
+
+                    {card.message && <p className="text-xs text-slate-400">{card.message}</p>}
                   </div>
-                  <div className="text-sm text-slate-300 flex flex-wrap gap-4">
-                    {card.valid_from && <p>Od {formatDate(card.valid_from) ?? card.valid_from}</p>}
-                    {card.valid_to && <p>Do {formatDate(card.valid_to) ?? card.valid_to}</p>}
-                    {card.daily_limit && <p>Limit {card.daily_limit} vstup/den</p>}
-                  </div>
-                  {card.message && <p className="text-xs text-slate-400">{card.message}</p>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -169,14 +268,24 @@ export default function PermanentkyPage() {
             <div className="grid gap-4 md:grid-cols-2">
               {availablePackages.map((pkg) => (
                 <div key={pkg.id} className="glass-subcard rounded-2xl p-5 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-semibold text-white">{pkg.name}</h3>
-                    <p className="text-slate-400 text-sm">{pkg.description ?? 'Bez popisu'}</p>
-                    <p className="text-white text-2xl font-semibold">{pkg.price_czk.toLocaleString('cs-CZ')} Kč</p>
-                    <p className="text-slate-400 text-sm">Platnost {pkg.duration_days} dnů</p>
-                    {pkg.daily_entry_limit && (
-                      <p className="text-slate-400 text-sm">Denní limit: {pkg.daily_entry_limit} vstup/den</p>
-                    )}
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-xl font-semibold text-white">{pkg.name}</h3>
+                        <p className="text-slate-400 text-sm">{pkg.description ?? 'Bez popisu'}</p>
+                      </div>
+                      <p className="text-white text-2xl font-semibold">{pkg.price_czk.toLocaleString('cs-CZ')} Kč</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                      <span className="px-3 py-1 rounded-full bg-white/5">
+                        Platnost {pkg.duration_days} dnů
+                      </span>
+                      {pkg.daily_entry_limit && (
+                        <span className="px-3 py-1 rounded-full bg-white/5">
+                          Denní limit {pkg.daily_entry_limit} vstupů
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => buyMembershipPackage(pkg)}
