@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
@@ -15,16 +15,6 @@ interface QrResponse {
 export default function DashboardPage() {
   const { toast, showToast } = useToast();
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [summary, setSummary] = useState('');
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const email = sessionStorage.getItem('user_email');
-    const name = sessionStorage.getItem('user_name');
-    if (name || email) {
-      setSummary([name, email].filter(Boolean).join(' • '));
-    }
-  }, []);
 
   const { data, isPending, refetch } = useQuery<QrResponse>({
     queryKey: ['my-qr'],
@@ -67,7 +57,6 @@ export default function DashboardPage() {
               <h1 className="text-3xl sm:text-[2.5rem] font-semibold tracking-tight text-white">
                 Tvůj přístupový QR kód
               </h1>
-              {summary && <p className="text-slate-300 mt-4 text-sm">{summary}</p>}
             </div>
           </div>
 
