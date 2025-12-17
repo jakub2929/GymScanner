@@ -16,8 +16,33 @@ from app.services.api_keys import create_api_key, serialize_api_key, verify_api_
 from app.services.membership import MembershipService
 from app.services.presence_sessions import PresenceSessionService, serialize_presence_session
 from app.services.presence import rebuild_presence_from_logs, set_presence
+from app.services.token_service import generate_unique_token
 
 router = APIRouter()
+
+
+def _ensure_active_token_for_user(db: Session, user_id: int) -> AccessToken:
+    token = (
+        db.query(AccessToken)
+        .filter(AccessToken.user_id == user_id, AccessToken.is_active.is_(True))
+        .order_by(AccessToken.created_at.desc())
+        .first()
+    )
+    if token:
+        return token
+    token_str = generate_unique_token(db)
+    token = AccessToken(
+        token=token_str,
+        user_id=user_id,
+        payment_id=None,
+        expires_at=None,
+        is_active=True,
+        scan_count=0,
+    )
+    db.add(token)
+    db.commit()
+    db.refresh(token)
+    return token
 
 def require_admin(
     request: Request,
@@ -97,6 +122,13 @@ class TogglePackageRequest(BaseModel):
 class EndPresenceSessionRequest(BaseModel):
     status: str = Field(default="closed", max_length=40)
     note: str | None = Field(default=None, max_length=500)
+
+
+class AdminUserQrResponse(BaseModel):
+    token: str
+    qr_code_url: str
+    user_name: str
+    user_email: str
 
 
 class AssignMembershipRequest(BaseModel):
@@ -249,6 +281,47 @@ async def list_users(
         }
         for user in users
     ]
+
+
+@router.get("/users/{user_id}/qr", response_model=AdminUserQrResponse)
+async def admin_get_user_qr(
+    user_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    token = _ensure_active_token_for_user(db, user.id)
+    return AdminUserQrResponse(
+        token=token.token,
+        qr_code_url=build_qr_image(token.token),
+        user_name=user.name,
+        user_email=user.email,
+    )
+
+
+@router.post("/users/{user_id}/qr/regenerate", response_model=AdminUserQrResponse)
+async def admin_regenerate_user_qr(
+    user_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.query(AccessToken).filter(
+        AccessToken.user_id == user.id,
+        AccessToken.is_active.is_(True),
+    ).update({"is_active": False})
+    db.flush()
+    token = _ensure_active_token_for_user(db, user.id)
+    return AdminUserQrResponse(
+        token=token.token,
+        qr_code_url=build_qr_image(token.token),
+        user_name=user.name,
+        user_email=user.email,
+    )
 
 @router.post("/users/{user_id}/credits")
 async def update_user_credits(

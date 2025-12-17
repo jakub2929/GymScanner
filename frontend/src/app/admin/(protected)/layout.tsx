@@ -14,7 +14,6 @@ const navLinks = [
   { href: '/admin', label: 'Přehled' },
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/packages', label: 'Balíčky' },
-  { href: '/admin/tokens', label: 'Tokeny' },
   { href: '/admin/api-keys', label: 'API klíče' },
 ];
 

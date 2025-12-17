@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
-import type { AdminMembershipPackage, AdminUser, AdminUserMembership } from '@/types/admin';
+import type { AdminMembershipPackage, AdminUser, AdminUserMembership, AdminUserQr } from '@/types/admin';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Toast, useToast } from '@/components/toast';
 
@@ -38,6 +38,11 @@ export default function AdminUsersPage() {
     queryFn: () => apiClient(`/api/admin/users/${membershipUser!.id}/memberships`),
     enabled: !!membershipUser,
   });
+  const userTokenQuery = useQuery<AdminUserQr>({
+    queryKey: ['admin-user-token', membershipUser?.id],
+    queryFn: () => apiClient(`/api/admin/users/${membershipUser!.id}/qr`),
+    enabled: !!membershipUser,
+  });
 
   const assignMembershipMutation = useMutation({
     mutationFn: async (payload: { userId: number; packageId: number; startDate?: string; autoRenew: boolean }) =>
@@ -57,6 +62,19 @@ export default function AdminUsersPage() {
       setAutoRenew(false);
     },
     onError: (error) => showToast(error instanceof Error ? error.message : 'Nepodařilo se přiřadit permanentku', 'error'),
+  });
+
+  const regenerateTokenMutation = useMutation({
+    mutationFn: async (userId: number) =>
+      apiClient(`/api/admin/users/${userId}/qr/regenerate`, {
+        method: 'POST',
+      }),
+    onSuccess: (_, userId) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-token', userId] });
+      showToast('QR a PIN byly regenerovány');
+    },
+    onError: (error) =>
+      showToast(error instanceof Error ? error.message : 'Nepodařilo se regenerovat PIN', 'error'),
   });
 
   const membershipStatusMutation = useMutation({
@@ -188,7 +206,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="py-4 text-right space-x-2">
                       <button className="secondary-button" onClick={() => openMembershipModal(user)}>
-                        Permanentky
+                        Detail klienta
                       </button>
                     </td>
                   </tr>
@@ -222,7 +240,7 @@ export default function AdminUsersPage() {
                   Registrován: {user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}
                 </p>
                 <button className="accent-button w-full" onClick={() => openMembershipModal(user)}>
-                  Permanentky
+                  Detail klienta
                 </button>
               </div>
             ))}
@@ -253,6 +271,42 @@ export default function AdminUsersPage() {
                 &times;
               </button>
             </div>
+
+            <section className="space-y-4">
+              <h4 className="text-lg font-semibold">Přístupový QR a PIN</h4>
+              {userTokenQuery.isPending ? (
+                <p className="text-slate-400 text-sm">Načítám přístup...</p>
+              ) : userTokenQuery.isError ? (
+                <p className="text-rose-300 text-sm">Nepodařilo se načíst přístupový kód.</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-[220px,1fr]">
+                  <div className="glass-subcard rounded-2xl p-4 flex items-center justify-center bg-white/5">
+                    {userTokenQuery.data?.qr_code_url ? (
+                      <img
+                        src={userTokenQuery.data.qr_code_url}
+                        alt="QR kód uživatele"
+                        className="w-full max-w-[200px] rounded-xl border border-white/10 bg-white"
+                      />
+                    ) : (
+                      <p className="text-slate-400 text-sm text-center">QR kód není dostupný.</p>
+                    )}
+                  </div>
+                  <div className="glass-subcard rounded-2xl p-5 space-y-3 flex flex-col justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Aktuální PIN</p>
+                      <p className="font-mono text-3xl text-white mt-2">{userTokenQuery.data?.token ?? '---'}</p>
+                    </div>
+                    <button
+                      className="secondary-button w-full sm:w-auto"
+                      onClick={() => regenerateTokenMutation.mutate(membershipUser.id)}
+                      disabled={regenerateTokenMutation.isPending}
+                    >
+                      {regenerateTokenMutation.isPending ? 'Regeneruji...' : 'Regenerovat PIN'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
 
             <section className="space-y-4">
               <h4 className="text-lg font-semibold">Aktivní permanentky</h4>

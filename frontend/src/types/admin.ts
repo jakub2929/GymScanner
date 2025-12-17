@@ -10,6 +10,13 @@ export interface AdminUser {
   is_in_gym?: boolean;
 }
 
+export interface AdminUserQr {
+  token: string;
+  qr_code_url: string | null;
+  user_name: string;
+  user_email: string;
+}
+
 export interface AdminToken {
   id: number;
   token: string;
