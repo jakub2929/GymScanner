@@ -88,6 +88,49 @@ def ensure_user_admin_column():
             # Set default is_admin for existing users
             conn.execute(text("UPDATE users SET is_admin = FALSE WHERE is_admin IS NULL"))
 
+def ensure_user_profile_columns():
+    """Ensure users table has profile-related columns (first_name/last_name/phone_number)."""
+    inspector = inspect(engine)
+    if 'users' not in inspector.get_table_names():
+        return
+    columns = [col['name'] for col in inspector.get_columns('users')]
+    alters = []
+    if 'first_name' not in columns:
+        alters.append("ALTER TABLE users ADD COLUMN first_name VARCHAR")
+    if 'last_name' not in columns:
+        alters.append("ALTER TABLE users ADD COLUMN last_name VARCHAR")
+    if 'phone_number' not in columns:
+        alters.append("ALTER TABLE users ADD COLUMN phone_number VARCHAR")
+
+    if alters:
+        with engine.begin() as conn:
+            for statement in alters:
+                conn.execute(text(statement))
+            # Try to populate first_name/last_name from existing name if missing (PostgreSQL split_part)
+            try:
+                conn.execute(
+                    text(
+                        """
+                        UPDATE users
+                        SET first_name = COALESCE(first_name, NULLIF(split_part(name, ' ', 1), '')),
+                            last_name = COALESCE(
+                                last_name,
+                                NULLIF(
+                                    CASE
+                                        WHEN array_length(string_to_array(name, ' '), 1) > 1
+                                            THEN substring(name from position(' ' in name) + 1)
+                                        ELSE ''
+                                    END,
+                                    ''
+                                )
+                            )
+                        WHERE name IS NOT NULL
+                        """
+                    )
+                )
+            except Exception as populate_error:
+                logger.warning(f"Could not backfill user profile columns: {populate_error}")
+
 def ensure_user_owner_column():
     """Ensure users table has is_owner column"""
     inspector = inspect(engine)
@@ -326,6 +369,64 @@ def ensure_membership_columns():
                     conn.execute(text(statement))
                 except Exception as e:
                     logger.warning(f"Error executing migration statement: {statement}, error: {e}")
+
+
+def ensure_calcom_columns():
+    """Ensure Cal.com tables have expected columns (admin_id on webhook events)."""
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    if "calcom_webhook_events" in tables:
+        columns = {col["name"] for col in inspector.get_columns("calcom_webhook_events")}
+        if "admin_id" not in columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE calcom_webhook_events ADD COLUMN admin_id INTEGER REFERENCES users(id)"))
+                except Exception as e:
+                    logger.warning(f"Error adding admin_id to calcom_webhook_events: {e}")
+    if "calcom_settings" in tables:
+        settings_columns = {col["name"] for col in inspector.get_columns("calcom_settings")}
+        if "embed_code" not in settings_columns:
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE calcom_settings ADD COLUMN embed_code TEXT"))
+                except Exception as e:
+                    logger.warning(f"Error adding embed_code to calcom_settings: {e}")
+    # Create per-admin settings table if missing
+    if "calcom_admin_settings" not in tables:
+        with engine.begin() as conn:
+            try:
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE calcom_admin_settings (
+                            id SERIAL PRIMARY KEY,
+                            admin_id INTEGER UNIQUE REFERENCES users(id),
+                            is_enabled BOOLEAN DEFAULT FALSE,
+                            embed_code TEXT,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                )
+            except Exception as e:
+                logger.warning(f"Error creating calcom_admin_settings: {e}")
+
+
+def ensure_branding_feature_columns():
+    """Ensure branding_settings table has reservation-related flags."""
+    inspector = inspect(engine)
+    if "branding_settings" not in inspector.get_table_names():
+        return
+    columns = {col["name"] for col in inspector.get_columns("branding_settings")}
+    if "reservations_enabled" in columns:
+        return
+    with engine.begin() as conn:
+        try:
+            conn.execute(text("ALTER TABLE branding_settings ADD COLUMN reservations_enabled BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("UPDATE branding_settings SET reservations_enabled = FALSE WHERE reservations_enabled IS NULL"))
+        except Exception as e:
+            logger.warning(f"Error adding reservations_enabled to branding_settings: {e}")
 
 def get_db():
     """Dependency for getting database session"""

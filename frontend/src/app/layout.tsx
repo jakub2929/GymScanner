@@ -39,6 +39,7 @@ async function fetchBranding(): Promise<BrandingConfig> {
       primaryColor: data.primary_color ?? defaultBranding.primaryColor,
       footerText: data.footer_text ?? defaultBranding.footerText,
       logoUrl: data.logo_url ?? defaultBranding.logoUrl,
+      reservationsEnabled: Boolean(data.reservations_enabled ?? defaultBranding.reservationsEnabled),
     };
   } catch (error) {
     console.error('Failed to load branding', error);

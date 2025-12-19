@@ -6,6 +6,7 @@ export interface BrandingConfig {
   primaryColor: string;
   footerText?: string | null;
   logoUrl?: string | null;
+  reservationsEnabled: boolean;
 }
 
 export const defaultBranding: BrandingConfig = {
@@ -16,4 +17,5 @@ export const defaultBranding: BrandingConfig = {
   primaryColor: '#0EA5E9',
   footerText: '© 2025 GymScanner',
   logoUrl: '/logo-default.svg',
+  reservationsEnabled: false,
 };

@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  calcom-postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: calcom
+      POSTGRES_PASSWORD: calcompass
+      POSTGRES_DB: calcom
+    volumes:
+      - calcom_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calcom -d calcom"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  calcom-redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - calcom_redis_data:/data
+    restart: unless-stopped
+
+  calcom:
+    image: calcom/cal.com:latest
+    depends_on:
+      calcom-postgres:
+        condition: service_healthy
+      calcom-redis:
+        condition: service_started
+    env_file:
+      - ./calcom/.env.calcom
+    environment:
+      DATABASE_URL: postgresql://calcom:calcompass@calcom-postgres:5432/calcom
+      REDIS_URL: redis://calcom-redis:6379
+      NEXTAUTH_URL: http://localhost:3200
+      NEXT_PUBLIC_WEBAPP_URL: http://localhost:3200
+    ports:
+      - "3200:3000"
+    restart: unless-stopped
+
+volumes:
+  calcom_pg_data:
+  calcom_redis_data:

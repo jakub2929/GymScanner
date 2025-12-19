@@ -15,6 +15,7 @@ const navLinks = [
   { href: '/admin/users', label: 'Uživatelé' },
   { href: '/admin/packages', label: 'Balíčky' },
   { href: '/admin/api-keys', label: 'API klíče' },
+  { href: '/admin/integrations', label: 'Integrace' },
 ];
 
 export default function AdminLayout({ children }: PropsWithChildren) {

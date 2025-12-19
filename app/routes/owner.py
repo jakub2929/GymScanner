@@ -43,6 +43,7 @@ def _serialize_branding(branding: BrandingSettings) -> BrandingResponse:
         primary_color=branding.primary_color,
         footer_text=branding.footer_text,
         logo_url=branding.logo_url,
+        reservations_enabled=bool(branding.reservations_enabled),
     )
 
 def _delete_logo_file(logo_url: Optional[str]):
@@ -118,6 +119,7 @@ async def update_branding(
     branding.primary_color = request.primary_color
     branding.footer_text = request.footer_text
     branding.logo_url = request.logo_url or None
+    branding.reservations_enabled = bool(request.reservations_enabled)
     branding.updated_by_owner_id = current_owner.id
 
     db.commit()

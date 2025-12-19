@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { apiClient } from '@/lib/apiClient';
 import type { AdminApiKey } from '@/types/admin';
 import { Toast, useToast } from '@/components/toast';
+import { DATE_LOCALE, DATE_TIMEZONE } from '@/lib/datetime';
 
 export default function AdminApiKeysPage() {
   const queryClient = useQueryClient();
@@ -149,7 +150,12 @@ export default function AdminApiKeysPage() {
                     </span>
                   </div>
                   <div className="text-xs text-slate-400 space-y-1">
-                    <p>Vytvořeno: {key.created_at ? new Date(key.created_at).toLocaleString('cs-CZ') : '---'}</p>
+                    <p>
+                      Vytvořeno:{' '}
+                      {key.created_at
+                        ? new Date(key.created_at).toLocaleString(DATE_LOCALE, { timeZone: DATE_TIMEZONE })
+                        : '---'}
+                    </p>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <button

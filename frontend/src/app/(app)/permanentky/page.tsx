@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import { Toast, useToast } from '@/components/toast';
+import { DATE_LOCALE, DATE_TIMEZONE } from '@/lib/datetime';
 
 interface MembershipDetail {
   membership_id: number;
@@ -47,10 +48,11 @@ interface QrResponse {
 function formatDate(date?: string | null) {
   if (!date) return null;
   try {
-    return new Date(date).toLocaleDateString('cs-CZ', {
+    return new Date(date).toLocaleDateString(DATE_LOCALE, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: DATE_TIMEZONE,
     });
   } catch {
     return null;
@@ -62,24 +64,24 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 function formatShortDate(value?: string | null) {
   if (!value) return '---';
   try {
-    return new Date(value).toLocaleDateString('cs-CZ', {
+    return new Date(value).toLocaleDateString(DATE_LOCALE, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      timeZone: DATE_TIMEZONE,
     });
   } catch {
     return value ?? '---';
   }
 }
 
-function buildTimelineInfo(validFrom?: string | null, validTo?: string | null) {
-  if (!validFrom || !validTo) return null;
+function buildTimelineInfo(validFrom?: string | null, validTo?: string | null, nowTs?: number | null) {
+  if (!validFrom || !validTo || typeof nowTs !== 'number') return null;
   const start = new Date(validFrom).getTime();
   const end = new Date(validTo).getTime();
   if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
-  const now = Date.now();
-  const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-  const remainingDays = Math.max(0, Math.ceil((end - now) / MS_PER_DAY));
+  const progress = Math.min(100, Math.max(0, ((nowTs - start) / (end - start)) * 100));
+  const remainingDays = Math.max(0, Math.ceil((end - nowTs) / MS_PER_DAY));
   return {
     progress,
     remainingDays,
@@ -104,6 +106,11 @@ function buildDailyUsage(dailyLimit?: number | null, used?: number | null) {
 export default function PermanentkyPage() {
   const { toast, showToast } = useToast();
   const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
+  const [nowTs, setNowTs] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNowTs(Date.now());
+  }, []);
 
   const { data, isPending } = useQuery<QrResponse>({
     queryKey: ['my-qr', 'permanentky'],
@@ -167,7 +174,7 @@ export default function PermanentkyPage() {
           ) : (
             <div className="space-y-4">
               {membershipCards.map((card) => {
-                const timeline = buildTimelineInfo(card.valid_from, card.valid_to);
+                const timeline = buildTimelineInfo(card.valid_from, card.valid_to, nowTs);
                 const daily = buildDailyUsage(card.daily_limit, card.daily_usage_count);
                 return (
                   <div key={card.membership_id} className="glass-subcard rounded-2xl p-5 space-y-4">

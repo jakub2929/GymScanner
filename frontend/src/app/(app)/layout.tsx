@@ -10,14 +10,6 @@ import { useBranding } from '@/components/branding-context';
 import { useBrandingLogo } from '@/hooks/useBrandingLogo';
 import { apiClient } from '@/lib/apiClient';
 
-const navLinks = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/permanentky', label: 'Permanentky' },
-  { href: '/treninky', label: 'Tréninky' },
-  { href: '/aktivita', label: 'Aktivita' },
-  { href: '/settings', label: 'Nastavení' },
-];
-
 export default function AppLayout({ children }: PropsWithChildren) {
   const token = useAtomValue(tokenAtom);
   const router = useRouter();
@@ -28,10 +20,21 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const [miniToken, setMiniToken] = useState<string | null>(null);
   const branding = useBranding();
   const logoSrc = useBrandingLogo();
+  const isAdmin = typeof window !== 'undefined' && sessionStorage.getItem('is_admin') === 'true';
+
+  const baseNavLinks = [
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/permanentky', label: 'Permanentky' },
+    { href: '/treninky', label: 'Tréninky' },
+    { href: '/aktivita', label: 'Aktivita' },
+    { href: '/settings', label: 'Nastavení' },
+  ];
+  const reservationsLink = { href: '/rezervace', label: 'Rezervace' };
+  const navLinks =
+    branding.reservationsEnabled || isAdmin ? [...baseNavLinks, reservationsLink] : baseNavLinks;
 
   const localToken = typeof window !== 'undefined' ? sessionStorage.getItem('access_token') : null;
   const effectiveToken = token || localToken;
-  const isAdmin = typeof window !== 'undefined' && sessionStorage.getItem('is_admin') === 'true';
 
   useEffect(() => {
     if (!effectiveToken && typeof window !== 'undefined') {

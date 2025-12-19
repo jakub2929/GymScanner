@@ -12,6 +12,7 @@ class BrandingResponse(BaseModel):
     primary_color: str
     footer_text: Optional[str] = None
     logo_url: Optional[str] = None
+    reservations_enabled: bool = False
 
 class BrandingUpdateRequest(BaseModel):
     brand_name: str = Field(..., min_length=2, max_length=100)
@@ -21,6 +22,7 @@ class BrandingUpdateRequest(BaseModel):
     primary_color: str = Field(..., description="Hex color in format #RRGGBB")
     footer_text: Optional[str] = Field(default=None, max_length=255)
     logo_url: Optional[str] = Field(default=None, max_length=512)
+    reservations_enabled: bool = Field(default=False)
 
     @field_validator("brand_name", "console_name", mode="before")
     @classmethod

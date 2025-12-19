@@ -80,9 +80,12 @@ async def register(
         
         # Create new user with hashed password
         password_hash = get_password_hash(request.password)
+        first_name, last_name = _split_full_name(request.name)
         user = User(
             email=request.email,
-            name=request.name,
+            name=request.name.strip(),
+            first_name=first_name,
+            last_name=last_name,
             password_hash=password_hash
         )
         db.add(user)
@@ -182,10 +185,72 @@ class UserInfoResponse(BaseModel):
     user_id: int
     email: str
     name: str
+    first_name: str | None = None
+    last_name: str | None = None
+    phone_number: str | None = None
     created_at: str
     qr_count: int
     email_verified: bool = False  # Email verification not implemented yet
     is_admin: bool = False
+
+class UpdateProfileRequest(BaseModel):
+    first_name: str = Field(..., min_length=1, max_length=60)
+    last_name: str = Field(..., min_length=1, max_length=80)
+    email: EmailStr
+    phone_number: str | None = Field(default=None, min_length=5, max_length=40)
+
+    @field_validator('first_name', 'last_name')
+    @classmethod
+    def validate_names(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Pole nesmí být prázdné")
+        return cleaned
+
+    @field_validator('phone_number')
+    @classmethod
+    def validate_phone(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if cleaned and not any(char.isdigit() for char in cleaned):
+            raise ValueError("Telefon musí obsahovat číslice")
+        return cleaned or None
+
+def _split_full_name(full_name: str | None) -> tuple[str | None, str | None]:
+    if not full_name:
+        return None, None
+    name = full_name.strip()
+    if not name:
+        return None, None
+    parts = name.split(" ", 1)
+    first = parts[0].strip() if parts else None
+    last = parts[1].strip() if len(parts) > 1 else None
+    return first or None, last or None
+
+def _serialize_user_info(user: User, qr_count: int) -> UserInfoResponse:
+    first_name = user.first_name
+    last_name = user.last_name
+    if not first_name:
+        split_first, split_last = _split_full_name(user.name)
+        first_name = split_first
+        last_name = last_name or split_last
+    if not last_name:
+        _, split_last = _split_full_name(user.name)
+        last_name = last_name or split_last
+    created_at_str = user.created_at.isoformat() if user.created_at else ""
+    return UserInfoResponse(
+        user_id=user.id,
+        email=user.email,
+        name=user.name,
+        first_name=first_name,
+        last_name=last_name,
+        phone_number=user.phone_number,
+        created_at=created_at_str,
+        qr_count=qr_count,
+        email_verified=False,
+        is_admin=bool(user.is_admin),
+    )
 
 @router.get("/user/info", response_model=UserInfoResponse)
 async def get_user_info(
@@ -201,18 +266,35 @@ async def get_user_info(
         AccessToken.user_id == current_user.id
     ).count()
     
-    # Format created_at date
-    created_at_str = current_user.created_at.isoformat() if current_user.created_at else ""
-    
-    return UserInfoResponse(
-        user_id=current_user.id,
-        email=current_user.email,
-        name=current_user.name,
-        created_at=created_at_str,
-        qr_count=qr_count,
-        email_verified=False,  # Email verification not implemented yet
-        is_admin=bool(current_user.is_admin)
-    )
+    return _serialize_user_info(current_user, qr_count)
+
+@router.put("/user/profile", response_model=UserInfoResponse)
+async def update_profile(
+    request: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update profile information (name/email/phone)."""
+    new_email = request.email.lower().strip()
+    if new_email != current_user.email:
+        duplicate = db.query(User).filter(User.email == new_email).first()
+        if duplicate and duplicate.id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email je již registrovaný",
+            )
+        current_user.email = new_email
+
+    current_user.first_name = request.first_name
+    current_user.last_name = request.last_name
+    # Display name = combination (fallback to first only)
+    current_user.name = f"{request.first_name} {request.last_name}".strip()
+    current_user.phone_number = request.phone_number
+
+    db.commit()
+    db.refresh(current_user)
+    qr_count = db.query(AccessToken).filter(AccessToken.user_id == current_user.id).count()
+    return _serialize_user_info(current_user, qr_count)
 
 @router.post("/user/change-password", response_model=ChangePasswordResponse)
 async def change_password(

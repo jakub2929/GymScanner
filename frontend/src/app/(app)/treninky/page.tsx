@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import { Toast, useToast } from '@/components/toast';
+import { DATE_LOCALE, DATE_TIMEZONE } from '@/lib/datetime';
 
 interface MembershipDetail {
   membership_id: number;
@@ -46,24 +47,24 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 function formatShortDate(value?: string | null) {
   if (!value) return '---';
   try {
-    return new Date(value).toLocaleDateString('cs-CZ', {
+    return new Date(value).toLocaleDateString(DATE_LOCALE, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      timeZone: DATE_TIMEZONE,
     });
   } catch {
     return value ?? '---';
   }
 }
 
-function buildTimelineInfo(validFrom?: string | null, validTo?: string | null) {
-  if (!validFrom || !validTo) return null;
+function buildTimelineInfo(validFrom?: string | null, validTo?: string | null, nowTs?: number | null) {
+  if (!validFrom || !validTo || typeof nowTs !== 'number') return null;
   const start = new Date(validFrom).getTime();
   const end = new Date(validTo).getTime();
   if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
-  const now = Date.now();
-  const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-  const remainingDays = Math.max(0, Math.ceil((end - now) / MS_PER_DAY));
+  const progress = Math.min(100, Math.max(0, ((nowTs - start) / (end - start)) * 100));
+  const remainingDays = Math.max(0, Math.ceil((end - nowTs) / MS_PER_DAY));
   return {
     progress,
     remainingDays,
@@ -75,6 +76,11 @@ function buildTimelineInfo(validFrom?: string | null, validTo?: string | null) {
 export default function TreninkyPage() {
   const { toast, showToast } = useToast();
   const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
+  const [nowTs, setNowTs] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNowTs(Date.now());
+  }, []);
 
   const { data, isPending } = useQuery<QrResponse>({
     queryKey: ['my-qr', 'treninky'],
@@ -143,7 +149,7 @@ export default function TreninkyPage() {
                 const remaining = totalSessions ? Math.max(0, totalSessions - usedSessions) : null;
                 const sessionsProgress =
                   totalSessions > 0 ? Math.min(100, Math.max(0, (usedSessions / totalSessions) * 100)) : usedSessions ? 100 : 0;
-                const timeline = buildTimelineInfo(card.valid_from, card.valid_to);
+                const timeline = buildTimelineInfo(card.valid_from, card.valid_to, nowTs);
 
                 return (
                   <div key={card.membership_id} className="glass-subcard rounded-2xl p-5 space-y-4">

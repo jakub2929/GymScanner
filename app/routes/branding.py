@@ -17,6 +17,7 @@ def _serialize(branding: BrandingSettings | None) -> BrandingResponse:
             primary_color=branding.primary_color,
             footer_text=branding.footer_text,
             logo_url=branding.logo_url,
+            reservations_enabled=bool(branding.reservations_enabled),
         )
     return BrandingResponse(
         brand_name=DEFAULT_BRANDING["brand_name"],
@@ -26,6 +27,7 @@ def _serialize(branding: BrandingSettings | None) -> BrandingResponse:
         primary_color=DEFAULT_BRANDING["primary_color"],
         footer_text=DEFAULT_BRANDING["footer_text"],
         logo_url=DEFAULT_BRANDING["logo_url"],
+        reservations_enabled=DEFAULT_BRANDING["reservations_enabled"],
     )
 
 @router.get("/branding", response_model=BrandingResponse)

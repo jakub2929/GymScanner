@@ -11,6 +11,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
     password_hash = Column(String, nullable=False)
     credits = Column(Integer, default=0)  # Number of credits (1 credit = 1 workout)
     is_admin = Column(Boolean, default=False)  # Admin privileges
@@ -234,8 +237,51 @@ class BrandingSettings(Base):
     primary_color = Column(String(7), nullable=False, default="#0EA5E9")
     footer_text = Column(String(255), nullable=True)
     logo_url = Column(String(512), nullable=True)
+    reservations_enabled = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     updated_by_owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     updated_by_owner = relationship("User")
+
+
+class CalcomSettings(Base):
+    __tablename__ = "calcom_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    is_enabled = Column(Boolean, default=False)  # legacy global toggle (kept for backward compatibility)
+    webhook_secret = Column(String, nullable=True)
+    embed_code = Column(Text, nullable=True)  # legacy global embed (kept for backward compatibility)
+    last_event_type = Column(String, nullable=True)
+    last_event_id = Column(String, nullable=True)
+    last_received_at = Column(DateTime(timezone=True), nullable=True)
+    last_error = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class CalcomWebhookEvent(Base):
+    __tablename__ = "calcom_webhook_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    event_id = Column(String, index=True, nullable=True)
+    payload_hash = Column(String(64), index=True, nullable=False)
+    event_type = Column(String, nullable=True)
+    status = Column(String(40), nullable=False, default="received")
+    error_message = Column(String, nullable=True)
+    received_at = Column(DateTime(timezone=True), server_default=func.now())
+    payload = Column(JSON, nullable=True)
+
+
+class CalcomAdminSettings(Base):
+    __tablename__ = "calcom_admin_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    is_enabled = Column(Boolean, default=False)
+    embed_code = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    admin = relationship("User")

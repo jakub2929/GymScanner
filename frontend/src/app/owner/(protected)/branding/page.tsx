@@ -20,6 +20,7 @@ const apiSchema = z.object({
   primary_color: z.string(),
   footer_text: z.string().nullable(),
   logo_url: z.string().nullable(),
+  reservations_enabled: z.boolean().optional().default(false),
 });
 
 type BrandingApiResponse = z.infer<typeof apiSchema>;
@@ -38,6 +39,7 @@ const formSchema = z.object({
       (value) => !value || value.startsWith('/') || /^https?:\/\//i.test(value),
       'Logo musí být absolutní nebo relativní URL'
     ),
+  reservationsEnabled: z.boolean(),
 });
 
 type BrandingFormValues = z.infer<typeof formSchema>;
@@ -51,6 +53,7 @@ function normalizeApi(data: BrandingApiResponse): BrandingFormValues {
     primaryColor: data.primary_color ?? defaultBranding.primaryColor,
     footerText: data.footer_text ?? undefined,
     logoUrl: data.logo_url ?? undefined,
+    reservationsEnabled: data.reservations_enabled ?? false,
   };
 }
 
@@ -63,6 +66,7 @@ function serializeForm(values: BrandingFormValues) {
     primary_color: values.primaryColor,
     footer_text: values.footerText?.trim() || null,
     logo_url: values.logoUrl?.trim() || null,
+    reservations_enabled: values.reservationsEnabled ?? false,
   };
 }
 
@@ -97,6 +101,7 @@ export default function BrandingPage() {
         primary_color: brandingContext.primaryColor,
         footer_text: brandingContext.footerText ?? null,
         logo_url: brandingContext.logoUrl ?? null,
+        reservations_enabled: brandingContext.reservationsEnabled ?? false,
       }
     ),
   });
@@ -198,6 +203,18 @@ export default function BrandingPage() {
                 <label className="text-sm text-slate-300 block mb-1.5">Footer text</label>
                 <input className="input-field" placeholder="© 2025 ..." {...register('footerText')} />
                 {errors.footerText && <p className="text-sm text-rose-300 mt-1">{errors.footerText.message}</p>}
+              </div>
+              <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 gap-3">
+                <div>
+                  <p className="text-sm text-slate-200">Rezervační systém</p>
+                  <p className="text-xs text-slate-400">Povol pro odemčení stránky rezervací v adminu i u uživatelů.</p>
+                </div>
+                <input
+                  id="reservations-enabled"
+                  type="checkbox"
+                  className="h-5 w-5 rounded border border-white/30 bg-white/10"
+                  {...register('reservationsEnabled')}
+                />
               </div>
               <div className="space-y-3">
                 <p className="text-sm text-slate-300">Logo</p>

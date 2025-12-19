@@ -106,3 +106,63 @@ export interface AdminApiKey {
   created_by_user_id?: number | null;
   token?: string | null;
 }
+
+export interface AdminCalcomSettings {
+  is_enabled: boolean;
+  has_secret: boolean;
+  webhook_url: string;
+  admin_webhook_url?: string | null;
+  embed_code?: string | null;
+  last_event_type?: string | null;
+  last_event_id?: string | null;
+  last_received_at?: string | null;
+  last_error?: string | null;
+}
+
+export interface AdminCalcomEvent {
+  id: number;
+  admin_id?: number | null;
+  event_id?: string | null;
+  event_type?: string | null;
+  status: string;
+  received_at?: string | null;
+  error_message?: string | null;
+}
+
+export interface AdminCalcomBooking {
+  id: number;
+  admin_id?: number | null;
+  event_id?: string | null;
+  event_type?: string | null;
+  status?: string | null;
+  booking_id?: string | null;
+  uid?: string | null;
+  ical_uid?: string | null;
+  reschedule_uid?: string | null;
+  location?: string | null;
+  title?: string | null;
+  organizer_name?: string | null;
+  organizer_email?: string | null;
+  attendee_name?: string | null;
+  attendee_email?: string | null;
+  attendee_phone?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  timezone?: string | null;
+  notes?: string | null;
+  created_at?: string | null;
+  received_at?: string | null;
+  history?: Array<{
+    event_type?: string | null;
+    status?: string | null;
+    received_at?: string | null;
+    notes?: string | null;
+    reschedule_reason?: string | null;
+    cancel_reason?: string | null;
+    start_time?: string | null;
+    end_time?: string | null;
+    location?: string | null;
+    raw_payload?: Record<string, unknown> | null;
+  }>;
+  raw_payload?: Record<string, unknown> | null;
+}

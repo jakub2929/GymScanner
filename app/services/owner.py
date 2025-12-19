@@ -16,6 +16,7 @@ DEFAULT_BRANDING = {
     "primary_color": os.getenv("BRANDING_DEFAULT_PRIMARY_COLOR", "#0EA5E9"),
     "footer_text": os.getenv("BRANDING_DEFAULT_FOOTER_TEXT", "© 2025 GymScanner"),
     "logo_url": os.getenv("BRANDING_DEFAULT_LOGO_URL"),
+    "reservations_enabled": False,
 }
 
 OWNER_ACCESS_TOKEN_EXPIRE_MINUTES = int(

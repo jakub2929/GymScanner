@@ -24,9 +24,10 @@ from app.database import (
     ensure_access_log_presence_session_column,
     ensure_user_presence_columns,
     ensure_membership_columns,
+    ensure_user_profile_columns,
 )
-from app.routes import payments, qr, verify, admin, auth, user_qr, credits, branding, owner
-from app.database import ensure_user_owner_column
+from app.routes import payments, qr, verify, admin, auth, user_qr, credits, branding, owner, calcom
+from app.database import ensure_user_owner_column, ensure_calcom_columns, ensure_branding_feature_columns
 from app.services.owner import ensure_owner_account, ensure_branding_defaults
 from app.services.membership import ensure_default_membership_packages
 
@@ -108,6 +109,9 @@ async def initialize_database():
         ensure_user_presence_columns()
         ensure_access_log_columns()
         ensure_membership_columns()
+        ensure_user_profile_columns()
+        ensure_calcom_columns()
+        ensure_branding_feature_columns()
         logger.info("Database migrations completed")
         ensure_owner_account()
         ensure_branding_defaults()
@@ -136,6 +140,7 @@ app.include_router(verify.router, prefix="/api", tags=["verify"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(owner.router, prefix="/api", tags=["owner"])
 app.include_router(branding.router, prefix="/api", tags=["branding"])
+app.include_router(calcom.router, prefix="/api", tags=["calcom"])
 
 static_dir = Path(os.getenv("STATIC_DIR", "static"))
 static_dir.mkdir(parents=True, exist_ok=True)

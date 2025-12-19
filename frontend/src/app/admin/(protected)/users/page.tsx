@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/apiClient';
 import type { AdminMembershipPackage, AdminUser, AdminUserMembership, AdminUserQr } from '@/types/admin';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Toast, useToast } from '@/components/toast';
+import { DATE_LOCALE, DATE_TIMEZONE } from '@/lib/datetime';
 
 export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
@@ -130,9 +131,13 @@ export default function AdminUsersPage() {
           }
           const [, iso, rest] = match;
           const date = new Date(iso);
-          const formatted = isNaN(date.getTime())
+          const formatted = Number.isNaN(date.getTime())
             ? iso
-            : date.toLocaleString('cs-CZ', { dateStyle: 'short', timeStyle: 'short' });
+            : date.toLocaleString(DATE_LOCALE, {
+                dateStyle: 'short',
+                timeStyle: 'short',
+                timeZone: DATE_TIMEZONE,
+              });
           return { key: idx, text: `${formatted} — ${rest || ''}`.trim() };
         });
     },
@@ -141,13 +146,14 @@ export default function AdminUsersPage() {
 
   const formatDateTime = (value?: string | null) =>
     value
-      ? new Date(value).toLocaleString('cs-CZ', {
+      ? new Date(value).toLocaleString(DATE_LOCALE, {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
+          timeZone: DATE_TIMEZONE,
         })
       : '---';
 
@@ -202,7 +208,9 @@ export default function AdminUsersPage() {
                     <td className="py-4 text-slate-400">{formatDateTime(user.last_entry_at)}</td>
                     <td className="py-4 text-slate-400">{formatDateTime(user.last_exit_at)}</td>
                     <td className="py-4 text-slate-400">
-                      {user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}
+                      {user.created_at
+                        ? new Date(user.created_at).toLocaleDateString(DATE_LOCALE, { timeZone: DATE_TIMEZONE })
+                        : '---'}
                     </td>
                     <td className="py-4 text-right space-x-2">
                       <button className="secondary-button" onClick={() => openMembershipModal(user)}>
@@ -237,7 +245,10 @@ export default function AdminUsersPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Registrován: {user.created_at ? new Date(user.created_at).toLocaleDateString('cs-CZ') : '---'}
+                  Registrován:{' '}
+                  {user.created_at
+                    ? new Date(user.created_at).toLocaleDateString(DATE_LOCALE, { timeZone: DATE_TIMEZONE })
+                    : '---'}
                 </p>
                 <button className="accent-button w-full" onClick={() => openMembershipModal(user)}>
                   Detail klienta
@@ -320,8 +331,14 @@ export default function AdminUsersPage() {
                     <div>
                       <p className="font-semibold text-lg leading-tight">{membership.package_name ?? 'Manuální permanentka'}</p>
                       <p className="text-slate-400 text-sm">
-                        Platnost {membership.valid_from ? new Date(membership.valid_from).toLocaleDateString('cs-CZ') : '?'} –{' '}
-                        {membership.valid_to ? new Date(membership.valid_to).toLocaleDateString('cs-CZ') : '?'}
+                        Platnost{' '}
+                        {membership.valid_from
+                          ? new Date(membership.valid_from).toLocaleDateString(DATE_LOCALE, { timeZone: DATE_TIMEZONE })
+                          : '?'}{' '}
+                        –{' '}
+                        {membership.valid_to
+                          ? new Date(membership.valid_to).toLocaleDateString(DATE_LOCALE, { timeZone: DATE_TIMEZONE })
+                          : '?'}
                       </p>
                     </div>
                     <span

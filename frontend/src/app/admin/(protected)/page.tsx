@@ -4,10 +4,16 @@ import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import type { AdminMembershipPackage, AdminUser, AdminPresenceSession } from '@/types/admin';
+import { DATE_LOCALE, DATE_TIMEZONE } from '@/lib/datetime';
 
 function formatTimeHM(value?: string | null) {
   if (!value) return '---';
-  return new Date(value).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return new Date(value).toLocaleTimeString(DATE_LOCALE, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: DATE_TIMEZONE,
+  });
 }
 
 export default function AdminOverviewPage() {

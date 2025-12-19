@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/apiClient';
 import { Toast, useToast } from '@/components/toast';
+import { DATE_LOCALE, DATE_TIMEZONE } from '@/lib/datetime';
 
 interface PresenceSession {
   id: number;
@@ -26,16 +27,16 @@ interface MyQrResponse {
 }
 
 function formatDate(value?: string | null) {
-  if (!value) return '---';
-  return new Date(value).toLocaleString('cs-CZ', { hour12: false });
-}
-
-function formatDuration(seconds?: number | null) {
-  if (!seconds) return '---';
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  if (!value) return 'Neznámé datum';
+  return new Date(value).toLocaleString(DATE_LOCALE, {
+    hour12: false,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: DATE_TIMEZONE,
+  });
 }
 
 export default function AktivitaPage() {
@@ -54,13 +55,15 @@ export default function AktivitaPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Přítomnost</p>
             <h1 className="text-3xl font-semibold text-white mt-1">Moje aktivita</h1>
-            <p className="text-slate-400 text-sm mt-2">Příchody a odchody z gymu podle skenů IN/OUT.</p>
+            <p className="text-slate-400 text-sm mt-2">
+              Seznam mých posledních příchodů do gymu podle skenů čtečky.
+            </p>
           </div>
         </div>
 
         <section className="glass-panel rounded-3xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">Historie</h2>
+            <h2 className="text-xl font-semibold text-white">Poslední návštěvy</h2>
             <p className="text-sm text-slate-400">{isPending ? 'Načítám...' : `${sessions.length} záznamů`}</p>
           </div>
           {isPending ? (
@@ -70,27 +73,8 @@ export default function AktivitaPage() {
           ) : (
             <div className="space-y-3">
               {sessions.map((session) => (
-                <div key={session.id} className="glass-subcard rounded-2xl p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-lg text-white">
-                        {session.last_direction === 'out' ? 'Odchod' : 'Příchod'}
-                      </p>
-                      <p className="text-xs uppercase tracking-[0.35em] text-slate-500">{session.status}</p>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs ${
-                        session.ended_at ? 'bg-white/10 text-slate-200' : 'bg-emerald-500/20 text-emerald-200'
-                      }`}
-                    >
-                      {session.ended_at ? 'Ukončeno' : 'Probíhá'}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-4 text-sm text-slate-300">
-                    <p>Čas: {formatDate(session.started_at)}</p>
-                    <p>Doba: {formatDuration(session.duration_seconds)}</p>
-                  </div>
-                  {session.notes && <p className="text-xs text-slate-400 whitespace-pre-line">{session.notes}</p>}
+                <div key={session.id} className="glass-subcard rounded-2xl p-4">
+                  <p className="font-semibold text-base text-white">{formatDate(session.started_at)}</p>
                 </div>
               ))}
             </div>
